@@ -1,0 +1,21 @@
+2015-10-14
+Telecon #1 of lens-finding project in HSC.
+
+Participants: Anupreeta More (IPMU), Francois Finet (NAOJ), Alessandro Sonnenfeld (IPMU), Masamune Oguri (UTokyo).
+
+Goal 0 of project: create a lens finder at least as efficient as RINGFINDER.
+
+Possible developments: 
+- using Space Warps to do eye inspection, or machine-learning (challenging because it requires realistic sample of false-positives).
+- attempting a quick and dirty lens model to classify candidates
+- using photo-z for classification (to exclude spiral arms)
+- using centroid shift information
+
+Action items: 
+- Alessandro: create a first list of potential lens galaxies. Get images and PSFs around systems, send them to Francois. Create github repository. Upload lens subtraction code on the repository. Write documentation for lens subtraction code.
+- Francois: start playing with lens light subtraction in HSC data.
+- Anupreeta: upload list of CFHTLS lenses that was missed by RINGFINDER.
+
+Technical issues:
+- Francois needs an account at IPMU.
+

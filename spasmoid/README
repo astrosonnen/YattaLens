@@ -9,6 +9,8 @@ Fits parametrized light profiles to multi-band data in a Bayesian framework.
 
 Quick start:
 
+Add the yattalens directory to your PYTHONPATH.
+
 in the directory 
 example/
 running 'python fit_deV_profile.py'

@@ -7,6 +7,12 @@ Fits parametrized light profiles to multi-band data in a Bayesian framework.
 
 -----------------------------------------------------------------------------------
 
+Requirements
+
+numpy, scipy, pyfits, pymc
+
+-----------------------------------------------------------------------------------
+
 Quick start:
 
 Add the yattalens directory to your PYTHONPATH.

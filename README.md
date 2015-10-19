@@ -15,7 +15,7 @@ Strategy:
 Step 1: target potential lenses (massive spatially extended objects at cosmological distances)
 Step 2: remove light from the potential lens
 Step 3: search for blue residuals using an object finder e.g. ARCFINDER
-Step 5: eye-classification
+Step 4: eye-classification
 
 
 ## License

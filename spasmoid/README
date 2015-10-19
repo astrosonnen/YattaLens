@@ -1,0 +1,35 @@
+Surface Photometry and Structural Modeling of Imaging Data (SPASMOID)
+
+Written by Matthew W. Auger
+Described in Bennert et al. 2011, ApJ, 726, 59
+
+Fits parametrized light profiles to multi-band data in a Bayesian framework.
+
+-----------------------------------------------------------------------------------
+
+Quick start:
+
+in the directory 
+example/
+running 'python fit_deV_profile.py'
+will fit a de Vaucouleurs profile to the light profile of a strong lens, as observed from CFHT.
+
+Name of input files (science exposure, uncertainty, psf) are hard-written in the file fit_deV_profile.py
+
+The code will look for a mask file (0s on pixels to be used in the fit, 1s on pixels to be excluded), but will proceed anyway if it can't find it.
+
+Initial guesses for the model parameters are input in the dictionary 'guess'.
+The units of centroids and effective radius are pixels.
+
+The speed of the code is mostly set by the convolution. Increasing the size of the psf will slow down the code.
+
+The code will produce an output deVauc.txt file with the best fit values of the parameters.
+It will also produce a *resid.fits file for each band.
+These files have multiple extension: ext 0 is the residual, ext 1 is the residual normalized by the uncertainty, ext 2 is the model.
+
+-----------------------------------------------------------------------------------
+
+Known issues:
+
+- If the initial guess for the PA is off by a lot, spasmoid can get stuck at very round values for the axis ratio parameter 'q'.
+

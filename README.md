@@ -6,6 +6,7 @@
 * Anupreeta More (IPMU)
 * Masamune Oguri (UTokyo)
 * Alessandro Sonnenfeld (IPMU)
+* Sherry Suyu (ASIAA)
 
 ## Planning, progress etc
 

@@ -1,0 +1,7 @@
+SELECT TOP 10
+   s.bestObjID,s.ra,s.dec,s.z,s.class, s.z,
+   s.velDisp,s.velDispErr,s.survey
+FROM SpecObj AS s
+WHERE 
+   s.class='GALAXY'
+   AND s.survey='boss'

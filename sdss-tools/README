@@ -1,0 +1,4 @@
+Created by AS, 2015-10-23.
+
+The HSC SSP is in SDSS. Using SDSS spectra can be very useful to classify lens candidates.
+This directory contains SQL scripts to select interesting objects lens search-wise.

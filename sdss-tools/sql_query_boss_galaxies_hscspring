@@ -1,5 +1,3 @@
--- Searches for spectroscopically confirmed galaxies from BOSS
--- in the Spring equatorial field of HSC Wide.
 SELECT
    s.bestObjID,s.ra,s.dec,s.z,s.class, s.z,
    s.velDisp,s.velDispErr,s.survey

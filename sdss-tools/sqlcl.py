@@ -13,7 +13,7 @@ Options:
 formats = ['csv','xml','html']
 
 astro_url='http://cas.sdss.org/astro/en/tools/search/x_sql.asp'
-public_url='http://cas.sdss.org/public/en/tools/search/x_sql.asp'
+public_url='http://skyserver.sdss.org/dr10/en/tools/search/x_sql.aspx'
 
 default_url=public_url
 default_fmt='csv'

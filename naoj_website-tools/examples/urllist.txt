@@ -1,0 +1,5 @@
+https://hscdata.mtk.nao.ac.jp:4443/das_quarry/cgi-bin/quarryImage?ra=50.7870510&dec= 0.8846470&sw=2asec&sh=2asec&type=coadd&image=on&filter=HSC-G&tract=&rerun=
+https://hscdata.mtk.nao.ac.jp:4443/das_quarry/cgi-bin/quarryImage?ra=50.7870510&dec= 0.8846470&sw=2asec&sh=2asec&type=coadd&image=on&filter=HSC-R&tract=&rerun=
+https://hscdata.mtk.nao.ac.jp:4443/das_quarry/cgi-bin/quarryImage?ra=50.7870510&dec= 0.8846470&sw=2asec&sh=2asec&type=coadd&image=on&filter=HSC-I&tract=&rerun=
+https://hscdata.mtk.nao.ac.jp:4443/das_quarry/cgi-bin/quarryImage?ra=50.7870510&dec= 0.8846470&sw=2asec&sh=2asec&type=coadd&image=on&filter=HSC-Z&tract=&rerun=
+https://hscdata.mtk.nao.ac.jp:4443/das_quarry/cgi-bin/quarryImage?ra=50.7870510&dec= 0.8846470&sw=2asec&sh=2asec&type=coadd&image=on&filter=HSC-Y&tract=&rerun=

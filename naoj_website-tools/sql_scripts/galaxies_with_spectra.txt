@@ -1,0 +1,5 @@
+SELECT id, ra2000, decl2000, mag_i, redshift
+FROM external_catalog.specz_201510
+WHERE redshift > 0.1
+LIMIT 1000
+;

@@ -36,7 +36,7 @@ while count < Nobj and i < len(ra):
     i += 1
 
 outname = 'radec_list.txt'
-if len(sys.argv > 1):
+if len(sys.argv) > 2:
     outname = sys.argv[2]
 
 f = open(outname, 'w')

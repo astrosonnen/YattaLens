@@ -1,0 +1,4 @@
+setuphsc
+setup -v hscPipe 3.8.5
+setup -v astrometry_net_data ps1_pv1.2a
+setup -v ipython

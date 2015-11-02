@@ -1,6 +1,6 @@
 from spasmoid.slsqp import fmin_slsqp
 #from scipy.optimize import fmin_slsqp
-from imageSim import convolve
+from spasmoid import convolve
 import numpy
 import indexTricks as iT
 

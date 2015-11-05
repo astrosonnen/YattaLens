@@ -72,8 +72,8 @@ for jj in range(ra.size):
                 outfits1=rrh+ddh+'_'+filt[ii]+'.fits'
                 subImage.writeFits(outfits)
                 call("imcopy %s[1] %s/%s"%(outfits,outdir1,outfits1),shell=1)
-                ## if you want to extract the weight image
-                outfits2=rrh+ddh+'_'+filt[ii]+'_wht.fits'
-                call("imcopy %s[2] %s/%s"%(outfits,outdir1,outfits2),shell=1)
+                ## if you want to extract the variance image
+                outfits2=rrh+ddh+'_'+filt[ii]+'_var.fits'
+                call("imcopy %s[3] %s/%s"%(outfits,outdir1,outfits2),shell=1)
             else:
                 print ra[jj],dec[jj], input_image,"not found"

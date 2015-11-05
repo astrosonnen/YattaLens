@@ -85,7 +85,6 @@ else:
     warnings.warn("Warning: mask file not found")
     mask = numpy.zeros(subimg.shape)
 
-
 data['MASK'] = mask.copy()
 
 data['PARAMS'] = pars

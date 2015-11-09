@@ -1,5 +1,5 @@
-from spasmoid import imageFit as modelSB, models, convolve
-import os,sys,numpy,pymc,pyfits
+from photofit import imageFit as modelSB, models, convolve
+import os,sys,numpy,pymc,pyfits, pickle
 from math import pi
 from scipy import ndimage
 import warnings
@@ -8,7 +8,7 @@ lensname = 'SL2SJ021411-040502'
 
 maskname = lensname+'_mask.fits'
 
-niter = 10000 #number of steps in the optimization chain
+niter = 100000 #number of steps in the optimization chain
 
 #
 #
@@ -90,33 +90,35 @@ data['MASK'] = mask.copy()
 data['PARAMS'] = pars
 data['COV'] = numpy.asarray(cov)
 data['OVRS'] = 1
-vals = modelSB.optimize(data,niter)
-logp,trace,dets = vals[1]
-print logp[0],logp[-1]
-
+chain,MLmodel, MLmags = modelSB.sample(data, niter)
 
 output = []
 j=0
 for par in pars:
-    val = trace[-1][j]
+    val = MLmodel[str(par)]
     j = j+1
-    print par,val
+    print str(par),val
     output.append(str(par)+' %5.3f\n'%val)
 
 for f in filters:
-    mag = dets['bulge_%s'%f][-1]
+    mag = MLmags['bulge_%s'%f]
     print f,mag
     output.append(f+' %4.2f\n'%mag)
 
+#writes the parameters of the best-fit model on a file
 f = open('deVauc_fit.txt','w')
 f.writelines(output)
 f.close()
 
+#saves the MCMC chain on a file
+f = open('deVauc_fit.mcmc','w')
+pickle.dump(chain, f)
+f.close()
 
 for filt in filters:
     i = data['IMG'][filt]
     s = data['SIGMA'][filt]
-    m = numpy.array(vals[0][filt])
+    m = numpy.array(MLmodel[filt])
 
     m = m.sum(0)
     hdu = pyfits.PrimaryHDU(i-m)

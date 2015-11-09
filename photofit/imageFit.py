@@ -1,9 +1,9 @@
 import numpy,time
-from spasmoid.modelSB import linearmodelSB
+from photofit.modelSB import linearmodelSB
 from math import log10
+import pymc
 
-def optimize(data,niter,oname=None,first=True):
-    import pymc,pyfits,numpy
+def do_mcmc(data,niter):
     import indexTricks as iT
 
     priors = data['PRIORS']
@@ -82,8 +82,7 @@ def optimize(data,niter,oname=None,first=True):
     for key in filters:
         image[key] = image[key].ravel()
 
-
-    @pymc.deterministic(trace=False)
+    @pymc.deterministic()#(trace=False)
     def logpAndMags(p=pars):
         lp = 0.
         mags = []
@@ -103,79 +102,40 @@ def optimize(data,niter,oname=None,first=True):
     def lp(lpAM=logpAndMags):
         return lpAM[0]
     
-    @pymc.deterministic
+    @pymc.deterministic(name='Mags')
     def Mags(lpAM=logpAndMags):
         return lpAM[1]
 
-    @pymc.observed
-    def logpCost(value=0.,logP=lp):
-        return logP
-
-    costs = [logpCost]
-    if priors is not None:
-        @pymc.observed
-        def colorPrior(value=0.,M=Mags):
-            lp = 0.
-            for p in priors:
-                color = M[model2index[p[0]]]-M[model2index[p[1]]]
-                lp += p[2](color)
-            return lp
-        costs.append(colorPrior)
-
-    def resid(p):
-        model = numpy.empty(0)
-        for key in filters:
-            indx = key2index[key]
-            if doSigma==True:
-                sigma = sigmas[indx].value
-            else:
-                sigma = sigmas[key]
-            simage = (image[key]/sigma)[mask_r]
-            model = numpy.append(model,linearmodelSB(p,simage,sigma[mask_r],mask,models[key],xc,yc,levMar=True,OVRS=OVRS))
-        return model
-
-
-    print "Optimizing",niter
-    from SampleOpt import AMAOpt as Opt,levMar as levMar
-    default = numpy.empty(0)
-    for key in filters:
-        indx = key2index[key]
-        if doSigma==True:
-            sigma = sigmas[indx].value
-        else:
-            sigma = sigmas[key]
-        simage = (image[key]/sigma)[mask_r]
-        default = numpy.append(default,simage)
-#    levMar(pars,resid,default)
+    @pymc.stochastic(observed=True, name='logp')
+    def logpCost(value=0., p=pars):
+        return lp
 
     cov = None
     if 'COV' in data.keys():
         cov = data['COV']
 
-    O = Opt(pars,costs,[lp,Mags],cov=cov)
-    O.set_minprop(len(pars)*2)
-    O.sample(niter/10)
+    print "Sampling",niter
 
-    O = Opt(pars,costs,[lp,Mags],cov=cov)
-    O.set_minprop(len(pars)*2)
-    O.cov = O.cov/4.
-    O.sample(niter/4)
+    M = pymc.MCMC(pars+[lp, logpAndMags, Mags])
+    M.use_step_method(pymc.AdaptiveMetropolis, pars, cov=numpy.diag(cov))
+    M.sample(niter, niter/10)
 
-    O = Opt(pars,costs,[lp,Mags],cov=cov)
-    O.set_minprop(len(pars)*2)
-    O.cov = O.cov/10.
-    O.sample(niter/4)
+    trace = {}
+    for par in pars:
+        trace[str(par)] = M.trace(par)[:]
+    trace['logp'] = M.trace('lp')[:]
 
-    O = Opt(pars,costs,[lp,Mags],cov=cov)
-    O.set_minprop(len(pars)*2)
-    O.cov = O.cov/10.
-    O.sample(niter)
-    logp,trace,result = O.result()
-    mags = numpy.array(result['Mags'])
+    ML = trace['logp'].argmax()
 
+    MLmodel = {}
+    for par in pars:
+        MLmodel[str(par)] = trace[str(par)][ML]
+
+    MLmags = {}
     for key in model2index.keys():
-        result[key] = mags[:,model2index[key]].copy()
-    del result['Mags']
+        #MLmags[key] = mags[:,model2index[key]].copy()
+        trace[key] = M.trace('Mags')[:, model2index[key]].copy()
+        MLmags[key] = M.trace('Mags')[ML, model2index[key]].copy()
 
     output = {}
     for key in filters:
@@ -186,5 +146,5 @@ def optimize(data,niter,oname=None,first=True):
             sigma = sigmas[key]
         simage = (image[key]/sigma)[mask_r]
         m = linearmodelSB([p.value for p in pars],simage,sigma[mask_r],mask,models[key],xc,yc,noResid=True,OVRS=OVRS)
-        output[key] = m
-    return output,(logp,trace,result)
+        MLmodel[key] = m
+    return trace, MLmodel, MLmags

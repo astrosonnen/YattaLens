@@ -1,6 +1,6 @@
-from spasmoid.slsqp import fmin_slsqp
+from photofit.slsqp import fmin_slsqp
 #from scipy.optimize import fmin_slsqp
-from spasmoid import convolve
+from photofit import convolve
 import numpy
 import indexTricks as iT
 
@@ -54,6 +54,7 @@ def linearmodelSB(inpars,simage,sigma,mask,models,xc,yc,OVRS=1,csub=11,noResid=F
     op = (model/sigma).T
     fit,chi = numpy.linalg.lstsq(op,simage)[:2]
     fit = numpy.array(fit)
+    print fit
     if (fit<0).any():
         sol = fit
         sol[sol<0] = 1e-11

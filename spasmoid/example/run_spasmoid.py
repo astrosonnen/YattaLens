@@ -154,21 +154,16 @@ for band in filters:
 		    const[parname] = const_indices[par+str(j)]
 	    else:
 		linked_par = all_indices[allpars[par+str(j)]['link']]
-		print 'linked_par', linked_par, allpars[par+str(j)]['link'], all_indices[1]
 		if allpars[linked_par]['var'] == 1:
 		    var[parname] = var_indices[linked_par]
 		else:
 		    const[parname] = const_indices[linked_par]
-
-	print 'var:', var
-	print 'const:', const
 
 	model = models.Sersic('sersic_%s_%s'%(filters[i], j), var, const)
 	model.convolve = convolve.convolve(subimg,psf)[1]
 	data['MODELS'][band].append(model)
 
     i += 1
-
 
 if os.path.isfile(maskname):
     mask = pyfits.open(maskname)[0].data.copy()
@@ -183,6 +178,7 @@ data['MASK'] = mask.copy()
 data['PARAMS'] = mcmcpars
 data['COV'] = numpy.asarray(covs)
 data['OVRS'] = 1
+
 vals = modelSB.optimize(data,1000)#input_pars['Nsteps'])
 logp,trace,dets = vals[1]
 print logp[0],logp[-1]
@@ -190,7 +186,7 @@ print logp[0],logp[-1]
 
 output = []
 j=0
-for par in pars:
+for par in mcmcpars:
     val = trace[-1][j]
     j = j+1
     print par,val

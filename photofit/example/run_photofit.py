@@ -11,7 +11,7 @@ f = open(configfile, 'r')
 lines = f.readlines()
 f.close()
 
-input_pars = {'data_dir':'./', 'output_dir':'./', 'filter_names':None, 'zeropoints':None, 'filename':None, 'science_tag':'_sci.fits', 'sigma_tag':'_sig.fits', 'psf_tag':'_psf.fits', 'output_tag': '_resid.fits', 'Nsteps':10000, 'maskname':None}
+input_pars = {'data_dir':'./', 'output_dir':'./', 'filter_names':None, 'zeropoints':None, 'filename':None, 'science_tag':'_sci.fits', 'sigma_tag':'_sig.fits', 'psf_tag':'_psf.fits', 'output_tag': '_resid.fits', 'Nsteps':10000, 'maskname':None, 'fit_type':'MCMC'}
 
 allowed_models = ['Sersic']
 

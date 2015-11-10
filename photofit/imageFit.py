@@ -2,9 +2,12 @@ import numpy,time
 from photofit.modelSB import linearmodelSB
 from math import log10
 import pymc
+import indexTricks as iT
+from scipy.optimize import anneal
+import sys
 
-def do_mcmc(data,niter):
-    import indexTricks as iT
+
+def do_mcmc(data, niter):
 
     priors = data['PRIORS']
     models = data['MODELS']
@@ -17,11 +20,6 @@ def do_mcmc(data,niter):
     filters = [filt for filt in data['FILTERS']]
 
     sigmas = data['SIGMA']
-    if 'GAIN' in data.keys():
-        gain = data['GAIN']
-        doSigma = True
-    else:
-        doSigma = False
 
     if 'OVRS' in data.keys():
         OVRS = data['OVRS']
@@ -48,50 +46,19 @@ def do_mcmc(data,niter):
     imshape = MASK.shape
     yc,xc = iT.overSample(imshape,OVRS)
 
-    if doSigma==True:
-        nu = {}
-        eta = {}
-        background = {}
-        counts = {}
-        sigmask = {}
-        for key in filters:
-            nu[key] = pymc.Uniform('nu_%s'%key,-6,6,value=log10(gain[key]))
-            eta[key] = pymc.Uniform('eta_%s'%key,-4,5,value=1.)
-            background[key] = sigmas[key]
-            sigmask[key] = image[key]>1.5*sigmas[key]**0.5
-            counts[key] = image[key][sigmask[key]].copy()
-            pars.append(nu[key])
-            pars.append(eta[key])
-
-        def getSigma(n=nu,e=eta,b=background,c=counts,m=mask):
-            sigma = b.copy()
-            sigma[m] += ((10**n)*c)**e
-            return numpy.sqrt(sigma).ravel()
-
-        sigmas = []
-        for key in filters:
-            parents = {'n':nu[key],'e':eta[key],'b':background[key],
-                    'c':counts[key],'m':sigmask[key]}
-            sigmas.append(pymc.Deterministic(eval=getSigma,
-                        name='sigma_%s'%key,parents=parents,doc='',
-                        trace=False,verbose=False))
-    else:
-        for key in filters:
-            sigmas[key] = sigmas[key].ravel()
+    for key in filters:
+	sigmas[key] = sigmas[key].ravel()
 
     for key in filters:
         image[key] = image[key].ravel()
 
-    @pymc.deterministic()#(trace=False)
+    @pymc.deterministic(trace=False)
     def logpAndMags(p=pars):
         lp = 0.
         mags = []
         for key in filters:
             indx = key2index[key]
-            if doSigma==True:
-                sigma = sigmas[indx].value
-            else:
-                sigma = sigmas[key]
+            sigma = sigmas[key]
             simage = (image[key]/sigma)[mask_r]
             lp += linearmodelSB(p,simage,sigma[mask_r],mask,models[key],xc,yc,OVRS=OVRS)
             mags += [model.Mag(ZP[key]) for model in models[key]]
@@ -135,7 +102,6 @@ def do_mcmc(data,niter):
 
     MLmags = {}
     for key in model2index.keys():
-        #MLmags[key] = mags[:,model2index[key]].copy()
         trace[key] = M.trace('Mags')[:, model2index[key]].copy()
         MLmags[key] = M.trace('Mags')[ML, model2index[key]].copy()
 
@@ -150,3 +116,7 @@ def do_mcmc(data,niter):
         m = linearmodelSB([p.value for p in pars],simage,sigma[mask_r],mask,models[key],xc,yc,noResid=True,OVRS=OVRS)
         MLmodel[key] = m
     return trace, MLmodel, MLmags
+
+
+
+

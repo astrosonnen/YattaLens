@@ -24,7 +24,7 @@ def modelSB(inpars,image,sigma,mask,models,xc,yc,OVRS=1,csub=11,noResid=False):
     return logp
 
 
-def linearmodelSB(inpars,simage,sigma,mask,models,xc,yc,OVRS=1,csub=11,noResid=False,levMar=False):
+def linearmodelSB(inpars,simage,sigma,mask,models,xc,yc,OVRS=1,csub=11,noResid=False):
     def objf(x,lhs,rhs):
         return ((numpy.dot(lhs,x)-rhs)**2).sum()
     def objdf(x,lhs,rhs):
@@ -45,7 +45,7 @@ def linearmodelSB(inpars,simage,sigma,mask,models,xc,yc,OVRS=1,csub=11,noResid=F
             img = M.pixeval(xc,yc)
             if OVRS>1:
                 img = iT.resamp(img,OVRS,True)
-        if numpy.isnan(img).any() and noResid==False:
+        if numpy.isnan(img).any():
             return -1e300
         model[n] = img[mask].ravel()
         norm[n] = model[n].max()
@@ -54,7 +54,6 @@ def linearmodelSB(inpars,simage,sigma,mask,models,xc,yc,OVRS=1,csub=11,noResid=F
     op = (model/sigma).T
     fit,chi = numpy.linalg.lstsq(op,simage)[:2]
     fit = numpy.array(fit)
-    print fit
     if (fit<0).any():
         sol = fit
         sol[sol<0] = 1e-11
@@ -64,16 +63,9 @@ def linearmodelSB(inpars,simage,sigma,mask,models,xc,yc,OVRS=1,csub=11,noResid=F
         fit = numpy.asarray(fit)
         if (fit<1e-11).any():
             fit[fit<1e-11] = 1e-11
-	print 'newfit:',fit
 
     for i in range(nmod):
         models[i].amp = fit[i]/norm[i]
-
-    if levMar==True:
-        return (op*fit).sum(1)-simage
-        lhs =(op*fit)
-        print lhs.shape,simage.shape
-        return lhs-simage
 
     if noResid==True:
         output = []

@@ -1,15 +1,16 @@
 #
 data_dir: ./
 output_dir: ./
-filter_names: u, g, r, i, z
+filters: u, g, r, i, z
 zeropoints: 30., 30., 30., 30., 30.
 filename: SL2SJ021411-040502
 science_tag: _sci.fits
 sigma_tag: _rms.fits
 psf_tag: _psf.fits
 output_tag: _twosersic_resid.fits
-maskname:SL2SJ021411-040502_mask.fits
-Nsteps: 10000
+maskname: SL2SJ021411-040502_mask.fits
+fit_type: MCMC
+Nsteps: 100000
 # MODELS
 # Par_name initial_guess lower_bound upper_bound cov var(y/n) link(optional)
 
@@ -33,16 +34,16 @@ n 4. 1. 6. 0.1 1
 
 model_class: Sersic
 
-x_u 25. 23. 27. 0.1 1 1
-y_u 25. 23. 27. 0.1 1 2
-x_g 25. 23. 27. 0.1 1 3
-y_g 25. 23. 27. 0.1 1 4
-x_r 25. 23. 27. 0.1 1 5
-y_r 25. 23. 27. 0.1 1 6
-x_i 25. 23. 27. 0.1 1 7
-y_i 25. 23. 27. 0.1 1 8
-x_z 25. 23. 27. 0.1 1 9
-y_z 25. 23. 27. 0.1 1 10
+x_u 25. 23. 27. 0.1 1 1.x_u
+y_u 25. 23. 27. 0.1 1 1.y_u
+x_g 25. 23. 27. 0.1 1 1.x_g
+y_g 25. 23. 27. 0.1 1 1.y_g
+x_r 25. 23. 27. 0.1 1 1.x_r
+y_r 25. 23. 27. 0.1 1 1.y_r
+x_i 25. 23. 27. 0.1 1 1.x_i
+y_i 25. 23. 27. 0.1 1 1.y_i
+x_z 25. 23. 27. 0.1 1 1.x_z   
+y_z 25. 23. 27. 0.1 1 1.y_z
 q 0.8 0.2 1.0 0.01 1
 pa 0. -90. 180. 1. 1
 re 1. 1. 20. 0.1 1

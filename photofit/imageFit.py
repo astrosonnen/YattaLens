@@ -95,6 +95,8 @@ def do_mcmc(data,niter):
             simage = (image[key]/sigma)[mask_r]
             lp += linearmodelSB(p,simage,sigma[mask_r],mask,models[key],xc,yc,OVRS=OVRS)
             mags += [model.Mag(ZP[key]) for model in models[key]]
+	if lp != lp:
+	    lp = -1e300
         return lp,mags
 
 

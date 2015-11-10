@@ -59,11 +59,12 @@ def linearmodelSB(inpars,simage,sigma,mask,models,xc,yc,OVRS=1,csub=11,noResid=F
         sol = fit
         sol[sol<0] = 1e-11
         bounds = [(1e-11,1e11)]*nmod
-        result = fmin_slsqp(objf,sol,bounds=bounds,full_output=1,fprime=objdf,acc=1e-19,iter=2000,args=[op.copy(),simage.copy()],iprint=0)
+        result = fmin_slsqp(objf,sol,bounds=bounds,full_output=1,fprime=objdf,acc=1e-19,iter=2000,args=(op.copy(),simage.copy()),iprint=0)
         fit,chi = result[:2]
         fit = numpy.asarray(fit)
         if (fit<1e-11).any():
             fit[fit<1e-11] = 1e-11
+	print 'newfit:',fit
 
     for i in range(nmod):
         models[i].amp = fit[i]/norm[i]

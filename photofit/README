@@ -1,9 +1,5 @@
-Surface Photometry and Structural Modeling of Imaging Data (SPASMOID)
-
-Written by Matthew W. Auger
-Described in Bennert et al. 2011, ApJ, 726, 59
-
 Fits parametrized light profiles to multi-band data in a Bayesian framework.
+Forked from SPASMOID (Surface Photometry and Structural Modeling of Imaging Data), written by Matthew W. Auger and described in Bennert et al. 2011, ApJ, 726, 59.
 
 -----------------------------------------------------------------------------------
 
@@ -13,31 +9,85 @@ numpy, scipy, pyfits, pymc
 
 -----------------------------------------------------------------------------------
 
+Basic idea
+
+Fits combinations of Sersic profiles to photometry data in multiple bands simultaneously.
+Each component is described by a set of structural parameters (re, n, pa, q) as well as a centroid (x, y). The code allows for different values of the centroid in each band.
+The structural parameters instead apply to all bands, which implies that each Sersic component will have a well defined color (pre-psf). 
+In order to accurately fit galaxies with color gradients, multiple components are needed.
+
+Photofit can either do a maximum-likelihood fit or a full MCMC exploration of the posterior probability distribution of the model.
+
+-----------------------------------------------------------------------------------
+
+Usage
+
+Photofit runs with the following command
+
+> python run_photofit.py configfile
+
+where 'configfile' is a configuration file that contains all the information about the data and the model to be fitted.
+
+
+-----------------------------------------------------------------------------------
+
+The config file
+
+The config file has two parts: the first part (between the first lines starting with '#' and the line that says '# MODELS') contains information regarding the data, the second part descries the model.
+See examples 
+example/two_sersic_mcmc
+example/two_sersic_basinhop
+The first part of should be mostly self-explanatory.
+fit_type: can either be 'MCMC' or 'basinhop'
+'MCMC' runs an MCMC chain of length specified by the parameter Nsteps.
+'basinhop' does a maximum-likelihood search with the basinhopping method 
+(see scipy.optimize.basinhopping), doing Nsteps iterations (hops).
+
+#MODELS
+
+The user must define one or more components. 
+Each component must start with a 'model_class:' line (only allowed value is 'Sersic', for now).
+Following, the user must specify, for each parameter, its starting value, lower and upper bounds, a step size (ignored if not MCMC), and an integer indicating whether that parameter is to be kept fixed (0) or to be fitted (1).
+Optionally, the user can enter a sixth column indicating whether they want to link the parameter to a different parameter (a possible use is, when fitting two components, to impose that the components have the same centroid).
+
+
+-----------------------------------------------------------------------------------
+
 Quick start:
 
-Add the yattalens directory to your PYTHONPATH.
+Add the YattaLens directory to your PYTHONPATH.
 
-in the directory 
-example/
-running 'python fit_deV_profile.py'
-will fit a de Vaucouleurs profile to the light profile of a strong lens, as observed from CFHT.
+go to the directory example/
+example> python ../run_photofit.py two_sersic_basinhop
+will fit a double Sersic profile to the light profile of a strong lens, as observed from CFHT.
 
-Name of input files (science exposure, uncertainty, psf) are hard-written in the file fit_deV_profile.py
+The code will produce a .output file with the maximum-likelihood parameters values.
+It will also produce one .fits file for each band.
+These files have multiple extension: ext 0 is the data, ext 1 is the model, ext 2 is the residual, ext 3 is the residual normalized by the uncertainty, ext 4 is the mask.
 
-The code will look for a mask file (0s on pixels to be used in the fit, 1s on pixels to be excluded), but will proceed anyway if it can't find it.
+Running the other example,
+example> python ../run_photofit.py two_sersic_mcmc
+will instead run an MCMC chain.
+In addition to the files produced in the bainshopping case, it will save the chain
+into a .mcmc file.
+To actually read that chain, you need to open it within python.
+The following lines of code
 
-Initial guesses for the model parameters are input in the dictionary 'guess'.
-The units of centroids and effective radius are pixels.
+>>> import pickle
+>>> f = open('two_sersic_mcmc.mcmc', 'r')
+>>> chain = pickle.load(f)
+>>> f.close()
+>>> for par in chain:
+>>>	mean = chain['par'].mean()
+>>>	std = chain['par'].std()
+>>>	print par, mean, std
 
-The speed of the code is mostly set by the convolution. Increasing the size of the psf will slow down the code.
+will read the chain and print mean and standard deviation of the posterior sample for each parameter.
 
-The code will produce an output deVauc.txt file with the best fit values of the parameters.
-It will also produce a *resid.fits file for each band.
-These files have multiple extension: ext 0 is the residual, ext 1 is the residual normalized by the uncertainty, ext 2 is the model.
 
 -----------------------------------------------------------------------------------
 
 Known issues:
 
-- If the initial guess for the PA is off by a lot, spasmoid can get stuck at very round values for the axis ratio parameter 'q'.
+- If the initial guess for the PA is off by a lot, photofit can get stuck at very round values for the axis ratio parameter 'q'.
 

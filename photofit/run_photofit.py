@@ -1,14 +1,14 @@
-import numpy,time
-from photofit.modelSB import linearmodelSB
+import numpy as np,time
 from math import log10
 import pymc
 import indexTricks as iT
-from scipy.optimize import basinhopping as bh
 import sys
 import pyfits
-from photofit import models as photmodels, convolve
+from photofit import imageFit
+import pickle
 
-#configfile = sys.argv[1]
+configfile = sys.argv[1]
+
 
 def read_config(filename):
     f = open(filename, 'r')
@@ -36,7 +36,7 @@ def read_config(filename):
     for name in filternames:
         filtlist.append(name.lstrip())
     config['filters'] = filtlist
-    config['zeropoints'] = numpy.array(config['zeropoints'].split(','), dtype='float')
+    config['zeropoints'] = np.array(config['zeropoints'].split(','), dtype='float')
     config['Nsteps'] = int(config['Nsteps'])
     
     
@@ -73,191 +73,6 @@ def read_config(filename):
     return config
 
 
-def do_mcmc(config):
-
-    image = {}
-    sigmas = {}
-    models = {}
-    ZP = {}
-    pars = []
-    covs = []
-    filters = [filt for filt in config['filters']]
-
-    #defines model parameters
-    par2index = {}
-    ncomp = 0
-    npar = 0
-    for comp in config['components']:
-	ncomp += 1
-	for par in comp['pars']:
-	    parpar = comp['pars'][par]
-	    if parpar['link'] is None and parpar['var'] == 1:
-		pars.append(pymc.Uniform(par+str(ncomp), lower=parpar['low'], upper=parpar['up'], \
-		value=parpar['value']))
-		covs.append(parpar['cov'])
-		par2index[str(ncomp)+'.'+par] = npar
-		npar += 1
-
-    i = 0
-    for band in config['filters']:
-	ZP[band] = config['zeropoints'][i]
-	hdu = pyfits.open(config['filename']+'_%s'%band+config['science_tag'])[0]
-        img = hdu.data.copy()
-        subimg = img.copy()
-        image[band] = subimg
-        subsigma = pyfits.open(config['filename']+'_%s'%band+config['sigma_tag'])[0].data.copy()
-    
-        sigmas[band] = subsigma
-    
-        psf = pyfits.open(config['filename']+'_%s'%band+config['psf_tag'])[0].data.copy()
-        m = (psf[:2].mean()+psf[-2:].mean()+psf[:,:2].mean()+psf[:,-2:].mean())/4.
-        psf -= m
-        psf /= psf.sum()
-
-	"""
-	constructs a model for each band.
-	for each band, needs to know:
-	- How many components is the model made of, and of which kind
-	- What parameter corresponds to what
-	- What are the initial values of the model parameter, for each component
-	- For each model parameter, what is its initial value
-	- For each model parameter, whether it is variable or fixed
-	- If variable, whether it is linked to another parameter or not.
-	"""
-
-	parnames = ['x', 'y', 'pa', 'q', 're', 'n']
-	this_band_pars = ['x_'+band, 'y_'+band, 'pa', 'q', 're', 'n']
-
-	models[band] = []
-
-	ncomp = 0
-	for comp in config['components']:
-	    ncomp += 1
-	    var = {}
-	    const = {'amp':1.}
-	    npar = 0
-	    for par in this_band_pars:
-		if comp['pars'][par]['link'] is None:
-		    if comp['pars'][par]['var'] == 1:
-			var[parnames[npar]] = par2index[str(ncomp)+'.'+par]
-		    elif comp['pars'][par]['var'] == 0:
-			const[parnames[npar]] = comp['pars'][par]['value']
-		    else:
-			df
-		else:
-		    link = comp['pars'][par]['link'].split('.')
-		    lcomp = int(link[0])
-		    lpar = link[1]
-		    linkedpar = config['components'][lcomp-1]['pars'][lpar]
-		    if linkedpar['var'] == 1:
-			var[parnames[npar]] = par2index[comp['pars'][par]['link']]
-		    elif linkedpar['var'] == 0:
-			const[parnames[npar]] = linkedpar['value']
-		npar += 1
-
-	    model = photmodels.Sersic('Sersic_%s_%s'%(band, ncomp), var, const)
-	    model.convolve = convolve.convolve(subimg, psf)[1]
-	    models[band].append(model)
-
-	i += 1
-
-    if config['maskname'] is not None:
-	MASK = pyfits.open(config['maskname'])[0].data.copy()
-    else:
-	MASK = 0.*subimg
-
-    mask = MASK==0
-    mask_r = mask.ravel()
-
-    key2index = {}
-    i = 0
-    for key in filters:
-        key2index[key] = i
-        i += 1
-
-    model2index = {}
-    i = 0
-    for key in filters:
-        for model in models[key]:
-            model2index[model.name] = i
-            i += 1
-
-    imshape = MASK.shape
-    OVRS = 1
-    yc,xc = iT.overSample(imshape,OVRS)
-
-    for key in filters:
-	sigmas[key] = sigmas[key].ravel()
-
-    for key in filters:
-        image[key] = image[key].ravel()
-
-    @pymc.deterministic(trace=False)
-    def logpAndMags(p=pars):
-        lp = 0.
-        mags = []
-        for key in filters:
-            indx = key2index[key]
-            sigma = sigmas[key]
-            simage = (image[key]/sigma)[mask_r]
-            lp += linearmodelSB(p,simage,sigma[mask_r],mask,models[key],xc,yc,OVRS=OVRS)
-            mags += [model.Mag(ZP[key]) for model in models[key]]
-	if lp != lp:
-	    lp = -1e300
-        return lp,mags
-
-
-    @pymc.deterministic
-    def lp(lpAM=logpAndMags):
-        return lpAM[0]
-    
-    @pymc.deterministic(name='Mags')
-    def Mags(lpAM=logpAndMags):
-        return lpAM[1]
-
-    @pymc.stochastic(observed=True, name='logp')
-    def logpCost(value=0., p=pars):
-        return lp
-
-    print "Sampling",config['Nsteps']
-
-    M = pymc.MCMC(pars+[lp, logpAndMags, Mags])
-    M.use_step_method(pymc.AdaptiveMetropolis, pars, cov=numpy.diag(covs))
-    M.sample(config['Nsteps'], config['Nsteps']/10)
-
-    trace = {}
-    for par in pars:
-        trace[str(par)] = M.trace(par)[:]
-    trace['logp'] = M.trace('lp')[:]
-
-    ML = trace['logp'].argmax()
-
-    MLmodel = {}
-    for par in pars:
-        MLmodel[str(par)] = trace[str(par)][ML]
-
-    MLmags = {}
-    for key in model2index.keys():
-        trace[key] = M.trace('Mags')[:, model2index[key]].copy()
-        MLmags[key] = M.trace('Mags')[ML, model2index[key]].copy()
-
-    output = {}
-    for key in filters:
-        indx = key2index[key]
-        sigma = sigmas[key]
-        simage = (image[key]/sigma)[mask_r]
-        m = linearmodelSB([p.value for p in pars],simage,sigma[mask_r],mask,models[key],xc,yc,noResid=True,OVRS=OVRS)
-        MLmodel[key] = m
-
-    output['models'] = models
-    output['trace'] = trace
-    output['MLmodel'] = MLmodel
-    output['MLmags'] = MLmags
-    output['config'] = config
-
-    return output
-
-
 def make_output_files(results):
     
     strpars = ['re', 'n', 'pa', 'q']
@@ -280,46 +95,34 @@ def make_output_files(results):
 	    val = results['MLmags'][magname]
 	    outlines.append(band+' %5.3f\n'%val)
     
-   
-    """
-    strpars = ['re', 'n', 'pa', 'q']
-    outlines = []
-    outlines.append('#par mean std\n')
-    ncomp = 0
-    for comp in results['config']['components']:
-	ncomp += 1
-	outlines.append('#%s\n'%(comp['class']+'_%d'%ncomp))
-	for par in strpars:
-	    if comp['pars'][par]['var'] == 1:
-		parname = par+str(ncomp)
-		val = results['trace'][parname].mean()
-		err = results['trace'][parname].std()
-		outlines.append(parname+' %5.3f %5.3f\n'%(val, err))
-	for band in results['config']['filters']:
-	    for par in ['x', 'y']:
-		if comp['pars'][par+'_'+band]['var'] == 1 and comp['pars'][par+'_'+band]['link'] is None:
-		    parname = par+'_%s%d'%(band, ncomp)
-		    val = results['trace'][parname].mean()
-		    err = results['trace'][parname].std()
-		    outlines.append(parname+' %5.3f %5.3f\n'%(val, err))
-	for band in results['config']['filters']:
-	    magname = comp['class']+'_%s_%d'%(band, ncomp)
-	    val = results['trace'][magname].mean()
-	    err = results['trace'][magname].std()
-	    outlines.append(magname+' %5.3f %5.3f\n'%(val, err))
-    """
-    
     f = open(results['config']['output_dir']+results['config']['config_file']+'.output','w')
     f.writelines(outlines)
     f.close()
     
+    for band in results['config']['filters']:
+	ms = []
+	for comp in results['MLmodel'][band]:
+	    ms.append(comp)
+	m = np.array(ms).sum(0)
+	i = results['IMG'][band].reshape(m.shape)
+	s = results['SIGMA'][band].reshape(m.shape)
 
-#config = read_config(configfile)
+	hdu = pyfits.PrimaryHDU(i)
+	mod = pyfits.ImageHDU(m)
+	res = pyfits.ImageHDU(i-m)
+	nres = pyfits.ImageHDU((i-m)/s)
+	mask = pyfits.ImageHDU(results['MASK'])
+	hdulist = pyfits.HDUList([hdu, mod, res, nres, mask])
+	hdulist.writeto(results['config']['filename']+'_'+band+'_'+results['config']['config_file']+'.fits', clobber=True)
 
-#if config['fit_type'] == 'MCMC':
-#    results = do_mcmc(config)
-#elif config['fit_type'] == 'siman':
-#    results = do_siman(config)
+    if results['config']['fit_type'] == 'MCMC':
+	f = open(results['config']['output_dir']+results['config']['config_file']+'.mcmc','w')
+	pickle.dump(results['trace'], f)
+	f.close()
 
+
+config = read_config(configfile)
+results = imageFit.do_fit(config)
+make_output_files(results)
 
 

@@ -155,7 +155,7 @@ def do_mcmc(config):
 			const[parnames[npar]] = linkedpar['value']
 		npar += 1
 
-	    model = photmodels.Sersic('sersic_%s_%s'%(band, ncomp), var, const)
+	    model = photmodels.Sersic('Sersic_%s_%s'%(band, ncomp), var, const)
 	    model.convolve = convolve.convolve(subimg, psf)[1]
 	    models[band].append(model)
 
@@ -253,41 +253,67 @@ def do_mcmc(config):
     output['trace'] = trace
     output['MLmodel'] = MLmodel
     output['MLmags'] = MLmags
+    output['config'] = config
 
     return output
 
 
-def make_output_files(config, output):
+def make_output_files(results):
     
+    strpars = ['re', 'n', 'pa', 'q']
     outlines = []
     outlines.append('#par mean std\n')
     ncomp = 0
-    for comp in config['components']:
+    for comp in results['config']['components']:
 	ncomp += 1
-	lines = []
-	pars = []
-	for par in comp['pars']:
-	    if comp['pars'][par]['var'] == 1 and comp['pars'][par]['link'] is None:
+	outlines.append('#%s\n'%(comp['class']+'_%d'%ncomp))
+	strdone = False
+	for band in results['config']['filters']:
+	    if not strdone:
+		for par in strpars:
+		    outlines.append('%s %5.3f\n'%(par, results['models'][band][ncomp-1].values[par]))
+		strdone = True
+	    for par in ['x', 'y']:
+		outlines.append('%s_%s %5.3f\n'%(par, band, results['models'][band][ncomp-1].values[par]))
+	for band in results['config']['filters']:
+	    magname = comp['class']+'_%s_%d'%(band, ncomp)
+	    val = results['MLmags'][magname]
+	    outlines.append(band+' %5.3f\n'%val)
+    
+   
+    """
+    strpars = ['re', 'n', 'pa', 'q']
+    outlines = []
+    outlines.append('#par mean std\n')
+    ncomp = 0
+    for comp in results['config']['components']:
+	ncomp += 1
+	outlines.append('#%s\n'%(comp['class']+'_%d'%ncomp))
+	for par in strpars:
+	    if comp['pars'][par]['var'] == 1:
 		parname = par+str(ncomp)
-		val = output['trace'][parname].mean()
-		err = output['trace'][parname].std()
-		lines.append(par+' %5.3f %5.3f\n'%(val, err))
-
-	zipped = zip(pars, lines)
-	zipped.sort()
-	spars, slines = zip(*zipped)
-	outlines += slines
-
-    f = open(config['output_dir']+config['config_file']+'.output','w')
+		val = results['trace'][parname].mean()
+		err = results['trace'][parname].std()
+		outlines.append(parname+' %5.3f %5.3f\n'%(val, err))
+	for band in results['config']['filters']:
+	    for par in ['x', 'y']:
+		if comp['pars'][par+'_'+band]['var'] == 1 and comp['pars'][par+'_'+band]['link'] is None:
+		    parname = par+'_%s%d'%(band, ncomp)
+		    val = results['trace'][parname].mean()
+		    err = results['trace'][parname].std()
+		    outlines.append(parname+' %5.3f %5.3f\n'%(val, err))
+	for band in results['config']['filters']:
+	    magname = comp['class']+'_%s_%d'%(band, ncomp)
+	    val = results['trace'][magname].mean()
+	    err = results['trace'][magname].std()
+	    outlines.append(magname+' %5.3f %5.3f\n'%(val, err))
+    """
+    
+    f = open(results['config']['output_dir']+results['config']['config_file']+'.output','w')
     f.writelines(outlines)
     f.close()
     
 
-    for par in output['trace']:
-	val = output['trace'][par].mean()
-	err = output['trace'][par].std()
-
-    
 #config = read_config(configfile)
 
 #if config['fit_type'] == 'MCMC':

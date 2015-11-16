@@ -158,7 +158,7 @@ def do_fit(config):
     
         M = pymc.MCMC(pars+[lp, logpAndMags, Mags])
         M.use_step_method(pymc.AdaptiveMetropolis, pars, cov=np.diag(covs))
-	if config['burnin'] = None:
+	if config['burnin'] == None:
 	    burnin = config['Nsteps']/10
 	else:
 	    burnin = config['burnin']
@@ -175,6 +175,7 @@ def do_fit(config):
         MLmodel = {}
         for par in pars:
             MLmodel[str(par)] = trace[str(par)][ML]
+	MLmodel['logp'] = trace['logp'][ML]
     
         MLmags = {}
         for key in model2index.keys():
@@ -203,7 +204,7 @@ def do_fit(config):
     elif config['fit_type'] == 'basinhop':
 
 	bounds = [(low, high) for low, high in zip(lower, upper)]
-	minimizer_kwargs = dict(method="L-BFGS-B", bounds=bounds, tol=1.)
+	minimizer_kwargs = dict(method="L-BFGS-B", bounds=bounds, tol=float(config['logptol']))
 
         def nlogp(p):
             lp = 0.
@@ -223,6 +224,7 @@ def do_fit(config):
 	MLmodel = {}
 	for i in range(0, len(MLpars)):
 	    MLmodel[index2par[i]] = MLpars[i]
+	MLmodel['logp'] = -nlogp(MLpars)
 
 	MLmags = {}
 

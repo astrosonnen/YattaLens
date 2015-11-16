@@ -15,7 +15,7 @@ def read_config(filename):
     lines = f.readlines()
     f.close()
     
-    config = {'data_dir':'./', 'output_dir':'./', 'filters':None, 'zeropoints':None, 'filename':None, 'science_tag':'_sci.fits', 'sigma_tag':'_sig.fits', 'psf_tag':'_psf.fits', 'output_tag': '_resid.fits', 'Nsteps':10000, 'maskname':None, 'fit_type':'MCMC', 'components':None, 'config_file':filename}
+    config = {'data_dir':'./', 'output_dir':'./', 'filters':None, 'zeropoints':None, 'filename':None, 'science_tag':'_sci.fits', 'sigma_tag':'_sig.fits', 'psf_tag':'_psf.fits', 'output_tag': '_resid.fits', 'Nsteps':10000, 'logptol':1., 'burnin':None, 'maskname':None, 'fit_type':'MCMC', 'components':None, 'config_file':filename}
     
     allowed_models = ['Sersic']
     
@@ -94,6 +94,7 @@ def make_output_files(results):
 	    magname = comp['class']+'_%s_%d'%(band, ncomp)
 	    val = results['MLmags'][magname]
 	    outlines.append(band+' %5.3f\n'%val)
+    outlines.append('logp %5.3f\n'%results['MLmodel']['logp'])
     
     f = open(results['config']['output_dir']+results['config']['config_file']+'.output','w')
     f.writelines(outlines)

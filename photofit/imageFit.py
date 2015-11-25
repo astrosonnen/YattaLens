@@ -201,6 +201,69 @@ def do_fit(config):
     
         return output
 
+    elif config['fit_type'] == 'fmin_powell':
+
+        @pymc.deterministic(trace=False)
+        def logpAndMags(p=pars):
+            lp = 0.
+            mags = []
+            for key in filters:
+                indx = key2index[key]
+                sigma = sigmas[key]
+                simage = (image[key]/sigma)[mask_r]
+                lp += linearmodelSB(p,simage,sigma[mask_r],mask,models[key],xc,yc,OVRS=OVRS)
+                mags += [model.Mag(ZP[key]) for model in models[key]]
+	    if lp != lp:
+    	        lp = -1e300
+            return lp,mags
+    
+    
+        @pymc.deterministic
+        def lp(lpAM=logpAndMags):
+            return lpAM[0]
+        
+        @pymc.deterministic(name='Mags')
+        def Mags(lpAM=logpAndMags):
+            return lpAM[1]
+    
+        @pymc.stochastic(observed=True, name='logp')
+        def logpCost(value=0., p=pars):
+            return lp
+ 
+	model = pymc.Model(pars+[logpCost])
+	mmap = pymc.MAP(model)
+	mmap.fit(method='fmin_powell', iterlim=config['Nsteps'], tol=float(config['logptol']))
+	mmap.revert_to_max()
+
+        output = {}
+
+	MLmodel = {}
+	MLmags = {}
+
+        for key in filters:
+            indx = key2index[key]
+            sigma = sigmas[key]
+            simage = (image[key]/sigma)[mask_r]
+            m = linearmodelSB([p.value for p in pars],simage,sigma[mask_r],mask,models[key],xc,yc,noResid=True,OVRS=OVRS)
+            MLmodel[key] = m
+	    for i in range(0, len(models[key])):
+		MLmags[models[key][i].name] = models[key][i].Mag(ZP[key])
+ 
+	for variable in mmap.variables:
+	    if str(variable) == 'logp':
+		MLmodel['logp'] = variable.value
+
+        output['IMG'] = image
+        output['SIGMA'] = sigmas
+        output['MASK'] = MASK
+        output['models'] = models
+        output['MLmodel'] = MLmodel
+        output['config'] = config
+	output['MLmags'] = MLmags
+
+	return output
+	
+
     elif config['fit_type'] == 'basinhop':
 
 	bounds = [(low, high) for low, high in zip(lower, upper)]

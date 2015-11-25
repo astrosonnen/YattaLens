@@ -10,7 +10,7 @@ psf_tag: _psf.fits
 output_tag: _twosersic_resid.fits
 maskname: SL2SJ021411-040502_mask.fits
 fit_type: fmin_powell
-Nsteps: 1000
+Nsteps: 100000
 logptol: 1
 # MODELS
 # Par_name initial_guess lower_bound upper_bound cov var(y/n) link(optional)

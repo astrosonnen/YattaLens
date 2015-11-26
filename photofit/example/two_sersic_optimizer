@@ -7,8 +7,9 @@ filename: SL2SJ021411-040502
 science_tag: _sci.fits
 sigma_tag: _rms.fits
 psf_tag: _psf.fits
+output_tag: _twosersic_resid.fits
 maskname: SL2SJ021411-040502_mask.fits
-fit_type: MCMC
+fit_type: AMAOpt
 Nsteps: 1000
 # MODELS
 # Par_name initial_guess lower_bound upper_bound cov var(y/n) link(optional)

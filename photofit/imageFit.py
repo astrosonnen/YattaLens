@@ -202,26 +202,118 @@ def do_fit(config):
         return output
 
 
+    if config['fit_type'] == 'AMAOpt':
 
-    elif config['fit_type'] == 'basinhop':
-
-	bounds = [(low, high) for low, high in zip(lower, upper)]
-	minimizer_kwargs = dict(method="L-BFGS-B", bounds=bounds, tol=float(config['logptol']))
-
-        def nlogp(p):
+        @pymc.deterministic(trace=False)
+        def logpAndMags(p=pars):
             lp = 0.
+            mags = []
             for key in filters:
                 indx = key2index[key]
                 sigma = sigmas[key]
                 simage = (image[key]/sigma)[mask_r]
                 lp += linearmodelSB(p,simage,sigma[mask_r],mask,models[key],xc,yc,OVRS=OVRS)
+                mags += [model.Mag(ZP[key]) for model in models[key]]
+	    if lp != lp:
+    	        lp = -1e300
+            return lp,mags
+    
+    
+        @pymc.deterministic
+        def lp(lpAM=logpAndMags):
+            return lpAM[0]
+        
+        @pymc.deterministic(name='Mags')
+        def Mags(lpAM=logpAndMags):
+            return lpAM[1]
+    
+        @pymc.observed
+        def logpCost(value=0., logP=lp):
+            return logP
+
+	costs = [logpCost]
+
+        from SampleOpt import AMAOpt as Opt,levMar as levMar
+   
+	niter = config['Nsteps']
+        O = Opt(pars,costs,[lp,Mags],cov=covs)
+        O.set_minprop(len(pars)*2)
+        O.sample(niter/10)
+        logp,trace,result = O.result()
+
+        O = Opt(pars,costs,[lp,Mags],cov=covs)
+        O.set_minprop(len(pars)*2)
+        O.cov = O.cov/4.
+        O.sample(niter/4)
+        logp,trace,result = O.result()
+ 
+        O = Opt(pars,costs,[lp,Mags],cov=covs)
+        O.set_minprop(len(pars)*2)
+        O.cov = O.cov/10.
+        O.sample(niter/4)
+        logp,trace,result = O.result()
+    
+        O = Opt(pars,costs,[lp,Mags],cov=covs)
+        O.set_minprop(len(pars)*2)
+        O.cov = O.cov/10.
+        O.sample(niter)
+        logp,trace,result = O.result()
+        mags = np.array(result['Mags'])
+
+	MLmags = {}
+    
+        for key in model2index.keys():
+            MLmags[key] = mags[:,model2index[key]].copy()[-1]
+
+        MLmodel = {}
+    
+        for key in filters:
+            indx = key2index[key]
+            sigma = sigmas[key]
+            simage = (image[key]/sigma)[mask_r]
+            m = linearmodelSB([p.value for p in pars],simage,sigma[mask_r],mask,models[key],xc,yc,noResid=True,OVRS=OVRS)
+            MLmodel[key] = m
+	MLmodel['logp'] = logp[-1]
+   
+	output  = {}
+
+        output['IMG'] = image
+        output['SIGMA'] = sigmas
+        output['MASK'] = MASK
+        output['models'] = models
+        output['MLmodel'] = MLmodel
+        output['MLmags'] = MLmags
+        output['config'] = config
+    
+        return output
+
+
+    elif config['fit_type'] == 'basinhop':
+
+	bounds = [(low, high) for low, high in zip(lower, upper)]
+	barr = np.array(bounds)
+	scale_free_bounds = 0.*barr
+	scale_free_bounds[:,1] = 1.
+
+	scale_free_guess = (guess - barr[:,0])/(barr[:,1] - barr[:,0])
+
+	minimizer_kwargs = dict(method="L-BFGS-B", bounds=scale_free_bounds, tol=float(config['logptol']))
+
+        def nlogp(scaledp):
+            lp = 0.
+            for key in filters:
+                indx = key2index[key]
+                sigma = sigmas[key]
+                simage = (image[key]/sigma)[mask_r]
+		p = scaledp*(barr[:,1] - barr[:,0]) + barr[:,0]
+                lp += linearmodelSB(p,simage,sigma[mask_r],mask,models[key],xc,yc,OVRS=OVRS)
 	    if lp != lp:
 		lp = -1e300
             return -lp
  
-	res = basinhopping(nlogp, guess, niter=config['Nsteps'], minimizer_kwargs=minimizer_kwargs)
+	res = basinhopping(nlogp, scale_free_guess, stepsize=0.01, niter=config['Nsteps'], minimizer_kwargs=minimizer_kwargs)
 
-	MLpars = res.x
+	MLpars = res.x*(barr[:,1] - barr[:,0]) + barr[:,0]
 
 	MLmodel = {}
 	for i in range(0, len(MLpars)):

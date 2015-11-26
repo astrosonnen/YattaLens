@@ -121,9 +121,6 @@ def make_output_files(results):
 	pickle.dump(results['trace'], f)
 	f.close()
 
-
 config = read_config(configfile)
 results = imageFit.do_fit(config)
 make_output_files(results)
-
-

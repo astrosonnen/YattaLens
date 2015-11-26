@@ -42,6 +42,7 @@ fit_type: can either be 'MCMC' or 'basinhop'
 'MCMC' runs an MCMC chain of length specified by the parameter Nsteps.
 'basinhop' does a maximum-likelihood search with the basinhopping method 
 (see scipy.optimize.basinhopping), doing Nsteps iterations (hops).
+MCMC seems to perform better.
 
 #MODELS
 
@@ -88,6 +89,4 @@ will read the chain and print mean and standard deviation of the posterior sampl
 -----------------------------------------------------------------------------------
 
 Known issues:
-
-- If the initial guess for the PA is off by a lot, photofit can get stuck at very round values for the axis ratio parameter 'q'.
 

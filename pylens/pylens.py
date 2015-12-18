@@ -177,18 +177,33 @@ def getModel(lens, source, spars, image, sigma, mask, X, Y, zp=30., lenslight=No
     simage = ((image/sigma).ravel())[mask.ravel()]
 
     xl, yl = getDeflections([lens], [X, Y])
-    img = source.pixeval(xl, yl)
-    img = convolve.convolve(img, source.convolve, False)[0]
+    simg = source.pixeval(xl, yl)
+    simg = convolve.convolve(simg, source.convolve, False)[0]
 
-    if np.isnan(img).any():
-        return 0.*image
+    if np.isnan(simg).any():
+        rimg = 0.*image
+        rimg[simg!=simg] = 1.
+        return 0., 0., rimg
 
-    model = np.zeros((1, mask.sum()))
-    norm = np.zeros(1)
+    nmod = 1
+    if lenslight is not None:
+        nmod = 2
 
-    model[0] = img[mask].ravel()
+    model = np.zeros((nmod, mask.sum()))
+    norm = np.zeros(nmod)
+
+    model[0] = simg[mask].ravel()
     norm[0] = model[0].max()
     model[0] /= norm[0]
+
+    if lenslight is not None:
+        lenslight.setPars(spars)
+        limg = lenslight.pixeval(X, Y)
+        limg = convolve.convolve(limg, lenslight.convolve, False)[0]
+
+        model[1] = limg[mask].ravel()
+        norm[1] = model[1].max()
+        model[1] /= norm[1]
 
     op = (model/sigma.ravel()[mask.ravel()]).T
 
@@ -211,7 +226,10 @@ def getModel(lens, source, spars, image, sigma, mask, X, Y, zp=30., lenslight=No
     if returnImg:
         scaledimg = source.pixeval(xl, yl)
         scaledimg = convolve.convolve(scaledimg, source.convolve, False)[0]
-
+        if lenslight is not None:
+            lsimg = lenslight.pixeval(X, Y)
+            lsimg = convolve.convolve(lsimg, lenslight.convolve, False)[0]
+            scaledimg += lsimg
 
         return logp, mag, scaledimg
 

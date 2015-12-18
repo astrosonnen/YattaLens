@@ -133,11 +133,6 @@ def wrapper(sys_para, instr_para, ep, psf_name, Nsample, Ncov, burnin, flag):
 #        lenses = [lens,shear]
         lenses = [lens]
 
-        # The AGN       -       NOTE: the input model "psf" should not be FFT'd !!!
-        agn1 = SBModels.PointSource('agn1',psf,{'x':AX1,'y':AY1})
-        agn2 = SBModels.PointSource('agn2',psf,{'x':AX2,'y':AY2})
-        agn3 = SBModels.PointSource('agn3',psf,{'x':AX3,'y':AY3})
-        agn4 = SBModels.PointSource('agn4',psf,{'x':AX4,'y':AY4})
         # Create a list for the parameters, and define starting proposal steps for the optimization
         pars = [GX,GY,GR,GQ,GP,GN]
         cov = [0.05,0.05,0.1,0.01,3.,0.1]
@@ -147,8 +142,6 @@ def wrapper(sys_para, instr_para, ep, psf_name, Nsample, Ncov, burnin, flag):
 #        cov = cov+[0.01,0.01,0.05,0.01,3.,0.01,0.005,3.]
         pars = pars+[LX,LY,LB,LQ,LP,LE]
         cov = cov+[0.01,0.01,0.05,0.01,3.,0.01]
-        pars = pars+[AX1,AY1,AX2,AY2,AX3,AY3,AX4,AY4]
-        cov = cov+[0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01]
 
         # Finally define the optimization function; this evaluates the model and the
         #   current parameter values and returns the residual

@@ -1,4 +1,4 @@
-from ndinterp import ndInterp
+#from ndinterp import ndInterp
 from math import pi
 
 class MassProfile:

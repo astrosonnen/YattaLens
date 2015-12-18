@@ -1,3 +1,7 @@
+import numpy as np
+from scipy.optimize import fmin_slsqp
+from photofit import convolve
+
 class LensModel:
     """
     IN PROGRESS
@@ -158,3 +162,60 @@ def multiplePlanes(scales,massmodels,points):
         y0 = y-(ay[:,:,:p+1]*scales[:p+1,p]).sum(2)
         out.append([x0,y0])
     return out
+
+
+def objf(x, lhs, rhs):
+    return ((np.dot(lhs, x) - rhs)**3).sum()
+def objdf(x, lhs, rhs):
+    return np.dot(lhs.T, np.dot(lhs, x) - rhs)
+
+def getModel(lens, source, spars, image, sigma, mask, X, Y, zp=30., lenslight=None, returnImg=False):
+
+    source.setPars(spars)
+    lens.setPars()
+
+    simage = ((image/sigma).ravel())[mask.ravel()]
+
+    xl, yl = getDeflections([lens], [X, Y])
+    img = source.pixeval(xl, yl)
+    img = convolve.convolve(img, source.convolve, False)[0]
+
+    if np.isnan(img).any():
+        return 0.*image
+
+    model = np.zeros((1, mask.sum()))
+    norm = np.zeros(1)
+
+    model[0] = img[mask].ravel()
+    norm[0] = model[0].max()
+    model[0] /= norm[0]
+
+    op = (model/sigma.ravel()[mask.ravel()]).T
+
+    fit, chi = np.linalg.lstsq(op, simage)[:2]
+    if (fit<0).any():
+        sol = fit
+        sol[sol<0] = 1e-11
+        bounds = [(1e-11,1e11)]
+        result = fmin_slsqp(objf, sol, bounds=bounds, full_output=1, fprime=objdf, acc=1e-19, iter=2000, args=(op.copy(), simage.copy()), iprint=0)
+        fit, chi = result[:2]
+        fit = np.asarray(fit)
+        if (fit<1e-11).any():
+            fit[fit<1e-11] = 1e-11
+
+    logp = -0.5*chi - np.log(sigma.ravel()[mask.ravel()]).sum()
+
+    source.amp = fit[0]/norm[0]
+    mag = source.Mag(zp)
+
+    if returnImg:
+        scaledimg = source.pixeval(xl, yl)
+        scaledimg = convolve.convolve(scaledimg, source.convolve, False)[0]
+
+
+        return logp, mag, scaledimg
+
+    else:
+        return logp, mag
+
+

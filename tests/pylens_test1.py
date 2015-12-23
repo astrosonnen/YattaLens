@@ -6,7 +6,7 @@ from photofit.SampleOpt import AMAOpt, Sampler
 from pylens import pylens, MassModels
 from scipy.optimize import fmin_slsqp
 import pylab
-from plotters import cornerplot
+#from plotters import cornerplot
 
 
 lensname = 'SL2SJ021411-040502'
@@ -16,8 +16,8 @@ bands = ['i', 'g']
 
 zps = {'i': 30., 'g': 30.}
 
-Nsamp = 110000
-burnin = 10000
+Nsamp = 3000
+burnin = 0
 
 sigmas = {}
 images = {}
@@ -31,12 +31,12 @@ for band in bands:
 
 #lens parameters
 x0 = 19.907
-y0 = 18.750
+y0 = 20.
 #x = pymc.Normal('x', mu=x0, tau=1./0.1**2, value=x0)
 #y = pymc.Normal('y', mu=y0, tau=1./0.1**2, value=y0)
 x = pymc.Uniform('x', lower=18., upper=22., value=x0)
-y = pymc.Uniform('x', lower=18., upper=22., value=y0)
-rein = pymc.Uniform('rein', lower=0., upper=20., value=4.)
+y = pymc.Uniform('y', lower=18., upper=22., value=y0)
+rein = pymc.Uniform('rein', lower=0., upper=20., value=8.)
 pa = pymc.Uniform('pa', lower=-90., upper=180., value=0.)
 q = pymc.Uniform('q', lower=0.3, upper=1., value=0.8)
 
@@ -48,7 +48,7 @@ qs = pymc.Uniform('qs', lower=0.3, upper=1., value=0.8)
 
 #source parameters
 sx = pymc.Uniform('sx', lower=15., upper=25., value=23.)
-sy = pymc.Uniform('sy', lower=15., upper=25., value=20.)
+sy = pymc.Uniform('sy', lower=15., upper=25., value=19.)
 sp = pymc.Uniform('sp', lower=-90., upper=180., value=0.)
 sq = pymc.Uniform('sq', lower=0.3, upper=1., value=0.8)
 sr = pymc.Uniform('sr', lower=1., upper=20., value=5.)
@@ -99,7 +99,7 @@ for band in bands:
 
     mask = np.zeros(images[band].shape) == 0
 
-    logp, mag, modelimg = pylens.getModel(lens, source, guess, images[band], sigmas[band], mask, X, Y, zp=zps[band], lenslight=light, returnImg=True)
+    logp, mags, modelimg = pylens.getModel(lens, source, guess, images[band], sigmas[band], mask, X, Y, zp=zps[band], lenslight=light, returnImg=True)
 
     cmap = 'binary'
     pylab.subplot(1, 2, 1)
@@ -110,19 +110,22 @@ for band in bands:
 
     pylab.show()
 
+df
 lenses = [lens]
 
 
-
-
-simage = (image_r/sigma_r)[mask_r]
-
 @pymc.deterministic(trace=False)
 def logpAndMags(p=pars):
-    logp, mags = pylens.getModel(lens, source, p, image, sigma, mask, X, Y, zp=zp)
-    if logp != logp:
-        logp = -1e300
-    return logp, mags
+    sumlogp = 0.
+    magslist = []
+    for band in bands:
+        logp, mags = pylens.getModel(lens, sources[band], p, images[band], sigmas[band], mask, X, Y, zp=zps[band], lenslight=lights[band])
+        if logp != logp:
+            return -1e300, []
+        sumlogp += logp
+        magslist.append(mags)
+
+    return sumlogp, magslist
 
 @pymc.deterministic
 def lp(lpAM=logpAndMags):
@@ -134,9 +137,8 @@ def Mags(lpAM=logpAndMags):
 
 @pymc.stochastic(observed=True, name='logp')
 def logpCost(value=0., p=pars):
-    #if lp != lp:
-    #    return -1300
-    #else:
+    if lp != lp:
+        return -1e300
     return lp
 
 print "Sampling"
@@ -153,8 +155,8 @@ for par in pars:
 
 trace['logp'] = M.trace('lp')[:]
 
-cornerplot(cp, color='r')
-pylab.show()
+#cornerplot(cp, color='r')
+#pylab.show()
 
 
 ML = trace['logp'].argmax()
@@ -164,15 +166,16 @@ for par in pars:
     print str(par), mlval
     mlpars.append(mlval)
 
-logp, mag, mimage = pylens.getModel(lens, source, mlpars, image, sigma, mask, X, Y, returnImg=True)
+for band in bands:
+    logp, mags, mimage = pylens.getModel(lens, sources[band], mlpars, images[band], sigmas[band], mask, X, Y, lenslight=lights[band], returnImg=True)
 
-pylab.subplot(1, 2, 1)
-pylab.imshow(image)
+    pylab.subplot(1, 2, 1)
+    pylab.imshow(images[band])
 
-pylab.subplot(1, 2, 2)
-pylab.imshow(mimage)
+    pylab.subplot(1, 2, 2)
+    pylab.imshow(mimage)
 
-pylab.show()
+    pylab.show()
 
 
 

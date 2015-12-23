@@ -212,6 +212,8 @@ def getModel(lens, source, spars, image, sigma, mask, X, Y, zp=30., lenslight=No
         sol = fit
         sol[sol<0] = 1e-11
         bounds = [(1e-11,1e11)]
+        if lenslight is not None:
+            bounds.append((1e-11, 1e11))
         result = fmin_slsqp(objf, sol, bounds=bounds, full_output=1, fprime=objdf, acc=1e-19, iter=2000, args=(op.copy(), simage.copy()), iprint=0)
         fit, chi = result[:2]
         fit = np.asarray(fit)
@@ -223,6 +225,12 @@ def getModel(lens, source, spars, image, sigma, mask, X, Y, zp=30., lenslight=No
     source.amp = fit[0]/norm[0]
     mag = source.Mag(zp)
 
+    if lenslight is not None:
+        lenslight.amp = fit[1]/norm[1]
+        mags = (mag, lenslight.Mag(zp))
+    else:
+        mags = (mag, )
+
     if returnImg:
         scaledimg = source.pixeval(xl, yl)
         scaledimg = convolve.convolve(scaledimg, source.convolve, False)[0]
@@ -231,9 +239,9 @@ def getModel(lens, source, spars, image, sigma, mask, X, Y, zp=30., lenslight=No
             lsimg = convolve.convolve(lsimg, lenslight.convolve, False)[0]
             scaledimg += lsimg
 
-        return logp, mag, scaledimg
+        return logp, mags, scaledimg
 
     else:
-        return logp, mag
+        return logp, mags
 
 

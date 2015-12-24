@@ -1,10 +1,10 @@
-# fits the arc and the lens light simultaneously
+# fits lens light and arc simultaneously, using an optimizer to regulate the relative flux between lens and source
 
 import pymc
 import pyfits
 import numpy as np
-from photofit import convolve, models, indexTricks as iT
-from pylens import pylens, MassModels
+from photofit import convolve, indexTricks as iT
+from pylens import pylens, MassModels, SBModels as models
 import pylab
 #from plotters import cornerplot
 
@@ -33,8 +33,6 @@ for band in bands:
 #lens parameters
 x0 = 19.907
 y0 = 20.
-#x = pymc.Normal('x', mu=x0, tau=1./0.1**2, value=x0)
-#y = pymc.Normal('y', mu=y0, tau=1./0.1**2, value=y0)
 x = pymc.Uniform('x', lower=18., upper=22., value=x0)
 y = pymc.Uniform('y', lower=18., upper=22., value=y0)
 rein = pymc.Uniform('rein', lower=0., upper=20., value=6.)
@@ -64,34 +62,16 @@ for par in pars:
 
 print guess
 
-"""
-# filter mismatch parameters
-for band in bands[1:]:
-    pars.append(pymc.Uniform('dx_%s'%band, lower=-1., upper=1., value=0.))
-    pars.append(pymc.Uniform('dy_%s'%band, lower=-1., upper=1., value=0.))
-    cov.append(0.01)
-    cov.append(0.01)
-"""
-
-lvar = {'x': 0, 'y': 1, 're': 5, 'pa': 6, 'q':7}
-lconst = {'amp':1., 'n':4.}
-
-svar = {'x': 8, 'y': 9, 'pa': 10, 'q': 11, 're': 12}
-sconst = {'amp':1., 'n':1.}
-
 #defines the lnes model
 lens = MassModels.PowerLaw('lens', {'x':x, 'y':y, 'b':rein, 'q':q, 'pa':pa, 'eta':1.})
-#source = models.Sersic('src', {'x':sx, 'y':sy, 're':sr, 'q':sq, 'pa':sp, 'n':1.})
 
 lights = {}
 sources = {}
-scaleguess = {'i': 2., 'g':-0.5}
-scalepars = []
-scalecov = []
 
 for band in bands:
-    light = models.Sersic('LensLight', lvar, lconst)
-    source = models.Sersic('source', svar, sconst)
+    light = models.Sersic('LensLight', {'x':x, 'y':y, 're':reff, 'q':qs, 'pa':pas, 'n':4.})
+
+    source = models.Sersic('src', {'x':sx, 'y':sy, 're':sr, 'q':sq, 'pa':sp, 'n':1.})
 
     light.convolve = convolve.convolve(images[band], psfs[band])[1]
     source.convolve = convolve.convolve(images[band], psfs[band])[1]
@@ -99,15 +79,10 @@ for band in bands:
     lights[band] = light
     sources[band] = source
 
-    scalepars.append(pymc.Uniform('dm_%s'%band, lower=-2., upper=5., value=scaleguess[band]))
-    scalecov.append(0.01)
-
     Y, X = iT.coords(images[band].shape)
 
-    mask = np.zeros(images[band].shape) == 0
-
-    logp, mags, modelimg = pylens.getModel(lens, light, source, guess, scaleguess[band], images[band], sigmas[band], \
-                                           mask, X, Y, zp=zps[band], returnImg=True)
+    logp, mags, modelimg = pylens.getModel_optimizer(lens, light, source, images[band], sigmas[band], \
+                                           X, Y, zp=zps[band], returnImg=True)
 
     cmap = 'binary'
     pylab.subplot(1, 2, 1)
@@ -120,12 +95,12 @@ for band in bands:
 
 
 @pymc.deterministic(trace=False)
-def logpAndMags(p=pars, s=scalepars):
+def logpAndMags(p=pars):
     sumlogp = 0.
     magslist = []
     i = 0
     for band in bands:
-        logp, mags = pylens.getModel(lens, lights[band], sources[band], p, s[i], images[band], sigmas[band], mask, \
+        logp, mags = pylens.getModel_optimizer(lens, lights[band], sources[band], images[band], sigmas[band], \
                                      X, Y, zp=zps[band])
         if logp != logp:
             return -1e300, []
@@ -144,20 +119,20 @@ def Mags(lpAM=logpAndMags):
     return lpAM[1]
 
 @pymc.stochastic(observed=True, name='logp')
-def logpCost(value=0., p=pars, s=scalepars):
+def logpCost(value=0., p=pars):
     if lp != lp:
         return -1e300
     return lp
 
 print "Sampling"
 
-M = pymc.MCMC(pars+scalepars+[lp, Mags])
-M.use_step_method(pymc.AdaptiveMetropolis, pars+scalepars, cov=np.diag(cov+scalecov))
+M = pymc.MCMC(pars+[lp, Mags])
+M.use_step_method(pymc.AdaptiveMetropolis, pars, cov=np.diag(cov))
 M.isample(Nsamp, burnin)
 
 trace = {}
 cp = []
-for par in pars+scalepars:
+for par in pars:
     trace[str(par)] = M.trace(par)[:]
     cp.append({'data':trace[str(par)], 'label':str(par)})
 
@@ -171,6 +146,14 @@ pylab.show()
 #cornerplot(cp, color='r')
 #pylab.show()
 
+# saves everything
+import pickle
+#output = {'images': images, 'lens': lens, 'source': sources, 'light': lights, 'trace': trace, 'pars': pars}
+#output = {'images': images, 'trace': trace, 'pars': pars}
+f = open('test5.dat', 'w')
+pickle.dump(trace, f)
+f.close()
+
 
 ML = trace['logp'].argmax()
 print ML
@@ -183,14 +166,8 @@ for par in pars:
     par.value = mlval
 
 for band in bands:
-    parname = 'dm_%s'%band
-    mlval = trace[parname][ML]
-    print parname, mlval
-    mlscalepars[band] = mlval
-
-for band in bands:
-    logp, mags, mimage = pylens.getModel(lens, lights[band], sources[band], mlpars, mlscalepars[band], images[band], \
-                                         sigmas[band], mask, X, Y, returnImg=True)
+    logp, mags, mimage = pylens.getModel_optimizer(lens, lights[band], sources[band], images[band], \
+                                         sigmas[band], X, Y, zp=zps[band], returnImg=True)
 
     pylab.subplot(1, 2, 1)
     pylab.imshow(images[band])

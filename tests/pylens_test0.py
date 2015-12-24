@@ -1,10 +1,12 @@
+# fits the arc in the g band
+
+
+
 import pymc
 import pyfits
 import numpy as np
 from photofit import convolve, models, indexTricks as iT
-from photofit.SampleOpt import AMAOpt, Sampler
 from pylens import pylens, MassModels
-from scipy.optimize import fmin_slsqp
 import pylab
 from plotters import cornerplot
 
@@ -66,8 +68,15 @@ models = [source]
 nmod = len(models) #number of components (either lens or source)
 
 Y, X = iT.coords(image.shape)
+xc = X.mean()
+yc = Y.mean()
+dists = ((Y - yc)**2 + (X - xc)**2)**0.5
+newmask = np.ones(mask.shape)
+newmask[dists < 3.] = 0.
+mask = np.logical_not(newmask==0)
+mask_r = mask.ravel()
 
-logp, mag, modelimg = pylens.getModel(lens, source, guess, image, sigma, mask, X, Y, zp=zp, returnImg=True)
+logp, mag, modelimg = pylens.getModel_sourceonly(lens, source, guess, image, sigma, mask, X, Y, zp=zp, returnImg=True)
 
 cmap = 'binary'
 pylab.subplot(1, 2, 1)
@@ -86,7 +95,7 @@ simage = (image_r/sigma_r)[mask_r]
 
 @pymc.deterministic(trace=False)
 def logpAndMags(p=pars):
-    logp, mags = pylens.getModel(lens, source, p, image, sigma, mask, X, Y, zp=zp)
+    logp, mags = pylens.getModel_sourceonly(lens, source, p, image, sigma, mask, X, Y, zp=zp)
     if logp != logp:
         logp = -1e300
     return logp, mags
@@ -123,6 +132,12 @@ trace['logp'] = M.trace('lp')[:]
 cornerplot(cp, color='r')
 pylab.show()
 
+pylab.subplot(2, 1, 1)
+pylab.plot(trace['logp'])
+pylab.subplot(2, 1, 2)
+pylab.plot(trace['re'])
+pylab.show()
+
 
 ML = trace['logp'].argmax()
 mlpars = []
@@ -131,7 +146,7 @@ for par in pars:
     print str(par), mlval
     mlpars.append(mlval)
 
-logp, mag, mimage = pylens.getModel(lens, source, mlpars, image, sigma, mask, X, Y, returnImg=True)
+logp, mag, mimage = pylens.getModel_sourceonly(lens, source, mlpars, image, sigma, mask, X, Y, returnImg=True)
 
 pylab.subplot(1, 2, 1)
 pylab.imshow(image)

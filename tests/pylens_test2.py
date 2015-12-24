@@ -1,4 +1,6 @@
-# fits the arc and the lens light simultaneously
+# fits only the arc, in two bands simultaneously
+
+
 
 import pymc
 import pyfits
@@ -13,7 +15,6 @@ lensname = 'SL2SJ021411-040502'
 dpath = '../photofit/example/'
 
 bands = ['i', 'g']
-bands = ['g']
 
 zps = {'i': 30., 'g': 30.}
 
@@ -25,7 +26,7 @@ images = {}
 psfs = {}
 
 for band in bands:
-    images[band] = pyfits.open(dpath+lensname+'_%s_sci.fits'%band)[0].data.copy()
+    images[band] = pyfits.open(dpath+lensname+'_%s_one_sersic_mcmc.fits'%band)[2].data.copy()
     sigmas[band] = pyfits.open(dpath+lensname+'_%s_rms.fits'%band)[0].data.copy()
     psfs[band] = pyfits.open(dpath+lensname+'_%s_psf.fits'%band)[0].data.copy()
 
@@ -41,11 +42,6 @@ rein = pymc.Uniform('rein', lower=0., upper=20., value=6.)
 pa = pymc.Uniform('pa', lower=-90., upper=180., value=0.)
 q = pymc.Uniform('q', lower=0.3, upper=1., value=0.8)
 
-#light parameters
-reff = pymc.Uniform('reff', lower=1., upper=20., value=5.)
-pas = pymc.Uniform('pas', lower=-90., upper=180., value=0.)
-qs = pymc.Uniform('qs', lower=0.3, upper=1., value=0.8)
-
 
 #source parameters
 sx = pymc.Uniform('sx', lower=15., upper=25., value=22.)
@@ -55,58 +51,33 @@ sq = pymc.Uniform('sq', lower=0.3, upper=1., value=0.8)
 sr = pymc.Uniform('sr', lower=1., upper=20., value=5.)
 
 
-pars = [x, y, rein, pa, q, reff, pas, qs, sx, sy, sp, sq, sr]
-cov = [0.01, 0.01, 0.1, 1., 0.01, 1., 1., 0.01, 0.01, 0.01, 1., 0.01, 1.]
+pars = [x, y, rein, pa, q, sx, sy, sp, sq, sr]
+cov = [0.01, 0.01, 0.1, 1., 0.01, 0.1, 0.1, 1., 0.01, 1.]
 
 guess = []
 for par in pars:
     guess.append(par.value)
 
-print guess
-
-"""
-# filter mismatch parameters
-for band in bands[1:]:
-    pars.append(pymc.Uniform('dx_%s'%band, lower=-1., upper=1., value=0.))
-    pars.append(pymc.Uniform('dy_%s'%band, lower=-1., upper=1., value=0.))
-    cov.append(0.01)
-    cov.append(0.01)
-"""
-
-lvar = {'x': 0, 'y': 1, 're': 5, 'pa': 6, 'q':7}
-lconst = {'amp':1., 'n':4.}
-
-svar = {'x': 8, 'y': 9, 'pa': 10, 'q': 11, 're': 12}
+svar = {'x': 5, 'y': 6, 'pa': 7, 'q': 8, 're': 9}
 sconst = {'amp':1., 'n':1.}
 
 #defines the lnes model
 lens = MassModels.PowerLaw('lens', {'x':x, 'y':y, 'b':rein, 'q':q, 'pa':pa, 'eta':1.})
-#source = models.Sersic('src', {'x':sx, 'y':sy, 're':sr, 'q':sq, 'pa':sp, 'n':1.})
 
-lights = {}
 sources = {}
-scaleguess = {'i': 2., 'g':-0.5}
-scalepars = []
-scalecov = []
 
 for band in bands:
-    light = models.Sersic('LensLight', lvar, lconst)
     source = models.Sersic('source', svar, sconst)
 
-    light.convolve = convolve.convolve(images[band], psfs[band])[1]
     source.convolve = convolve.convolve(images[band], psfs[band])[1]
 
-    lights[band] = light
     sources[band] = source
-
-    scalepars.append(pymc.Uniform('dm_%s'%band, lower=-2., upper=5., value=scaleguess[band]))
-    scalecov.append(0.01)
 
     Y, X = iT.coords(images[band].shape)
 
     mask = np.zeros(images[band].shape) == 0
 
-    logp, mags, modelimg = pylens.getModel(lens, light, source, guess, scaleguess[band], images[band], sigmas[band], \
+    logp, mags, modelimg = pylens.getModel_sourceonly(lens, source, guess, images[band], sigmas[band], \
                                            mask, X, Y, zp=zps[band], returnImg=True)
 
     cmap = 'binary'
@@ -120,12 +91,12 @@ for band in bands:
 
 
 @pymc.deterministic(trace=False)
-def logpAndMags(p=pars, s=scalepars):
+def logpAndMags(p=pars):
     sumlogp = 0.
     magslist = []
     i = 0
     for band in bands:
-        logp, mags = pylens.getModel(lens, lights[band], sources[band], p, s[i], images[band], sigmas[band], mask, \
+        logp, mags = pylens.getModel_sourceonly(lens, sources[band], p, images[band], sigmas[band], mask, \
                                      X, Y, zp=zps[band])
         if logp != logp:
             return -1e300, []
@@ -144,27 +115,28 @@ def Mags(lpAM=logpAndMags):
     return lpAM[1]
 
 @pymc.stochastic(observed=True, name='logp')
-def logpCost(value=0., p=pars, s=scalepars):
+def logpCost(value=0., p=pars):
     if lp != lp:
         return -1e300
     return lp
 
 print "Sampling"
 
-M = pymc.MCMC(pars+scalepars+[lp, Mags])
-M.use_step_method(pymc.AdaptiveMetropolis, pars+scalepars, cov=np.diag(cov+scalecov))
+M = pymc.MCMC(pars+[lp, Mags])
+M.use_step_method(pymc.AdaptiveMetropolis, pars, cov=np.diag(cov))
 M.isample(Nsamp, burnin)
 
 trace = {}
 cp = []
-for par in pars+scalepars:
+for par in pars:
     trace[str(par)] = M.trace(par)[:]
     cp.append({'data':trace[str(par)], 'label':str(par)})
 
 trace['logp'] = M.trace('lp')[:]
 
+pylab.subplot(2, 1, 1)
 pylab.plot(trace['logp'])
-pylab.show()
+pylab.subplot(2, 1, 2)
 pylab.plot(trace['rein'])
 pylab.show()
 
@@ -183,13 +155,7 @@ for par in pars:
     par.value = mlval
 
 for band in bands:
-    parname = 'dm_%s'%band
-    mlval = trace[parname][ML]
-    print parname, mlval
-    mlscalepars[band] = mlval
-
-for band in bands:
-    logp, mags, mimage = pylens.getModel(lens, lights[band], sources[band], mlpars, mlscalepars[band], images[band], \
+    logp, mags, mimage = pylens.getModel_sourceonly(lens, sources[band], mlpars, images[band], \
                                          sigmas[band], mask, X, Y, returnImg=True)
 
     pylab.subplot(1, 2, 1)

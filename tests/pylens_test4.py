@@ -1,6 +1,7 @@
-# fits the arc and the lens light simultaneously
+# fits lens light and arc in one band, using emcee
 
 import pymc
+import emcee
 import pyfits
 import numpy as np
 from photofit import convolve, models, indexTricks as iT
@@ -62,19 +63,8 @@ guess = []
 for par in pars:
     guess.append(par.value)
 
-print guess
-
-"""
-# filter mismatch parameters
-for band in bands[1:]:
-    pars.append(pymc.Uniform('dx_%s'%band, lower=-1., upper=1., value=0.))
-    pars.append(pymc.Uniform('dy_%s'%band, lower=-1., upper=1., value=0.))
-    cov.append(0.01)
-    cov.append(0.01)
-"""
-
 lvar = {'x': 0, 'y': 1, 're': 5, 'pa': 6, 'q':7}
-lconst = {'amp':1., 'n':4.}
+lconst = {'amp':1., 'n':1.}
 
 svar = {'x': 8, 'y': 9, 'pa': 10, 'q': 11, 're': 12}
 sconst = {'amp':1., 'n':1.}

@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import optimize
 from scipy.optimize import fmin_slsqp
 from photofit import convolve
 
@@ -169,7 +170,8 @@ def objf(x, lhs, rhs):
 def objdf(x, lhs, rhs):
     return np.dot(lhs.T, np.dot(lhs, x) - rhs)
 
-def getModel(lens, source, spars, image, sigma, mask, X, Y, zp=30., lenslight=None, returnImg=False):
+
+def getModel_sourceonly(lens, source, spars, image, sigma, mask, X, Y, zp=30., returnImg=False):
 
     source.setPars(spars)
     lens.setPars()
@@ -186,8 +188,6 @@ def getModel(lens, source, spars, image, sigma, mask, X, Y, zp=30., lenslight=No
         return 0., 0., rimg
 
     nmod = 1
-    if lenslight is not None:
-        nmod = 2
 
     model = np.zeros((nmod, mask.sum()))
     norm = np.zeros(nmod)
@@ -196,15 +196,6 @@ def getModel(lens, source, spars, image, sigma, mask, X, Y, zp=30., lenslight=No
     norm[0] = model[0].max()
     model[0] /= norm[0]
 
-    if lenslight is not None:
-        lenslight.setPars(spars)
-        limg = lenslight.pixeval(X, Y)
-        limg = convolve.convolve(limg, lenslight.convolve, False)[0]
-
-        model[1] = limg[mask].ravel()
-        norm[1] = model[1].max()
-        model[1] /= norm[1]
-
     op = (model/sigma.ravel()[mask.ravel()]).T
 
     fit, chi = np.linalg.lstsq(op, simage)[:2]
@@ -212,8 +203,6 @@ def getModel(lens, source, spars, image, sigma, mask, X, Y, zp=30., lenslight=No
         sol = fit
         sol[sol<0] = 1e-11
         bounds = [(1e-11,1e11)]
-        if lenslight is not None:
-            bounds.append((1e-11, 1e11))
         result = fmin_slsqp(objf, sol, bounds=bounds, full_output=1, fprime=objdf, acc=1e-19, iter=2000, args=(op.copy(), simage.copy()), iprint=0)
         fit, chi = result[:2]
         fit = np.asarray(fit)
@@ -225,23 +214,125 @@ def getModel(lens, source, spars, image, sigma, mask, X, Y, zp=30., lenslight=No
     source.amp = fit[0]/norm[0]
     mag = source.Mag(zp)
 
-    if lenslight is not None:
-        lenslight.amp = fit[1]/norm[1]
-        mags = (mag, lenslight.Mag(zp))
+    if returnImg:
+        scaledimg = source.pixeval(xl, yl)
+        scaledimg = convolve.convolve(scaledimg, source.convolve, False)[0]
+
+        return logp, mag, scaledimg
+
     else:
-        mags = (mag, )
+        return logp, mag
+
+
+def getModel(lens, light, source, pars, scalepar, image, sigma, mask, X, Y, zp=30., returnImg=False):
+
+    source.setPars(pars)
+    lens.setPars()
+
+    simage = ((image/sigma).ravel())[mask.ravel()]
+
+    xl, yl = getDeflections([lens], [X, Y])
+    simg = source.pixeval(xl, yl)
+    simg = convolve.convolve(simg, source.convolve, False)[0]
+
+    light.setPars(pars)
+    limg = light.pixeval(X, Y)
+    limg = convolve.convolve(limg, light.convolve, False)[0]
+
+    if np.isnan(simg).any():
+        rimg = 0.*image
+        rimg[simg!=simg] = 1.
+        return 0., 0., rimg
+
+    model = np.zeros((1, mask.sum()))
+
+    smodel = simg[mask].ravel()
+    lmodel = limg[mask].ravel()
+
+    lmag = light.Mag(zp)
+    smag = source.Mag(zp)
+
+    rescale = 10.**(-0.4*(lmag + scalepar - smag))
+
+    smodel *= rescale
+    model[0] = lmodel + smodel
+
+    norm = model[0].max()
+
+    model[0] /= norm
+
+
+    op = (model/sigma.ravel()[mask.ravel()]).T
+
+    fit, chi = np.linalg.lstsq(op, simage)[:2]
+    if (fit<0).any():
+        sol = fit
+        sol[sol<0] = 1e-11
+        bounds = [(1e-11,1e11)]
+        result = fmin_slsqp(objf, sol, bounds=bounds, full_output=1, fprime=objdf, acc=1e-19, iter=2000, args=(op.copy(), simage.copy()), iprint=0)
+        fit, chi = result[:2]
+        fit = np.asarray(fit)
+        if (fit<1e-11).any():
+            fit[fit<1e-11] = 1e-11
+
+    logp = -0.5*chi - np.log(sigma.ravel()[mask.ravel()]).sum()
+
+    source.amp = fit[0]*rescale/norm
+    light.amp = fit[0]/norm
+    mags = (light.Mag(zp), source.Mag(zp))
 
     if returnImg:
         scaledimg = source.pixeval(xl, yl)
         scaledimg = convolve.convolve(scaledimg, source.convolve, False)[0]
-        if lenslight is not None:
-            lsimg = lenslight.pixeval(X, Y)
-            lsimg = convolve.convolve(lsimg, lenslight.convolve, False)[0]
-            scaledimg += lsimg
+        lsimg = light.pixeval(X, Y)
+        lsimg = convolve.convolve(lsimg, light.convolve, False)[0]
+        scaledimg += lsimg
 
-        return logp, mags, scaledimg
+        return logp, mags, model[0].reshape(image.shape)
 
     else:
         return logp, mags
+
+
+def getModel_optimizer(lens, light, source, image, sigma, X, Y, zp=30., returnImg=False):
+    """
+    This subroutine calculates the value of chi
+    cut from the original built-in subroutine at pylens main function
+    """
+# This evaluates the model at the given parameters and finds the best amplitudes for the surface brightness components
+    I = image.flatten()
+    S = sigma.flatten()
+# We need to update the parameters of the objects to the values proposed by the optimizer
+    light.setPars()
+    source.setPars()
+    lens.setPars()
+
+    xl,yl = getDeflections(lens,[X,Y])
+
+    model = np.empty((image.size,2))
+    model[:,0] = convolve.convolve(light.pixeval(X,Y), light.convolve,False)[0].ravel()/S
+    model[:,1] = convolve.convolve(source.pixeval(xl,yl), source.convolve,False)[0].ravel()/S
+
+    amps,chi = optimize.nnls(model,I/S)
+
+    light.amp *= amps[0]
+    source.amp *= amps[1]
+    if amps[0] <=0.:
+        lmag = 99.
+    else:
+        lmag = light.Mag(zp)
+    if amps[1] <= 0.:
+        smag = 99.
+    else:
+        smag = source.Mag(zp)
+
+    logp = -0.5*chi**2
+
+    if returnImg:
+        mimage = (amps*(model.T*S).T).sum(axis=1)
+        return logp, (lmag, smag), mimage.reshape(image.shape)
+
+    else:
+        return logp, amps*(model.T*S).T
 
 

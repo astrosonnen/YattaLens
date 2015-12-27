@@ -224,9 +224,10 @@ def getModel_sourceonly(lens, source, spars, image, sigma, mask, X, Y, zp=30., r
         return logp, mag
 
 
-def getModel(lens, light, source, pars, scalepar, image, sigma, mask, X, Y, zp=30., returnImg=False):
+def getModel(lens, light, source, scalepar, image, sigma, mask, X, Y, zp=30., returnImg=False):
 
-    source.setPars(pars)
+    source.setPars()
+    source.amp = 1.
     lens.setPars()
 
     simage = ((image/sigma).ravel())[mask.ravel()]
@@ -235,7 +236,8 @@ def getModel(lens, light, source, pars, scalepar, image, sigma, mask, X, Y, zp=3
     simg = source.pixeval(xl, yl)
     simg = convolve.convolve(simg, source.convolve, False)[0]
 
-    light.setPars(pars)
+    light.setPars()
+    light.amp = 1.
     limg = light.pixeval(X, Y)
     limg = convolve.convolve(limg, light.convolve, False)[0]
 
@@ -288,7 +290,7 @@ def getModel(lens, light, source, pars, scalepar, image, sigma, mask, X, Y, zp=3
         lsimg = convolve.convolve(lsimg, light.convolve, False)[0]
         scaledimg += lsimg
 
-        return logp, mags, model[0].reshape(image.shape)
+        return logp, mags, scaledimg
 
     else:
         return logp, mags
@@ -334,5 +336,4 @@ def getModel_optimizer(lens, light, source, image, sigma, X, Y, zp=30., returnIm
 
     else:
         return logp, amps*(model.T*S).T
-
 

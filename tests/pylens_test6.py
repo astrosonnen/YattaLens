@@ -1,4 +1,4 @@
-# fits the arc and the lens light simultaneously
+# fits the arc and the lens light simultaneously. Differently from pylens_test1.py it allows for a different centroid between mass and light.
 
 import pymc
 import pyfits
@@ -18,7 +18,7 @@ bands = ['g']
 
 zps = {'i': 30., 'g': 30.}
 
-Nsamp = 20000
+Nsamp = 100000
 burnin = 0
 
 sigmas = {}
@@ -31,21 +31,23 @@ for band in bands:
     psfs[band] = pyfits.open(dpath+lensname+'_%s_psf.fits'%band)[0].data.copy()
 
 
-#lens parameters
+# light parameters
 x0 = 19.907
 y0 = 20.
-#x = pymc.Normal('x', mu=x0, tau=1./0.1**2, value=x0)
-#y = pymc.Normal('y', mu=y0, tau=1./0.1**2, value=y0)
 x = pymc.Uniform('x', lower=18., upper=22., value=x0)
 y = pymc.Uniform('y', lower=18., upper=22., value=y0)
+reff = pymc.Uniform('reff', lower=1., upper=20., value=5.)
+pas = pymc.Uniform('pas', lower=-90., upper=180., value=0.)
+qs = pymc.Uniform('qs', lower=0.3, upper=1., value=0.8)
+
+# lens parameters
+
+xl = pymc.Normal('xl', mu=x, tau=1./0.3**2, value=x.value)
+yl = pymc.Normal('yl', mu=y, tau=1./0.3**2, value=y.value)
 rein = pymc.Uniform('rein', lower=0., upper=20., value=6.)
 pa = pymc.Uniform('pa', lower=-90., upper=180., value=0.)
 q = pymc.Uniform('q', lower=0.3, upper=1., value=0.8)
 
-#light parameters
-reff = pymc.Uniform('reff', lower=1., upper=20., value=5.)
-pas = pymc.Uniform('pas', lower=-90., upper=180., value=0.)
-qs = pymc.Uniform('qs', lower=0.3, upper=1., value=0.8)
 
 
 #source parameters
@@ -56,8 +58,8 @@ sq = pymc.Uniform('sq', lower=0.3, upper=1., value=0.8)
 sr = pymc.Uniform('sr', lower=1., upper=20., value=5.)
 
 
-pars = [x, y, rein, pa, q, reff, pas, qs, sx, sy, sp, sq, sr]
-cov = [0.01, 0.01, 0.1, 1., 0.01, 1., 1., 0.01, 0.01, 0.01, 1., 0.01, 1.]
+pars = [x, y, reff, pas, qs, xl, yl, rein, pa, q, sx, sy, sp, sq, sr]
+cov = [0.01, 0.01, 0.1, 1., 0.01, 0.01, 0.01, 0.1, 1., 0.01, 0.01, 0.01, 1., 0.01, 0.1]
 
 guess = []
 for par in pars:
@@ -66,8 +68,8 @@ for par in pars:
 print guess
 
 
-#defines the lnes model
-lens = MassModels.PowerLaw('lens', {'x':x, 'y':y, 'b':rein, 'q':q, 'pa':pa, 'eta':1.})
+# defines the lens model
+lens = MassModels.PowerLaw('lens', {'x':xl, 'y':yl, 'b':rein, 'q':q, 'pa':pa, 'eta':1.})
 
 lights = {}
 sources = {}
@@ -111,13 +113,14 @@ def logpAndMags(p=pars, s=scalepars):
     magslist = []
     i = 0
     for band in bands:
-        logp, mags, img = pylens.getModel(lens, lights[band], sources[band], s[i], images[band], sigmas[band], mask, \
-                                     X, Y, zp=zps[band], returnImg=True)
+        logp, mags = pylens.getModel(lens, lights[band], sources[band], s[i], images[band], sigmas[band], mask, \
+                                     X, Y, zp=zps[band])
         if logp != logp:
             return -1e300, []
         sumlogp += logp
         magslist.append(mags)
         i += 1
+
     return sumlogp, magslist
 
 @pymc.deterministic
@@ -156,7 +159,7 @@ pylab.show()
 #cornerplot(cp, color='r')
 #pylab.show()
 
-f = open('test1.dat', 'w')
+f = open('test6.dat', 'w')
 pickle.dump(trace, f)
 f.close()
 

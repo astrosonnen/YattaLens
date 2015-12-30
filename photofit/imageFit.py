@@ -44,15 +44,15 @@ def do_fit(config):
     i = 0
     for band in config['filters']:
 	ZP[band] = config['zeropoints'][i]
-	hdu = pyfits.open(config['filename']+'_%s'%band+config['science_tag'])[0]
+	hdu = pyfits.open(config['data_dir']+config['filename']+'_%s'%band+config['science_tag'])[0]
         img = hdu.data.copy()
         subimg = img.copy()
         image[band] = subimg
-        subsigma = pyfits.open(config['filename']+'_%s'%band+config['sigma_tag'])[0].data.copy()
+        subsigma = pyfits.open(config['data_dir']+config['filename']+'_%s'%band+config['sigma_tag'])[0].data.copy()
     
         sigmas[band] = subsigma
     
-        psf = pyfits.open(config['filename']+'_%s'%band+config['psf_tag'])[0].data.copy()
+        psf = pyfits.open(config['data_dir']+config['filename']+'_%s'%band+config['psf_tag'])[0].data.copy()
         m = (psf[:2].mean()+psf[-2:].mean()+psf[:,:2].mean()+psf[:,-2:].mean())/4.
         psf -= m
         psf /= psf.sum()
@@ -94,7 +94,7 @@ def do_fit(config):
 	i += 1
 
     if config['maskname'] is not None:
-	MASK = pyfits.open(config['maskname'])[0].data.copy()
+	MASK = pyfits.open(config['data_dir']+config['maskname'])[0].data.copy()
     else:
 	MASK = 0.*subimg
 
@@ -137,8 +137,9 @@ def do_fit(config):
                 simage = (image[key]/sigma)[mask_r]
                 lp += linearmodelSB(p,simage,sigma[mask_r],mask,models[key],xc,yc,OVRS=OVRS)
                 mags += [model.Mag(ZP[key]) for model in models[key]]
-	    if lp != lp:
-    	        lp = -1e300
+	        if lp != lp:
+                    lp = -1e300 #wtf?
+
             return lp,mags
     
     
@@ -161,7 +162,7 @@ def do_fit(config):
 	if config['burnin'] == None:
 	    burnin = config['Nsteps']/10
 	else:
-	    burnin = config['burnin']
+	    burnin = int(config['burnin'])
 
         M.sample(config['Nsteps'] + burnin, burnin)
     

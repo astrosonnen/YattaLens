@@ -120,8 +120,6 @@ def Mags(lpAM=logpAndMags):
 
 @pymc.stochastic(observed=True, name='logp')
 def logpCost(value=0., p=pars):
-    if lp != lp:
-        return -1e300
     return lp
 
 print "Sampling"

@@ -137,8 +137,8 @@ def do_fit(config):
                 simage = (image[key]/sigma)[mask_r]
                 lp += linearmodelSB(p,simage,sigma[mask_r],mask,models[key],xc,yc,OVRS=OVRS)
                 mags += [model.Mag(ZP[key]) for model in models[key]]
-	        if lp != lp:
-                    lp = -1e300 #wtf?
+            if lp != lp:
+                lp = -1e300
 
             return lp,mags
     
@@ -159,10 +159,10 @@ def do_fit(config):
     
         M = pymc.MCMC(pars+[lp, logpAndMags, Mags])
         M.use_step_method(pymc.AdaptiveMetropolis, pars, cov=np.diag(covs))
-	if config['burnin'] == None:
-	    burnin = config['Nsteps']/10
-	else:
-	    burnin = int(config['burnin'])
+        if config['burnin'] == None:
+            burnin = config['Nsteps']/10
+        else:
+            burnin = int(config['burnin'])
 
         M.sample(config['Nsteps'] + burnin, burnin)
     
@@ -176,7 +176,7 @@ def do_fit(config):
         MLmodel = {}
         for par in pars:
             MLmodel[str(par)] = trace[str(par)][ML]
-	MLmodel['logp'] = trace['logp'][ML]
+        MLmodel['logp'] = trace['logp'][ML]
     
         MLmags = {}
         for key in model2index.keys():

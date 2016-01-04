@@ -5,9 +5,8 @@ import pyfits
 import numpy as np
 from photofit import convolve, indexTricks as iT
 from pylens import pylens, MassModels, SBModels as models
-#import pylab
+import pylab
 import pickle
-from plotters import cornerplot
 from scipy.optimize import fmin_slsqp
 
 
@@ -39,12 +38,14 @@ x0 = 19.907
 y0 = 20.
 x = pymc.Uniform('x', lower=18., upper=22., value=x0)
 y = pymc.Uniform('y', lower=18., upper=22., value=y0)
-reff = pymc.Uniform('reff', lower=1., upper=20., value=5.)
+reff = pymc.Uniform('reff', lower=5., upper=20., value=10.)
 pas = pymc.Uniform('pas', lower=-90., upper=180., value=0.)
 qs = pymc.Uniform('qs', lower=0.3, upper=1., value=0.8)
+ns = pymc.Uniform('ns', lower=1., upper=8., value=4.)
 
-pars = [x, y, reff, pas, qs]
-cov = [0.01, 0.01, 0.1, 1., 0.01]
+
+pars = [x, y, reff, pas, qs, ns]
+cov = [0.01, 0.01, 0.1, 1., 0.01, 0.01]
 
 guess = []
 for par in pars:
@@ -65,6 +66,7 @@ def solve_linearproblem(profile, image, sigma, mask, X, Y, zp=30., returnImg=Fal
 
     profile.setPars()
     profile.amp = 1.
+
     limg = profile.pixeval(X, Y)
     limg = convolve.convolve(limg, profile.convolve, False)[0]
 
@@ -77,8 +79,6 @@ def solve_linearproblem(profile, image, sigma, mask, X, Y, zp=30., returnImg=Fal
 
     lmodel = limg[mask].ravel()
 
-    lmag = profile.Mag(zp)
-
     model[0] = lmodel
 
     norm = model[0].max()
@@ -90,6 +90,8 @@ def solve_linearproblem(profile, image, sigma, mask, X, Y, zp=30., returnImg=Fal
 
     fit, chi = np.linalg.lstsq(op, simage)[:2]
     if (fit<0).any():
+        return -1e300, 99.
+        """
         sol = fit
         sol[sol<0] = 1e-11
         bounds = [(1e-11,1e11)]
@@ -98,6 +100,7 @@ def solve_linearproblem(profile, image, sigma, mask, X, Y, zp=30., returnImg=Fal
         fit = np.asarray(fit)
         if (fit<1e-11).any():
             fit[fit<1e-11] = 1e-11
+        """
 
     logp = -0.5*chi - np.log(sigma.ravel()[mask.ravel()]).sum()
 
@@ -117,7 +120,7 @@ def solve_linearproblem(profile, image, sigma, mask, X, Y, zp=30., returnImg=Fal
 lights = {}
 
 for band in bands:
-    light = models.Sersic('LensLight', {'x': x, 'y': y, 're': reff, 'q': qs, 'pa': pas, 'n': 4.})
+    light = models.Sersic('LensLight', {'x': x, 'y': y, 're': reff, 'q': qs, 'pa': pas, 'n': ns})
 
     light.convolve = convolve.convolve(images[band], psfs[band])[1]
 
@@ -164,8 +167,6 @@ def Mags(lpAM=logpAndMags):
 
 @pymc.stochastic(observed=True, name='logp')
 def logpCost(value=0., p=pars):
-    if lp != lp:
-        return -1e300
     return lp
 
 print "Sampling"
@@ -206,7 +207,6 @@ for par in pars:
     mlpars.append(mlval)
     par.value = mlval
 
-"""
 for band in bands:
     logp, mags, mimage = solve_linearproblem(lights[band], images[band], sigmas[band], mask, X, Y, returnImg=True)
 
@@ -217,7 +217,6 @@ for band in bands:
     pylab.imshow(mimage)
 
     pylab.show()
-"""
 
 
 

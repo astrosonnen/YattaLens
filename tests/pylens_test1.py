@@ -7,7 +7,7 @@ from photofit import convolve, indexTricks as iT
 from pylens import pylens, MassModels, SBModels as models
 import pylab
 import pickle
-#from plotters import cornerplot
+from plotters import cornerplot
 
 
 lensname = 'SL2SJ021411-040502'
@@ -18,7 +18,7 @@ bands = ['g']
 
 zps = {'i': 30., 'g': 30.}
 
-Nsamp = 20000
+Nsamp = 100000
 burnin = 0
 
 sigmas = {}
@@ -71,7 +71,7 @@ lens = MassModels.PowerLaw('lens', {'x':x, 'y':y, 'b':rein, 'q':q, 'pa':pa, 'eta
 
 lights = {}
 sources = {}
-scaleguess = {'i': 2., 'g':-0.5}
+scaleguess = {'i': 3., 'g':0.5}
 scalepars = []
 scalecov = []
 
@@ -130,8 +130,6 @@ def Mags(lpAM=logpAndMags):
 
 @pymc.stochastic(observed=True, name='logp')
 def logpCost(value=0., p=pars, s=scalepars):
-    if lp != lp:
-        return -1e300
     return lp
 
 print "Sampling"
@@ -153,10 +151,10 @@ pylab.show()
 pylab.plot(trace['rein'])
 pylab.show()
 
-#cornerplot(cp, color='r')
-#pylab.show()
+cornerplot(cp, color='r')
+pylab.show()
 
-f = open('test1.dat', 'w')
+f = open('test1_oneband.dat', 'w')
 pickle.dump(trace, f)
 f.close()
 

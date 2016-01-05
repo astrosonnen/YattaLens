@@ -335,5 +335,5 @@ def getModel_optimizer(lens, light, source, image, sigma, X, Y, zp=30., returnIm
         return logp, (lmag, smag), mimage.reshape(image.shape)
 
     else:
-        return logp, amps*(model.T*S).T
+        return logp, (lmag, smag)
 

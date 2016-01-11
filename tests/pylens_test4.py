@@ -61,8 +61,11 @@ pars = [x, y, rein, pa, q, reff, pas, qs, sx, sy, sp, sq, sr]
 cov = [0.1, 0.1, 0.3, 1., 0.1, 1., 1., 0.1, 0.1, 0.1, 1., 0.1, 1.]
 
 guess = []
+bounds = []
 for par in pars:
     guess.append(par.value)
+    bounds.append((par.parents['lower'], par.parents['upper']))
+
 
 #defines the lens model
 lens = MassModels.PowerLaw('lens', {'x':x, 'y':y, 'b':rein, 'q':q, 'pa':pa, 'eta':1.})
@@ -84,12 +87,13 @@ for band in bands:
     pars.append(pymc.Uniform('dm_%s'%band, lower=-2., upper=5., value=scaleguess[band]))
     cov.append(0.1)
     guess.append(scaleguess[band])
+    bounds.append((-2., 5.))
 
     Y, X = iT.coords(images[band].shape)
 
     mask = np.zeros(images[band].shape) == 0
 
-    logp, mags, modelimg = pylens.getModel_allpylens(lens, light, source, scaleguess[band], images[band], sigmas[band], \
+    logp, mags, modelimg = pylens.getModel(lens, light, source, scaleguess[band], images[band], sigmas[band], \
                                            mask, X, Y, zp=zps[band], returnImg=True)
 
     cmap = 'binary'
@@ -104,7 +108,20 @@ for band in bands:
 npars = len(pars)
 
 
+def logprior(allpars):
+    for i in range(0, npars):
+        if allpars[i] < bounds[i][0] or allpars[i] > bounds[i][1]:
+            return -np.inf
+        else:
+            return 0.
+
+
+
 def logpfunc(allpars):
+    lp = logprior(allpars)
+    if not np.isfinite(lp):
+        return -np.inf
+
     structpars = allpars[:13]
     for j in range(0, 13):
         pars[j].value = structpars[j]
@@ -113,10 +130,10 @@ def logpfunc(allpars):
     i = 0
     for band in bands:
 
-        logp, mags = pylens.getModel_allpylens(lens, lights[band], sources[band], allpars[13+i], images[band], sigmas[band], mask, \
+        logp, mags = pylens.getModel(lens, lights[band], sources[band], allpars[13+i], images[band], sigmas[band], mask, \
                                      X, Y, zp=zps[band])
         if logp != logp:
-            return -1e300, []
+            return -np.inf
         sumlogp += logp
         magslist.append(mags)
         i += 1
@@ -132,10 +149,11 @@ for i in range(nwalkers):
         p0 = np.random.normal(guess[j], cov[j], 1)
         tmp.append(p0)
         pars[j].value = p0
+    print tmp[12]
 
     """
     for band in bands:
-        logp, mags, modelimg = pylens.getModel_allpylens(lens, lights[band], sources[band], pars[-1].value, images[band], sigmas[band], \
+        logp, mags, modelimg = pylens.getModel(lens, lights[band], sources[band], pars[-1].value, images[band], sigmas[band], \
                                                mask, X, Y, zp=zps[band], returnImg=True)
 
         cmap = 'binary'
@@ -154,6 +172,33 @@ for i in range(nwalkers):
 print "Sampling"
 
 sampler.run_mcmc(start, Nsamp)
+
+print 'recalculating the likelihood...'
+logp_trace = 0.*sampler.flatchain[:,0]
+
+for i in range(0, sampler.flatchain.shape[0]):
+    logp_trace[i] = logpfunc(sampler.flatchain[i, :])
+
+ML = logp_trace.argmax()
+
+pylab.plot(logp_trace)
+pylab.show()
+
+for j in range(0, npars):
+    pars[j].value = sampler.flatchain[ML, j]
+
+for band in bands:
+    logp, mags, modelimg = pylens.getModel(lens, lights[band], sources[band], pars[-1].value, images[band], sigmas[band], \
+                                           mask, X, Y, zp=zps[band], returnImg=True)
+
+    cmap = 'binary'
+    pylab.subplot(1, 2, 1)
+    pylab.imshow(images[band], cmap=cmap)
+
+    pylab.subplot(1, 2, 2)
+    pylab.imshow(modelimg, cmap=cmap)
+
+    pylab.show()
 
 for i in range(npars):
     pylab.plot(sampler.flatchain[:, i])

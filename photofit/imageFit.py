@@ -5,6 +5,7 @@ import pymc
 import indexTricks as iT
 import pyfits
 from scipy.optimize import basinhopping
+from scipy.stats import truncnorm
 from photofit import models as photmodels, convolve
 
 
@@ -18,7 +19,7 @@ def do_fit(config):
     guess = []
     lower = []
     upper = []
-    covs = []
+    steps = []
     filters = [filt for filt in config['filters']]
 
     #defines model parameters
@@ -36,7 +37,7 @@ def do_fit(config):
 		guess.append(parpar['value'])
 		lower.append(parpar['low'])
 		upper.append(parpar['up'])
-		covs.append(parpar['cov'])
+		steps.append(parpar['cov'])
 		par2index[str(ncomp)+'.'+par] = npar
 		index2par[npar] = str(ncomp)+'.'+par
 		npar += 1
@@ -140,6 +141,7 @@ def do_fit(config):
             if lp != lp:
                 lp = -1e300
 
+            #print lp, p
             return lp,mags
     
     
@@ -156,9 +158,16 @@ def do_fit(config):
             return lp
     
         print "Sampling",config['Nsteps']
-    
+
+        scales = {}
+        i = 0
+        for par in pars:
+            scales[par] = steps[i]/10.
+            i += 1
+
         M = pymc.MCMC(pars+[lp, logpAndMags, Mags])
-        M.use_step_method(pymc.AdaptiveMetropolis, pars, cov=np.diag(covs))
+        M.use_step_method(pymc.AdaptiveMetropolis, pars, scales=scales, interval=1000, delay=config['Nsteps']/10)
+        #M.use_step_method(pymc.AdaptiveMetropolis, pars, cov=np.diag(steps)*1e-3)
         if config['burnin'] == None:
             burnin = config['Nsteps']/10
         else:
@@ -203,7 +212,85 @@ def do_fit(config):
         return output
 
 
-    if config['fit_type'] == 'AMAOpt':
+    elif config['fit_type'] == 'emcee':
+
+        import emcee
+
+        bounds = []
+        for par in pars:
+            bounds.append((par.parents['lower'], par.parents['upper']))
+
+        def logprior(allpars):
+            for i in range(0, npars):
+                if allpars[i] < bounds[i][0] or allpars[i] > bounds[i][1]:
+                    return -np.inf
+            return 0.
+
+        def likelihood(p):
+            lp = logprior(p)
+            if not np.isfinite(lp):
+                return -np.inf
+
+            for j in range(0, npars):
+                pars[j].value = p[j]
+            sumlp = 0.
+            for key in filters:
+                indx = key2index[key]
+                sigma = sigmas[key]
+                simage = (image[key]/sigma)[mask_r]
+                sumlp += linearmodelSB(p,simage,sigma[mask_r],mask,models[key],xc,yc,OVRS=OVRS)
+            if sumlp != sumlp:
+                sumlp = -1e300
+
+            return sumlp
+
+        npars = len(pars)
+        nwalkers = 6*npars
+        sampler = emcee.EnsembleSampler(nwalkers, npars, likelihood)
+
+        print "Sampling",config['Nsteps']
+
+        start = []
+        for i in range(nwalkers):
+            tmp = np.zeros(npars)
+            urand = np.random.rand(npars)
+            for j in range(0, npars):
+                a, b = (bounds[j][0] - pars[j].value)/steps[j], (bounds[j][1] - pars[j].value)/steps[j]
+                p0 = truncnorm.rvs(a, b, size=1)*steps[j] + pars[j].value
+                tmp[j] = p0
+
+            start.append(tmp)
+
+
+        print "Sampling"
+
+        sampler.run_mcmc(start, config['Nsteps'])
+
+        trace = {}
+        i = 0
+        for par in pars:
+            trace[str(par)] = sampler.chain[:, :, i]
+            i += 1
+
+        output = {'trace': trace, 'logp': sampler.lnprobability}
+
+        ML = sampler.flatlnprobability.argmax()
+
+        for j in range(0, npars):
+            pars[j].value = sampler.flatchain[ML, j]
+
+        output['IMG'] = image
+        output['SIGMA'] = sigmas
+        output['MASK'] = MASK
+        #output['models'] = models
+        #output['MLmodel'] = MLmodel
+        #output['MLmags'] = MLmags
+        output['config'] = config
+
+        return output
+
+
+    elif config['fit_type'] == 'AMAOpt':
 
         @pymc.deterministic(trace=False)
         def logpAndMags(p=pars):
@@ -215,8 +302,8 @@ def do_fit(config):
                 simage = (image[key]/sigma)[mask_r]
                 lp += linearmodelSB(p,simage,sigma[mask_r],mask,models[key],xc,yc,OVRS=OVRS)
                 mags += [model.Mag(ZP[key]) for model in models[key]]
-	    if lp != lp:
-    	        lp = -1e300
+            if lp != lp:
+                lp = -1e300
             return lp,mags
     
     
@@ -232,36 +319,36 @@ def do_fit(config):
         def logpCost(value=0., logP=lp):
             return logP
 
-	costs = [logpCost]
+        costs = [logpCost]
 
         from SampleOpt import AMAOpt as Opt,levMar as levMar
    
-	niter = config['Nsteps']
-        O = Opt(pars,costs,[lp,Mags],cov=covs)
+        niter = config['Nsteps']
+        O = Opt(pars,costs,[lp,Mags],cov=steps)
         O.set_minprop(len(pars)*2)
         O.sample(niter/10)
         logp,trace,result = O.result()
 
-        O = Opt(pars,costs,[lp,Mags],cov=covs)
+        O = Opt(pars,costs,[lp,Mags],cov=steps)
         O.set_minprop(len(pars)*2)
         O.cov = O.cov/4.
         O.sample(niter/4)
         logp,trace,result = O.result()
  
-        O = Opt(pars,costs,[lp,Mags],cov=covs)
+        O = Opt(pars,costs,[lp,Mags],cov=steps)
         O.set_minprop(len(pars)*2)
         O.cov = O.cov/10.
         O.sample(niter/4)
         logp,trace,result = O.result()
     
-        O = Opt(pars,costs,[lp,Mags],cov=covs)
+        O = Opt(pars,costs,[lp,Mags],cov=steps)
         O.set_minprop(len(pars)*2)
         O.cov = O.cov/10.
         O.sample(niter)
         logp,trace,result = O.result()
         mags = np.array(result['Mags'])
 
-	MLmags = {}
+        MLmags = {}
     
         for key in model2index.keys():
             MLmags[key] = mags[:,model2index[key]].copy()[-1]
@@ -274,9 +361,9 @@ def do_fit(config):
             simage = (image[key]/sigma)[mask_r]
             m = linearmodelSB([p.value for p in pars],simage,sigma[mask_r],mask,models[key],xc,yc,noResid=True,OVRS=OVRS)
             MLmodel[key] = m
-	MLmodel['logp'] = logp[-1]
+        MLmodel['logp'] = logp[-1]
    
-	output  = {}
+        output  = {}
 
         output['IMG'] = image
         output['SIGMA'] = sigmas
@@ -291,14 +378,14 @@ def do_fit(config):
 
     elif config['fit_type'] == 'basinhop':
 
-	bounds = [(low, high) for low, high in zip(lower, upper)]
-	barr = np.array(bounds)
-	scale_free_bounds = 0.*barr
-	scale_free_bounds[:,1] = 1.
+        bounds = [(low, high) for low, high in zip(lower, upper)]
+        barr = np.array(bounds)
+        scale_free_bounds = 0.*barr
+        scale_free_bounds[:,1] = 1.
 
-	scale_free_guess = (guess - barr[:,0])/(barr[:,1] - barr[:,0])
+        scale_free_guess = (guess - barr[:,0])/(barr[:,1] - barr[:,0])
 
-	minimizer_kwargs = dict(method="L-BFGS-B", bounds=scale_free_bounds, tol=float(config['logptol']))
+        minimizer_kwargs = dict(method="L-BFGS-B", bounds=scale_free_bounds, tol=float(config['logptol']))
 
         def nlogp(scaledp):
             lp = 0.
@@ -306,22 +393,22 @@ def do_fit(config):
                 indx = key2index[key]
                 sigma = sigmas[key]
                 simage = (image[key]/sigma)[mask_r]
-		p = scaledp*(barr[:,1] - barr[:,0]) + barr[:,0]
+                p = scaledp*(barr[:,1] - barr[:,0]) + barr[:,0]
                 lp += linearmodelSB(p,simage,sigma[mask_r],mask,models[key],xc,yc,OVRS=OVRS)
-	    if lp != lp:
-		lp = -1e300
+            if lp != lp:
+                lp = -1e300
             return -lp
  
-	res = basinhopping(nlogp, scale_free_guess, stepsize=0.01, niter=config['Nsteps'], minimizer_kwargs=minimizer_kwargs)
+        res = basinhopping(nlogp, scale_free_guess, stepsize=0.01, niter=config['Nsteps'], minimizer_kwargs=minimizer_kwargs)
 
-	MLpars = res.x*(barr[:,1] - barr[:,0]) + barr[:,0]
+        MLpars = res.x*(barr[:,1] - barr[:,0]) + barr[:,0]
 
-	MLmodel = {}
-	for i in range(0, len(MLpars)):
-	    MLmodel[index2par[i]] = MLpars[i]
-	MLmodel['logp'] = -nlogp(MLpars)
+        MLmodel = {}
+        for i in range(0, len(MLpars)):
+            MLmodel[index2par[i]] = MLpars[i]
+        MLmodel['logp'] = -nlogp(MLpars)
 
-	MLmags = {}
+        MLmags = {}
 
         output = {}
         for key in filters:
@@ -330,8 +417,8 @@ def do_fit(config):
             simage = (image[key]/sigma)[mask_r]
             m = linearmodelSB(MLpars,simage,sigma[mask_r],mask,models[key],xc,yc,noResid=True,OVRS=OVRS)
             MLmodel[key] = m
-	    for i in range(0, len(models[key])):
-		MLmags[models[key][i].name] = models[key][i].Mag(ZP[key])
+        for i in range(0, len(models[key])):
+            MLmags[models[key][i].name] = models[key][i].Mag(ZP[key])
  
         output['IMG'] = image
         output['SIGMA'] = sigmas
@@ -339,10 +426,10 @@ def do_fit(config):
         output['models'] = models
         output['MLmodel'] = MLmodel
         output['config'] = config
-	output['MLmags'] = MLmags
+        output['MLmags'] = MLmags
 
-	return output
-	
+        return output
+
     else:
-	raise ValueError("fit_type must be one between 'MCMC' and 'basinhop'.")
-	
+        raise ValueError("fit_type must be one between 'MCMC' and 'basinhop'.")
+

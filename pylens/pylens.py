@@ -418,7 +418,7 @@ def do_fit_emcee(pars, bands, lens, lights, sources, images, sigmas, X, Y, mask_
         for i in range(0, npars):
             if allpars[i] < bounds[i][0] or allpars[i] > bounds[i][1]:
                 return -np.inf
-	return 0.
+        return 0.
 
 
     def logpfunc(allpars):

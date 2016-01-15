@@ -11,7 +11,7 @@ maskname: SL2SJ021411-040502_mask.fits
 fit_type: MCMC
 Nsteps: 10000
 # MODELS
-# Par_name initial_guess lower_bound upper_bound cov var(y/n) link(optional)
+# Par_name initial_guess lower_bound upper_bound step var(y/n) link(optional)
 
 model_class: Sersic
 

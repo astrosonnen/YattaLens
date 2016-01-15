@@ -1,0 +1,33 @@
+#
+data_dir: ../photofit/example/
+output_dir: ./
+filters: u, g, r, i, z
+zeropoints: 30., 30., 30., 30., 30.
+filename: SL2SJ021411-040502
+science_tag: _sci.fits
+sigma_tag: _rms.fits
+psf_tag: _psf.fits
+fit_type: MCMC
+Nsteps: 10000
+burnin: 0
+# MODELS
+# Par_name initial_guess lower_bound upper_bound cov var(y/n) link(optional)
+
+model_class: Sersic
+
+x_u 20. 18. 22. 0.01 1
+y_u 20. 18. 22. 0.01 1
+x_g 20. 18. 22. 0.01 1 1.x_u
+y_g 20. 18. 22. 0.01 1 1.y_u
+x_r 20. 18. 22. 0.01 1 1.x_u
+y_r 20. 18. 22. 0.01 1 1.y_u
+x_i 20. 18. 22. 0.01 1 1.x_u
+y_i 20. 18. 22. 0.01 1 1.y_u
+x_z 20. 18. 22. 0.01 1 1.x_u
+y_z 20. 18. 22. 0.01 1 1.y_u
+q 0.8 0.2 1.0 0.01 1
+pa 0. -90. 180. 1. 1
+re 20. 10. 100. 0.1 1
+n 4. 1. 6. 0.01 1
+
+

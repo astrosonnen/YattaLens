@@ -73,7 +73,7 @@ def make_crazy_pil_format(data, cuts):
     return l
 
 
-def make_rgb_png(data, models, sources, outname='rgb.png'):
+def make_rgb_png(data, models, sources=None, outname='rgb.png'):
 
     cuts = []
     resids = []
@@ -85,25 +85,31 @@ def make_rgb_png(data, models, sources, outname='rgb.png'):
 
     dlist = make_crazy_pil_format(data, cuts)
     mlist = make_crazy_pil_format(models, cuts)
-    slist = make_crazy_pil_format(sources, cuts)
     rlist = make_crazy_pil_format(resids, cuts)
 
-    im = Image.new('RGB', (4*data[0].shape[0], data[0].shape[1]), 'black')
 
     s = data[0].shape
     dim = Image.new('RGB', s, 'black')
     mim = Image.new('RGB', s, 'black')
-    sim = Image.new('RGB', s, 'black')
     rim = Image.new('RGB', s, 'black')
 
     dim.putdata(dlist)
     mim.putdata(mlist)
-    sim.putdata(slist)
     rim.putdata(rlist)
+
+    if sources is None:
+        im = Image.new('RGB', (3*data[0].shape[0], data[0].shape[1]), 'black')
+        rindex = 2
+    else:
+        im = Image.new('RGB', (4*data[0].shape[0], data[0].shape[1]), 'black')
+        sim = Image.new('RGB', s, 'black')
+        slist = make_crazy_pil_format(sources, cuts)
+        sim.putdata(slist)
+        im.paste(sim, (2*s[1], 0))
+        rindex = 3
 
     im.paste(dim, (0, 0,))
     im.paste(mim, (s[1], 0))
-    im.paste(sim, (2*s[1], 0))
-    im.paste(rim, (3*s[1], 0))
+    im.paste(rim, (rindex*s[1], 0))
 
     im.save(outname)

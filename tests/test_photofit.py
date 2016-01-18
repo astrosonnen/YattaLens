@@ -8,6 +8,7 @@ import pickle
 
 #configfile = 'one_sersic_nomask_mcmc'
 configfile = 'one_sersic_nomask_emcee'
+configfile = 'quick_fit_oneband'
 
 def read_config(filename):
     f = open(filename, 'r')
@@ -125,9 +126,10 @@ results = imageFit.do_fit(config)
 #make_output_files(results)
 
 import pylab
-pars = ['q1', 'pa1', 'x_u1', 'y_u1', 're1', 'n1']
+#pars = ['q1', 'pa1', 'x_u1', 'y_u1', 're1', 'n1']
+pars = ['q1', 'pa1', 'x_i1', 'y_i1', 're1']
 for p in pars:
-    for i in range(results['trace'][p].shape[0]):
-        pylab.plot(results['trace'][p][i])
+    #for i in range(results['trace'][p].shape[0]):
+    pylab.plot(results['trace'][p])
     pylab.title(p)
     pylab.show()

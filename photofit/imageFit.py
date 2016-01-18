@@ -213,7 +213,6 @@ def do_fit(config):
 
 
     elif config['fit_type'] == 'emcee':
-
         import emcee
 
         bounds = []
@@ -269,7 +268,7 @@ def do_fit(config):
         trace = {}
         i = 0
         for par in pars:
-            trace[str(par)] = sampler.chain[:, :, i]
+            trace[str(par)] = sampler.chain[:, :, i].T
             i += 1
 
         output = {'trace': trace, 'logp': sampler.lnprobability}

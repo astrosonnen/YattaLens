@@ -1,0 +1,25 @@
+#
+data_dir: ../photofit/example/
+output_dir: ./
+filters: i
+zeropoints: 30.
+filename: SL2SJ021411-040502
+science_tag: _sci.fits
+sigma_tag: _rms.fits
+psf_tag: _psf.fits
+fit_type: emcee
+Nsteps: 100
+burnin: 0
+# MODELS
+# Par_name initial_guess lower_bound upper_bound cov var(y/n) link(optional)
+
+model_class: Sersic
+
+x_i 20. 18. 22. 0.1 1 
+y_i 20. 18. 22. 0.1 1
+q 0.8 0.2 2.0 0.03 1
+pa 0. -90. 180. 5. 1
+re 20. 5. 100. 1.0 1
+n 4. 1. 6. 0.01 0
+
+

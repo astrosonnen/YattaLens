@@ -213,6 +213,7 @@ def do_fit(config):
 
 
     elif config['fit_type'] == 'emcee':
+	# fit using emcee
         import emcee
 
         bounds = []

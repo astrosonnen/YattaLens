@@ -344,7 +344,7 @@ def do_fit(pars, cov, bands, lens, lights, sources, images, sigmas, X, Y, mask_r
 
     M = pymc.MCMC(pars+[lp, Mags])
     M.use_step_method(pymc.AdaptiveMetropolis, pars, cov=np.diag(cov))
-    M.isample(Nsamp, burnin)
+    M.sample(Nsamp, burnin)
 
     trace = {}
 
@@ -388,7 +388,7 @@ def do_fit_lightonly(lpars, lcov, bands, lights, images, sigmas, X, Y, mask_r, z
 
     M = pymc.MCMC(lpars + [lightonlylogp])
     M.use_step_method(pymc.AdaptiveMetropolis, lpars, cov=np.diag(lcov))
-    M.isample(Nsamp, burnin)
+    M.sample(Nsamp, burnin)
 
     trace = {}
 

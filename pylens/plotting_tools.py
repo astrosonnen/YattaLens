@@ -113,3 +113,33 @@ def make_rgb_png(data, models, sources=None, outname='rgb.png'):
     im.paste(rim, (rindex*s[1], 0))
 
     im.save(outname)
+
+
+def make_arcfinder_mask_png(data, mask, outname='arcfinder_mask.png'):
+
+    cuts = []
+    i = 0
+    mlist = []
+    for img in data:
+        cut = np.percentile(img, 99.)
+        cuts.append(cut)
+        mlist.append(mask*cut)
+        i += 1
+
+    dlist = make_crazy_pil_format(data, cuts)
+    mlist = make_crazy_pil_format(mlist, cuts)
+
+
+    s = data[0].shape
+    dim = Image.new('RGB', s, 'black')
+    mim = Image.new('RGB', s, 'black')
+
+    dim.putdata(dlist)
+    mim.putdata(mlist)
+
+    im = Image.new('RGB', (2*data[0].shape[0], data[0].shape[1]), 'black')
+
+    im.paste(dim, (0, 0,))
+    im.paste(mim, (s[1], 0))
+
+    im.save(outname)

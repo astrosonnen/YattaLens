@@ -86,7 +86,7 @@ def logpfunc(scaledp):
         pars[j].value = p[j]
     sumlogp = 0.
 
-    for band in bands:
+    for band in bands0:
         logp, mag = pylens.getModel_lightonly(lights[band], images[band], sigmas[band], X, Y, zp=zps[band], mask=mask_r)
 
         if logp != logp:

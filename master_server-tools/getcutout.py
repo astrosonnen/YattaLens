@@ -69,7 +69,7 @@ for jj in range(ra.size):
                     continue
                 subImage = lsst.afw.image.ExposureF(coadd, bbox, lsst.afw.image.PARENT)
                 outfits=outdir0+rrh+ddh+'_'+inpfilt[ii]+'.fits'
-                outfits1=rrh+ddh+'_'+filt[ii]+'.fits'
+                outfits1=rrh+ddh+'_'+filt[ii]+'_sci.fits'
                 subImage.writeFits(outfits)
                 call("imcopy %s[1] %s/%s"%(outfits,outdir1,outfits1),shell=1)
                 ## if you want to extract the variance image

@@ -6,16 +6,15 @@ import Image
 def make_rgbarray(images, cuts):
 
     scaled = []
-    i = 0
-    for img in images:
+    for i in range(3):
+        img = images[i].copy()
+
         img[img<0.] = 0.
-        #i99 = np.percentile(img, 99.)
         img *= 255./cuts[i]
         img[img>255.] = 255.
         img = np.uint8(img.round())
         img = np.flipud(img)
         scaled.append(img.T)
-        i += 1
 
     rgbarray = np.array(scaled).T
     return rgbarray

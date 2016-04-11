@@ -309,6 +309,56 @@ def getModel_lightonly(light, image, sigma, X, Y, zp=30., returnImg=False, mask=
         return logp, lmag
 
 
+def getModel_lightonly_ncomponents(lights, image, sigma, X, Y, zp=30., returnImg=False, mask=None):
+    """
+    This subroutine calculates the value of chi
+    cut from the original built-in subroutine at pylens main function
+    """
+# This evaluates the model at the given parameters and finds the best amplitudes for the surface brightness components
+    I = image.flatten()
+    S = sigma.flatten()
+# We need to update the parameters of the objects to the values proposed by the optimizer
+    ncomp = len(lights)
+
+    if mask is None:
+        mask = np.ones(image.size, dtype=bool)
+
+    modlist = []
+    for light in lights:
+        light.setPars()
+        light.amp = 1.
+
+        lmodel = (convolve.convolve(light.pixeval(X,Y), light.convolve, False)[0].ravel()/S)
+        modlist.append(lmodel[mask])
+
+    model = np.array(modlist).T
+
+    if np.isnan(model).any():
+        return -np.inf, (99., 99.)
+
+    amps, chi = optimize.nnls(model, (I/S)[mask])
+    lmags = np.zeros(ncomp)
+
+    for i in range(ncomp):
+        lights[i].amp *= amps[i]
+        if amps[i] <=0.:
+            lmags[i] = 99.
+        else:
+            lmags[i] = lights[i].Mag(zp)
+
+    logp = -0.5*chi
+
+    if returnImg:
+        mimage = np.zeros(mask.shape)
+        for light in lights:
+            lmodel = (convolve.convolve(light.pixeval(X,Y), light.convolve, False)[0].ravel()/S)
+            mimage += lmodel*S
+
+        return logp, lmags, mimage.reshape(image.shape)
+
+    else:
+        return logp, lmags
+
 
 def do_fit(pars, cov, bands, lens, lights, sources, images, sigmas, X, Y, mask_r, zps, Nsamp=11000, burnin=1000):
 

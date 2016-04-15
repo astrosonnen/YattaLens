@@ -456,7 +456,7 @@ def do_fit_lightonly(lpars, lcov, bands, lights, images, sigmas, X, Y, mask_r, z
 
 
 def do_fit_emcee(pars, bands, lens, lights, sources, images, sigmas, X, Y, mask_r, zps, nwalkers=50, nsamp=100,\
-                 usecov=None, steps=None):
+                 gaussprior=None, stepsize=None):
 
     bounds = []
     for par in pars:
@@ -499,11 +499,11 @@ def do_fit_emcee(pars, bands, lens, lights, sources, images, sigmas, X, Y, mask_
         urand = np.random.rand(npars)
         for j in range(0, npars):
             p0 = urand[j]*(bounds[j][1] - bounds[j][0]) + bounds[j][0]
-            if usecov is not None:
-                if usecov[j]:
-                    a, b = (bounds[j][0] - pars[j].value)/steps[j], (bounds[j][1] - pars[j].value)/steps[j]
+            if gaussprior is not None:
+                if gaussprior[j]:
+                    a, b = (bounds[j][0] - pars[j].value)/stepsize[j], (bounds[j][1] - pars[j].value)/stepsize[j]
                     #p0 = np.random.normal(pars[j].value, steps[j], 1)
-                    p0 = truncnorm.rvs(a, b, size=1)*steps[j] + pars[j].value
+                    p0 = truncnorm.rvs(a, b, size=1)*stepsize[j] + pars[j].value
             tmp[j] = p0
 
         start.append(tmp)

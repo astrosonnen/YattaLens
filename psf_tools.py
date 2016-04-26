@@ -39,10 +39,18 @@ def fit_gaussian(psf):
 
 def get_kernel(psf1, psf2, cut=5):
 
+    ny, nx = psf1.shape
+    ny2, nx2 = psf2.shape
+    if ny2 < ny:
+        psf1 = psf1[(ny - ny2)/2:-(ny-ny2)/2, (nx - nx2)/2:-(nx-nx2)/2]
+        nx = nx2
+        ny = ny2
+    elif ny < ny2:
+        psf2 = psf2[(ny2 - ny)/2:-(ny2-ny)/2, (nx2 - nx)/2:-(nx2-nx)/2]
+
     ft1 = np.fft.fft2(psf1)
     ft2 = np.fft.fft2(psf2)
 
-    ny, nx = psf1.shape
 
     Ktilde = ft1/ft2
 

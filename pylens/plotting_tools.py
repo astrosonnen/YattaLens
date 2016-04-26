@@ -1,6 +1,7 @@
 import pylab
 import numpy as np
 import Image
+import ImageDraw
 
 
 def make_rgbarray(images, cuts):
@@ -72,44 +73,104 @@ def make_crazy_pil_format(data, cuts):
     return l
 
 
-def make_rgb_png(data, models, sources=None, outname='rgb.png'):
+def make_rgb_png(data, models, sources=None, arcmask=None, outname='rgb.png'):
 
     cuts = []
     resids = []
+    masks = []
     i = 0
     for img in data:
-        cuts.append(np.percentile(img, 99.))
+        cut = np.percentile(img, 99.)
+        cuts.append(cut)
         resids.append(img - models[i])
+        masks.append(arcmask*cut)
         i += 1
 
     dlist = make_crazy_pil_format(data, cuts)
     mlist = make_crazy_pil_format(models, cuts)
     rlist = make_crazy_pil_format(resids, cuts)
-
+    alist = make_crazy_pil_format(masks, cuts)
 
     s = data[0].shape
     dim = Image.new('RGB', s, 'black')
     mim = Image.new('RGB', s, 'black')
     rim = Image.new('RGB', s, 'black')
+    aim = Image.new('RGB', s, 'black')
 
     dim.putdata(dlist)
     mim.putdata(mlist)
     rim.putdata(rlist)
+    aim.putdata(alist)
 
     if sources is None:
-        im = Image.new('RGB', (3*data[0].shape[0], data[0].shape[1]), 'black')
-        rindex = 2
-    else:
         im = Image.new('RGB', (4*data[0].shape[0], data[0].shape[1]), 'black')
+        rindex = 3
+    else:
+        im = Image.new('RGB', (5*data[0].shape[0], data[0].shape[1]), 'black')
         sim = Image.new('RGB', s, 'black')
         slist = make_crazy_pil_format(sources, cuts)
         sim.putdata(slist)
-        im.paste(sim, (2*s[1], 0))
-        rindex = 3
+        im.paste(sim, (3*s[1], 0))
+        rindex = 4
 
     im.paste(dim, (0, 0,))
-    im.paste(mim, (s[1], 0))
+    im.paste(aim, (s[1], 0))
+    im.paste(mim, (2*s[1], 0))
     im.paste(rim, (rindex*s[1], 0))
+
+    im.save(outname)
+
+
+def make_large_rgb_png(data, lenssub, model, source, arcmask, outname='rgb.png'):
+
+    cuts = []
+    resids = []
+    invresids = []
+    masks = []
+    i = 0
+    for img in data:
+        cut = np.percentile(img, 99.)
+        cuts.append(cut)
+        resids.append(img - model[i])
+        invresids.append(model[i] - img)
+        masks.append(arcmask*cut)
+        i += 1
+
+    dlist = make_crazy_pil_format(data, cuts)
+    mlist = make_crazy_pil_format(model, cuts)
+
+    rlist = make_crazy_pil_format(resids, cuts)
+    ilist = make_crazy_pil_format(invresids, cuts)
+    alist = make_crazy_pil_format(masks, cuts)
+    slist = make_crazy_pil_format(source, cuts)
+    sublist = make_crazy_pil_format(lenssub, cuts)
+    s = data[0].shape
+
+    dim = Image.new('RGB', s, 'black')
+    subim = Image.new('RGB', s, 'black')
+    mim = Image.new('RGB', s, 'black')
+    rim = Image.new('RGB', s, 'black')
+    iim = Image.new('RGB', s, 'black')
+    aim = Image.new('RGB', s, 'black')
+    sim = Image.new('RGB', s, 'black')
+
+    sim.putdata(slist)
+    dim.putdata(dlist)
+    mim.putdata(mlist)
+    rim.putdata(rlist)
+    iim.putdata(ilist)
+    aim.putdata(alist)
+    subim.putdata(sublist)
+
+    im = Image.new('RGB', (3*data[0].shape[0], 3*data[0].shape[1]), 'black')
+
+    im.paste(dim, (0, 0,))
+    im.paste(subim, (s[1], 0))
+    im.paste(aim, (2*s[1], 0))
+    im.paste(mim, (0, s[0]))
+    im.paste(sim, (s[1], s[0]))
+    im.paste(rim, (2*s[1], s[0]))
+    im.paste(iim, (2*s[1], 2*s[0]))
 
     im.save(outname)
 

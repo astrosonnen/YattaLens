@@ -111,6 +111,8 @@ inpfilt=['HSC-G','HSC-R','HSC-I','HSC-Y','HSC-Z']
 filt=['g','r','i','y','z']
 outdir0='fitsdir/'
 ra,dec=np.loadtxt(filename,usecols=(0,1),unpack=1)
+ra = np.atleast_1d(ra)
+dec = np.atleast_1d(dec)
 
 for jj in range(ra.size):
     coord = lsst.afw.coord.IcrsCoord(lsst.afw.geom.Point2D(ra[jj],dec[jj]))

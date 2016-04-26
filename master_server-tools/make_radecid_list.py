@@ -5,7 +5,7 @@
 import numpy as np
 import sys
 
-Nobj = 100
+Nobj = 1000
 
 racol = 0
 deccol = 1

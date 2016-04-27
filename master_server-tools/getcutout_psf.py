@@ -37,7 +37,7 @@ def deg2hms(rr,dd):
 def extract_posflag(input_images):           
     flag_pos=0 
     for filename in (input_images): 
-        if os.path.exists(filename): 
+        if os.path.isfile(filename): 
             exposure = ExposureF(filename)
             psf = exposure.getPsf()
             pos = psf.getAveragePosition()
@@ -101,7 +101,7 @@ def genpsfimage(input_images,flagp,output):
 filename=sys.argv[1]
 outdir1=sys.argv[2]
 
-parent_dir="/lustre/Subaru/SSP/rerun/yasuda/SSP3.8.5_20150725/"
+parent_dir="/lustre2/HSC_DR/dr1/s15b/data/s15b_wide/"
 coadd_dir = 'deepCoadd/'
 
 butler = lsst.daf.persistence.Butler(parent_dir)
@@ -124,16 +124,16 @@ for jj in range(ra.size):
         for ii in range(len(inpfilt)):
             tract1=tract.getId()
             patch1="%d,%d"%(patch[0].getIndex())
-            input_image = parent_dir+coadd_dir+inpfilt[ii]+'/'+str(tract1)+'/'+str(patch1)+'.fits'
+            input_image = parent_dir+coadd_dir+inpfilt[ii]+'/'+str(tract1)+'/'+str(patch1)+'/calexp-'+inpfilt[ii]+'-'+str(tract1)+'-'+patch1+'.fits'
             input_images.append(input_image)
             out_psffits.append(outdir1+'/'+rrh+ddh+'_'+filt[ii]+'_psf.fits')
         for ii in range(len(inpfilt)):
             tract1=tract.getId()
             patch1="%d,%d"%(patch[0].getIndex())
-            input_image = parent_dir+coadd_dir+inpfilt[ii]+'/'+str(tract1)+'/'+str(patch1)+'.fits'
+            input_image = parent_dir+coadd_dir+inpfilt[ii]+'/'+str(tract1)+'/'+str(patch1)
              
-            if os.path.exists(input_image): 
-                coadd = butler.get("deepCoadd", tract=tract.getId(),
+            if os.path.isdir(input_image): 
+                coadd = butler.get("deepCoadd_calexp", tract=tract.getId(),
                                    patch="%d,%d" % patch[0].getIndex(),
                                    filter=inpfilt[ii])  # your filter here
                 print ra[jj],dec[jj], input_image

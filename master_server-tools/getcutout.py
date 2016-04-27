@@ -33,9 +33,9 @@ filename=sys.argv[1]
 outdir1=sys.argv[2]
 boxsize=int(sys.argv[3])
     
-parent_dir="/lustre/Subaru/SSP/rerun/yasuda/SSP3.8.5_20150725/"
+#parent_dir="/lustre/Subaru/SSP/rerun/yasuda/SSP3.8.5_20150725/"
+parent_dir="/lustre2/HSC_DR/dr1/s15b/data/s15b_wide/"
 
-##parent_dir="/lustre/Subaru/SSP/rerun/yasuda/SSP3.4.1_20141224/"
 coadd_dir = 'deepCoadd/'
 
 butler = lsst.daf.persistence.Butler(parent_dir)
@@ -55,13 +55,13 @@ for jj in range(ra.size):
         for ii in range(len(inpfilt)):
             tract1=tract.getId()
             patch1="%d,%d"%(patch[0].getIndex())
-            input_image = parent_dir+coadd_dir+inpfilt[ii]+'/'+str(tract1)+'/'+str(patch1)+'.fits'
-             
-            if os.path.exists(input_image): 
-                coadd = butler.get("deepCoadd", tract=tract.getId(),
+            input_image = parent_dir+coadd_dir+inpfilt[ii]+'/'+str(tract1)+'/'+str(patch1)
+            
+            if os.path.isdir(input_image): 
+                coadd = butler.get("deepCoadd_calexp", tract=tract.getId(),
                                    patch="%d,%d" % patch[0].getIndex(),
                                    filter=inpfilt[ii])  # your filter here
-                print ra[jj],dec[jj], input_image
+                #print ra[jj],dec[jj], input_image
                 pixel = coadd.getWcs().skyToPixel(coord)
                 pixel = lsst.afw.geom.Point2I(pixel)
                 bbox = lsst.afw.geom.Box2I(pixel, pixel)   # 1-pixel box

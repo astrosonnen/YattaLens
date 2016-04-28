@@ -1,4 +1,4 @@
-import numpy,time
+import numpy as np
 from scipy import interpolate
 """
 MINIMAL ERROR CHECKING!
@@ -31,7 +31,7 @@ class Sersic:
     def eval(self,r):
         k = 2.*self.n-1./3+4./(405.*self.n)+46/(25515.*self.n**2)
         R = r/self.re
-        return self.amp*numpy.exp(-k*(R**(1./self.n) - 1.))
+        return self.amp*np.exp(-k*(R**(1./self.n) - 1.))
 
     def pixeval(self,x,y,scale=1,csub=23):
         from scipy import interpolate
@@ -47,8 +47,8 @@ class Sersic:
         r = (self.q*xp**2+yp**2/self.q)**0.5
 
         k = 2.*self.n-1./3+4./(405.*self.n)+46/(25515.*self.n**2)
-        R = numpy.logspace(-5.,4.,451) # 50 pnts / decade
-        s0 = numpy.exp(-k*(R**(1./self.n) - 1.))
+        R = np.logspace(-5.,4.,451) # 50 pnts / decade
+        s0 = np.exp(-k*(R**(1./self.n) - 1.))
 
         # Determine corrections for curvature
         rpow = R**(1./self.n - 1.)
@@ -68,8 +68,120 @@ class Sersic:
         if self.n<=1. or minR==0:
             return self.amp*s.reshape(shape)
         model2 = interpolate.splrep(R,s0*R*self.re**2,k=3,s=0)
-        coords = numpy.where(R0<minR)[0]
-        c = (numpy.indices((csub,csub)).astype(numpy.float32)-csub/2)*scale/csub
+        coords = np.where(R0<minR)[0]
+        c = (np.indices((csub,csub)).astype(np.float32)-csub/2)*scale/csub
+        for i in coords:
+            # The central pixels are tricky because we can't assume that we
+            #   are integrating in delta-theta segments of an annulus; these
+            #   pixels are treated separately by sub-sampling with ~500 pixels
+            if R0[i]<3*scale/self.re:
+                s[i] = 0.
+                y0 = c[1]+y[i]
+                x0 = c[0]+x[i]
+                xp = (x0-self.x)*cos+(y0-self.y)*sin
+                yp = (y0-self.y)*cos-(x0-self.x)*sin
+                r0 = (self.q*xp**2+yp**2/self.q)**0.5/self.re
+                s[i] = interpolate.splev(r0.ravel(),model).mean()*scale**2
+                continue
+            lo = R0[i]-0.5*scale/self.re
+            hi = R0[i]+0.5*scale/self.re
+            angle = (scale/self.re)/R0[i]
+            s[i] = angle*interpolate.splint(lo,hi,model2)
+            # The following code should no longer be needed
+            """
+            if lo<0:
+                s[i] = ((interpolate.splint(0,abs(lo),model2)+interpolate.splint(0,hi,model2)))*pi*2
+            else:
+                s[i] = angle*interpolate.splint(lo,hi,model2)
+            """
+        return self.amp*s.reshape(shape)
+
+
+class Arc:
+    def __init__(self, x=None, y=None, omega=None, pa=None, hr=None, ht=None, rc=None, amp=None):
+        self.x = x
+        self.y = y
+        self.omega = omega
+        self.pa = pa
+        self.hr = hr
+        self.ht = ht
+        self.rc = rc
+        self.amp = amp
+        self.convolve = True
+
+    def eval(self, dr, t):
+
+        rad = self.amp*np.exp(-dr/hr)
+        core = self.amp*0.5*(np.sign(t + 1.) + 1.)*0.5*(np.sign(1. - t) + 1.)
+        edge = 0.5*self.amp*(np.sign(t - 1.) + 2. + np.sign(-1. - t)) * np.exp(-(np.abs(t) - 1)/ht)
+        return rad*core*edge
+
+    def pixeval(self, x, y, scale=1, csub=23):
+        from scipy import interpolate
+        from math import pi,cos as COS,sin as SIN
+        shape = x.shape
+        x = x.ravel()
+        y = y.ravel()
+
+        xc = self.x + self.rc*COS(self.pa*pi/180.)
+        yc = self.y + self.rc*SIN(self.pa*pi/180.)
+
+        r = ((x - xc)**2 + (y - yc)**2)**0.5
+        dr = r - rc
+
+        cos = COS(self.pa*pi/180. + pi)
+        sin = SIN(self.pa*pi/180. + pi)
+
+        cosa = COS((self.pa - 0.5*self.omega)*pi/180.)
+        cosb = COS((self.pa + 0.5*self.omega)*pi/180.)
+
+        sina = SIN((self.pa - 0.5*self.omega)*pi/180.)
+        sinb = SIN((self.pa + 0.5*self.omega)*pi/180.)
+
+        tana = sina/cosa
+        tanb = sinb/cosb
+
+        def get_angle(c, s, t):
+            theta = np.arctan(t)
+            if c > 0.:
+                if s < 0.:
+                    theta = 2.*pi + theta
+            elif c < 0.:
+                theta = pi + theta
+            else:
+                if sina > 0.:
+                    theta = 0.5*np.pi
+                else:
+                    theta = 3/2.*np.pi
+            return theta
+
+        thetaa = get_angle(cosa, sina, tana)
+        thetab = get_angle(cosb, sinb, tanb)
+
+        k = 2.*self.n-1./3+4./(405.*self.n)+46/(25515.*self.n**2)
+        R = np.logspace(-5.,4.,451) # 50 pnts / decade
+        s0 = np.exp(-k*(R**(1./self.n) - 1.))
+
+        # Determine corrections for curvature
+        rpow = R**(1./self.n - 1.)
+        term1 = (k*rpow/self.n)**2
+        term2 = k*(self.n-1.)*rpow/(R*self.n**2)
+        wid = scale/self.re
+        corr = (term1+term2)*wid**3/6.
+        try:
+            minR = R[abs(corr)<0.005].min()
+        except:
+            minR = 0
+
+        # Evaluate model!
+        model = interpolate.splrep(R,s0,k=3,s=0)
+        R0 = r/self.re
+        s = interpolate.splev(R0,model)*scale**2
+        if self.n<=1. or minR==0:
+            return self.amp*s.reshape(shape)
+        model2 = interpolate.splrep(R,s0*R*self.re**2,k=3,s=0)
+        coords = np.where(R0<minR)[0]
+        c = (np.indices((csub,csub)).astype(np.float32)-csub/2)*scale/csub
         for i in coords:
             # The central pixels are tricky because we can't assume that we
             #   are integrating in delta-theta segments of an annulus; these
@@ -124,14 +236,14 @@ class Gauss:
     def pixeval(self,x,y,factor=None,csub=None):
         from math import pi
 
-        cos = numpy.cos(self.pa*pi/180.)
-        sin = numpy.sin(self.pa*pi/180.)
+        cos = np.cos(self.pa*pi/180.)
+        sin = np.sin(self.pa*pi/180.)
         xp = (x-self.x)*cos+(y-self.y)*sin
         yp = (y-self.y)*cos-(x-self.x)*sin
         r2 = (self.q*xp**2+yp**2/self.q)
         if self.r0 is None:
-            return self.amp*numpy.exp(-0.5*r2/self.sigma**2)
-        return self.amp*numpy.exp(-0.5*(r2**0.5-self.r0)**2/self.sigma**2)
+            return self.amp*np.exp(-0.5*r2/self.sigma**2)
+        return self.amp*np.exp(-0.5*(r2**0.5-self.r0)**2/self.sigma**2)
 
 
     def getMag(self,zp):
@@ -150,12 +262,12 @@ class Gauss:
     def eval(self,x,y):
         from math import pi
         try:
-            cos = numpy.cos(self.theta)
-            sin = numpy.sin(self.theta)
+            cos = np.cos(self.theta)
+            sin = np.sin(self.theta)
             xp = (x-self.x)*cos+(y-self.y)*sin
             yp = (y-self.y)*cos-(x-self.x)*sin
             r = (self.q*xp**2+yp**2/self.q)**0.5/self.sigma
-            s = self.amp*numpy.exp(-0.5*r**self.n)/(2.*pi*self.sigma**2)**1.0
+            s = self.amp*np.exp(-0.5*r**self.n)/(2.*pi*self.sigma**2)**1.0
             return s
         except:
             return x*0.

@@ -74,6 +74,15 @@ class Sersic(SBModel,SBProfiles.Sersic):
         return self.getMag(self.amp,zp)
 
 
+class Arc(SBModel, SBProfiles.Arc):
+    _baseProfile = SBProfiles.Arc
+    _SBkeys = [['amp','hr','ht','pa','omega','x','y'],
+                ['amp','hr','ht','pa','theta','x','y']]
+
+    def __init__(self, name, pars, convolve=0):
+        SBModel.__init__(self, name, pars, convolve)
+
+
 class Gauss(SBModel,SBProfiles.Gauss):
     _baseProfile = SBProfiles.Gauss
     _SBkeys = [['amp','pa','q','r0','sigma','x','y']]

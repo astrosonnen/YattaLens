@@ -8,7 +8,8 @@ SELECT
     object.id,
     object.parent,
     object.gmag_cmodel,
-    object.imag_cmodel
+    object.imag_cmodel,
+    object.zmag_cmodel
 FROM
     s15b_wide.photoobj_mosaic__deepcoadd__merged  AS object
     JOIN
@@ -19,5 +20,6 @@ FROM
         ON (match.specz_id = specz.id)
 WHERE
     object.imag_sinc < 25.0  -- for iselect (see NOTE)
-    AND specz.redshift > 0.1 AND specz.redshift < 1.0 AND specz.flag_sdss_dr12 is true AND object.imag_cmodel < 22 AND object.gmag_cmodel - object.imag_cmodel > 1.
+    AND specz.redshift > 0.1 AND specz.redshift < 1.0 AND specz.flag_sdss_dr12 is true AND object.imag_cmodel < 22 AND object.gmag_cmodel - object.zmag_cmodel > 0.9 + 3 * specz.redshift
+LIMIT 10000
 ;

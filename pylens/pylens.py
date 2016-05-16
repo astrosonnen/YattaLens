@@ -368,15 +368,12 @@ def getModel_lightonly_ncomponents(lights, image, sigma, X, Y, zp=30., returnImg
     logp = -0.5*chi
 
     if returnImg:
-        mimage = np.zeros(mask.shape)
+        mimages = []
         for light in lights:
-            if do_convol:
-                lmodel = (convolve.convolve(light.pixeval(X,Y), light.convolve, False)[0].ravel()/S)
-            else:
-                lmodel = light.pixeval(X, Y).ravel()/S
-            mimage += lmodel*S
+            lmodel = (convolve.convolve(light.pixeval(X,Y), light.convolve, False)[0].ravel())
+            mimages.append(lmodel.reshape(image.shape))
 
-        return logp, lmags, mimage.reshape(image.shape)
+        return logp, lmags, mimages
 
     else:
         return logp, lmags
@@ -577,6 +574,73 @@ def do_fit_lightonly_emcee(pars, bands, lights, images, sigmas, X, Y, mask_r, zp
         for band in bands:
             logp, mags = getModel_lightonly(lights[band], images[band], sigmas[band], X, Y, zp=zps[band], mask=mask_r, \
                                             do_convol=do_convol)
+            if logp != logp:
+                return -np.inf
+            sumlogp += logp
+            i += 1
+
+        return sumlogp
+
+    sampler = emcee.EnsembleSampler(nwalkers, npars, logpfunc)
+
+    start = []
+    for i in range(nwalkers):
+        tmp = np.zeros(npars)
+        urand = np.random.rand(npars)
+        for j in range(0, npars):
+            p0 = urand[j]*(bounds[j][1] - bounds[j][0]) + bounds[j][0]
+            if gaussprior is not None:
+                if gaussprior[j]:
+                    a, b = (bounds[j][0] - pars[j].value)/stepsize[j], (bounds[j][1] - pars[j].value)/stepsize[j]
+                    p0 = truncnorm.rvs(a, b, size=1)*stepsize[j] + pars[j].value
+            tmp[j] = p0
+
+        start.append(tmp)
+
+
+    print "Sampling"
+
+    sampler.run_mcmc(start, nsamp)
+
+    output = {'chain': sampler.chain, 'logp': sampler.lnprobability}
+
+    ML = sampler.flatlnprobability.argmax()
+
+    for j in range(0, npars):
+        pars[j].value = sampler.flatchain[ML, j]
+
+    return output
+
+
+def do_fit_ncomponents_emcee(pars, bands, lights, images, sigmas, X, Y, mask_r, zps, nwalkers=50, nsamp=100,\
+                           gaussprior=None, stepsize=None, do_convol=True):
+
+    bounds = []
+    for par in pars:
+        bounds.append((par.parents['lower'], par.parents['upper']))
+
+    npars = len(pars)
+
+    def logprior(allpars):
+        for i in range(0, npars):
+            if allpars[i] < bounds[i][0] or allpars[i] > bounds[i][1]:
+                return -np.inf
+        return 0.
+
+
+    def logpfunc(allpars):
+        lp = logprior(allpars)
+        if not np.isfinite(lp):
+            return -np.inf
+
+        for j in range(0, npars):
+            pars[j].value = allpars[j]
+        sumlogp = 0.
+        i = 0
+
+        for band in bands:
+            logp, mags = getModel_lightonly_ncomponents(lights[band], images[band], sigmas[band], X, Y, \
+                                                        zp=zps[band], mask=mask_r)
             if logp != logp:
                 return -np.inf
             sumlogp += logp

@@ -97,24 +97,70 @@ class Sersic:
         return self.amp*s.reshape(shape)
 
 
-class Arc:
-    def __init__(self, x=None, y=None, omega=None, pa=None, hr=None, ht=None, rc=None, amp=None):
+class Ring:
+    def __init__(self, x=None, y=None, q=None, pa=None, rr=None, amp=None, hi=None, ho=None):
         self.x = x
         self.y = y
-        self.omega = omega
+        self.q = q
+        self.pa = pa
+        self.rr = rr
+        self.amp = amp
+	self.hi = hi
+	self.ho = ho
+        self.convolve = True
+
+    def pixeval(self, x, y):
+        from math import pi,cos as COS,sin as SIN
+        shape = x.shape
+        x = x.ravel()
+        y = y.ravel()
+
+        cos = COS(self.pa*pi/180.)
+        sin = SIN(self.pa*pi/180.)
+        xp = (x-self.x)*cos+(y-self.y)*sin
+        yp = (y-self.y)*cos-(x-self.x)*sin
+        r = (self.q*xp**2+yp**2/self.q)**0.5
+
+	inner = 0.5*(np.sign(self.rr - r) + 1.)*np.exp(-(self.rr - r)/self.hi)
+	outer = 0.5*(np.sign(r - self.rr) + 1.)*np.exp(-(r - self.rr)/self.ho)
+
+        return self.amp*(inner + outer).reshape(shape)
+
+
+class Arc:
+    def __init__(self, x=None, y=None, length=None, pa=None, hr=None, ht=None, amp=None, invrc=None):
+        self.x = x
+        self.y = y
+        self.length = length
         self.pa = pa
         self.hr = hr
         self.ht = ht
-        self.rc = rc
+        self.invrc = invrc
         self.amp = amp
         self.convolve = True
 
-    def eval(self, dr, t):
+    def eval(self, r, theta):
 
+        cut = 0.5*self.omega/180.*pi
+        dr = np.abs(r - rc)
+        dt = np.abs(theta - cut)*r
         rad = self.amp*np.exp(-dr/hr)
-        core = self.amp*0.5*(np.sign(t + 1.) + 1.)*0.5*(np.sign(1. - t) + 1.)
-        edge = 0.5*self.amp*(np.sign(t - 1.) + 2. + np.sign(-1. - t)) * np.exp(-(np.abs(t) - 1)/ht)
+        core = self.amp*0.5*(np.sign(theta + cut) + 1.)*0.5*(np.sign(cut - theta) + 1.)
+        edge = 0.5*self.amp*(np.sign(theta - cut) + 2. + np.sign(-cut - theta)) * np.exp(-dt/ht)
         return rad*core*edge
+
+    def rc(self):
+        return 1./self.invrc
+
+    def get_center(self):
+        from math import pi
+        cos = np.cos(0.5*pi*(np.sign(-self.rc()) + 1.) + self.pa*pi/180.)
+        sin = np.sin(0.5*pi*(np.sign(-self.rc()) + 1.) + self.pa*pi/180.)
+
+        xc = self.x - np.abs(self.rc())*cos
+        yc = self.y - np.abs(self.rc())*sin
+
+        return (xc, yc)
 
     def pixeval(self, x, y, scale=1, csub=23):
         from scipy import interpolate
@@ -123,90 +169,65 @@ class Arc:
         x = x.ravel()
         y = y.ravel()
 
-        xc = self.x + self.rc*COS(self.pa*pi/180.)
-        yc = self.y + self.rc*SIN(self.pa*pi/180.)
+        cos = COS(0.5*pi*(np.sign(-self.rc()) + 1.) + self.pa*pi/180.)
+        sin = SIN(0.5*pi*(np.sign(-self.rc()) + 1.) + self.pa*pi/180.)
+        tan = np.tan(0.5*pi*(np.sign(-self.rc()) + 1.) + self.pa*pi/180.)
+
+        xc = self.x - np.abs(self.rc())*cos
+        yc = self.y - np.abs(self.rc())*sin
 
         r = ((x - xc)**2 + (y - yc)**2)**0.5
-        dr = r - rc
 
-        cos = COS(self.pa*pi/180. + pi)
-        sin = SIN(self.pa*pi/180. + pi)
+        cospix = (x - xc)/r
+        sinpix = (y - yc)/r
+        tanpix = (y - yc)/(x - xc)
 
-        cosa = COS((self.pa - 0.5*self.omega)*pi/180.)
-        cosb = COS((self.pa + 0.5*self.omega)*pi/180.)
+        cosdiff = cos*cospix + sin*sinpix
+        sindiff = sin*cospix - cos*sinpix
+        tandiff = (tan - tanpix)/(1. + tan*tanpix)
 
-        sina = SIN((self.pa - 0.5*self.omega)*pi/180.)
-        sinb = SIN((self.pa + 0.5*self.omega)*pi/180.)
+        angdiff = np.arccos(cosdiff)
 
-        tana = sina/cosa
-        tanb = sinb/cosb
+        cut = 0.5*self.length*np.abs(self.invrc)
+        body = angdiff < cut
+        edge = np.logical_not(body)
 
-        def get_angle(c, s, t):
-            theta = np.arctan(t)
-            if c > 0.:
-                if s < 0.:
-                    theta = 2.*pi + theta
-            elif c < 0.:
-                theta = pi + theta
-            else:
-                if sina > 0.:
-                    theta = 0.5*np.pi
-                else:
-                    theta = 3/2.*np.pi
-            return theta
+        dr = 0.*x
 
-        thetaa = get_angle(cosa, sina, tana)
-        thetab = get_angle(cosb, sinb, tanb)
+        q = self.hr/self.ht
 
-        k = 2.*self.n-1./3+4./(405.*self.n)+46/(25515.*self.n**2)
-        R = np.logspace(-5.,4.,451) # 50 pnts / decade
-        s0 = np.exp(-k*(R**(1./self.n) - 1.))
+        dr[body] = np.abs(r[body] - np.abs(self.rc()))/self.hr
 
-        # Determine corrections for curvature
-        rpow = R**(1./self.n - 1.)
-        term1 = (k*rpow/self.n)**2
-        term2 = k*(self.n-1.)*rpow/(R*self.n**2)
-        wid = scale/self.re
-        corr = (term1+term2)*wid**3/6.
-        try:
-            minR = R[abs(corr)<0.005].min()
-        except:
-            minR = 0
+        dr[edge] = ((self.rc()*(angdiff[edge] - cut))**2/self.ht**2 + np.abs(r[edge] - np.abs(self.rc()))**2/self.hr**2)**0.5
 
-        # Evaluate model!
-        model = interpolate.splrep(R,s0,k=3,s=0)
-        R0 = r/self.re
-        s = interpolate.splev(R0,model)*scale**2
-        if self.n<=1. or minR==0:
-            return self.amp*s.reshape(shape)
-        model2 = interpolate.splrep(R,s0*R*self.re**2,k=3,s=0)
-        coords = np.where(R0<minR)[0]
-        c = (np.indices((csub,csub)).astype(np.float32)-csub/2)*scale/csub
-        for i in coords:
-            # The central pixels are tricky because we can't assume that we
-            #   are integrating in delta-theta segments of an annulus; these
-            #   pixels are treated separately by sub-sampling with ~500 pixels
-            if R0[i]<3*scale/self.re:
-                s[i] = 0.
-                y0 = c[1]+y[i]
-                x0 = c[0]+x[i]
-                xp = (x0-self.x)*cos+(y0-self.y)*sin
-                yp = (y0-self.y)*cos-(x0-self.x)*sin
-                r0 = (self.q*xp**2+yp**2/self.q)**0.5/self.re
-                s[i] = interpolate.splev(r0.ravel(),model).mean()*scale**2
-                continue
-            lo = R0[i]-0.5*scale/self.re
-            hi = R0[i]+0.5*scale/self.re
-            angle = (scale/self.re)/R0[i]
-            s[i] = angle*interpolate.splint(lo,hi,model2)
-            # The following code should no longer be needed
-            """
-            if lo<0:
-                s[i] = ((interpolate.splint(0,abs(lo),model2)+interpolate.splint(0,hi,model2)))*pi*2
-            else:
-                s[i] = angle*interpolate.splint(lo,hi,model2)
-            """
-        return self.amp*s.reshape(shape)
+        #dr = np.abs(r - self.rc)
+        #dt = np.abs(angdiff - cut)*r
+        #rad = self.amp*np.exp(-dr/self.h)
+        #core = self.amp*0.5*(np.sign(angdiff + cut) + 1.)*0.5*(np.sign(cut - angdiff) + 1.)
+        #edge = 0.5*self.amp*(np.sign(angdiff - cut) + 2. + np.sign(-cut - angdiff)) * np.exp(-dt/self.ht)
+        #return (rad*(core + edge)).reshape(shape)
+
+        return (self.amp*np.exp(-dr)).reshape(shape)
+
+    def get_edges(self):
+        from math import pi
+        theta = 0.5*pi*(np.sign(-self.rc()) + 1.) + self.pa*pi/180.
+        theta_a = theta + 0.5*self.length*np.abs(self.invrc)
+        theta_b = theta - 0.5*self.length*np.abs(self.invrc)
+
+        cos = np.cos(theta)
+        sin = np.sin(theta)
+
+        xc = self.x - np.abs(self.rc())*cos
+        yc = self.y - np.abs(self.rc())*sin
+
+        xa = xc + np.abs(self.rc())*np.cos(theta_a)
+        ya = yc + np.abs(self.rc())*np.sin(theta_a)
+
+        xb = xc + np.abs(self.rc())*np.cos(theta_b)
+        yb = yc + np.abs(self.rc())*np.sin(theta_b)
+
+        return ((xa, ya), (xb, yb))
 
 
 class deV(Sersic):

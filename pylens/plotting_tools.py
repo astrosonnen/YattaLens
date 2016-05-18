@@ -1,8 +1,10 @@
 import pylab
 import numpy as np
-import Image
-import ImageDraw
+import Image, ImageDraw, ImageFont
+from yattaconfig import *
 
+
+font = ImageFont.truetype("/usr/local/texlive/2015/texmf-dist/fonts/truetype/public/dejavu/DejaVuSans-Bold.ttf", 12)
 
 def make_rgbarray(images, cuts):
 
@@ -27,7 +29,8 @@ def visual_comparison(data, models, sources=None):
     resids = []
     i = 0
     for img in data:
-        cuts.append(np.percentile(img, 99.))
+        cut = np.percentile(img, 99.)
+        cuts.append(cut)
         resids.append(img - models[i])
         i += 1
 
@@ -73,104 +76,287 @@ def make_crazy_pil_format(data, cuts):
     return l
 
 
-def make_rgb_png(data, models, sources=None, arcmask=None, outname='rgb.png'):
+def make_rgb_png(data, lenssub, model, source, arcmask, crapmask=None, maskedge=None, outname='rgb.png'):
 
     cuts = []
-    resids = []
-    masks = []
+    resid = []
+    mask = []
     i = 0
     for img in data:
         cut = np.percentile(img, 99.)
         cuts.append(cut)
-        resids.append(img - models[i])
-        masks.append(arcmask*cut)
+        resid.append(img - model[i])
+        if i==0:
+            if crapmask is not None:
+                mask.append(arcmask*cut + crapmask*cut)
+        else:
+            mask.append(arcmask*cut)
         i += 1
 
     dlist = make_crazy_pil_format(data, cuts)
-    mlist = make_crazy_pil_format(models, cuts)
-    rlist = make_crazy_pil_format(resids, cuts)
-    alist = make_crazy_pil_format(masks, cuts)
+    lsublist = make_crazy_pil_format(lenssub, cuts)
+    mlist = make_crazy_pil_format(model, cuts)
+    rlist = make_crazy_pil_format(resid, cuts)
+    alist = make_crazy_pil_format(mask, cuts)
+    slist = make_crazy_pil_format(source, cuts)
 
     s = data[0].shape
     dim = Image.new('RGB', s, 'black')
-    mim = Image.new('RGB', s, 'black')
-    rim = Image.new('RGB', s, 'black')
+    lsubim = Image.new('RGB', s, 'black')
     aim = Image.new('RGB', s, 'black')
+    mim = Image.new('RGB', s, 'black')
+    sim = Image.new('RGB', s, 'black')
+    rim = Image.new('RGB', s, 'black')
+
+    if maskedge is not None:
+        x0 = s[1]/2
+        y0 = s[0]/2
+        maskdraw = ImageDraw.Draw(aim)
+        maskdraw.ellipse((x0 - maskedge, y0 - maskedge, x0 + maskedge, y0 + maskedge), fill=None, outline='yellow')
 
     dim.putdata(dlist)
+    lsubim.putdata(lsublist)
     mim.putdata(mlist)
     rim.putdata(rlist)
     aim.putdata(alist)
+    sim.putdata(slist)
 
-    if sources is None:
-        im = Image.new('RGB', (4*data[0].shape[0], data[0].shape[1]), 'black')
-        rindex = 3
-    else:
-        im = Image.new('RGB', (5*data[0].shape[0], data[0].shape[1]), 'black')
-        sim = Image.new('RGB', s, 'black')
-        slist = make_crazy_pil_format(sources, cuts)
-        sim.putdata(slist)
-        im.paste(sim, (3*s[1], 0))
-        rindex = 4
+    im = Image.new('RGB', (6*data[0].shape[0], data[0].shape[1]), 'black')
 
     im.paste(dim, (0, 0,))
-    im.paste(aim, (s[1], 0))
-    im.paste(mim, (2*s[1], 0))
-    im.paste(rim, (rindex*s[1], 0))
+    im.paste(lsubim, (s[1], 0))
+    im.paste(aim, (2*s[1], 0))
+    im.paste(mim, (3*s[1], 0))
+    im.paste(sim, (4*s[1], 0))
+    im.paste(rim, (5*s[1], 0))
+
+    im.save(outname)
+
+def make_long_rgb_png(data, lenssub, arcimg, model, source, arcmask, normresid, nsig_cut=5., crapmask=None, \
+                      maskedge=None, fuzzmask=None, outname='rgb.png'):
+
+    cuts = []
+    resid = []
+    lensonly_resid = []
+    mask = []
+    normresid_rgb = []
+    normresid_cuts = []
+    i = 0
+    for img in data:
+        cut = np.percentile(img, 99.)
+        cuts.append(cut)
+        resid.append(img - model[i])
+        lensonly_resid.append(img - model[i] + source[i])
+        normresid_rgb.append(normresid + nsig_cut)
+        normresid_cuts.append(2.*nsig_cut)
+        if i==0:
+            maskdata = arcmask*cut
+            if crapmask is not None:
+                maskdata += crapmask*cut
+            if fuzzmask is not None:
+                maskdata += 0.4*fuzzmask*cut
+
+            mask.append(maskdata)
+        else:
+            mask.append(arcmask*cut)
+        i += 1
+
+    dlist = make_crazy_pil_format(data, cuts)
+    lsublist = make_crazy_pil_format(lenssub, cuts)
+    masklist = make_crazy_pil_format(mask, cuts)
+    arclist = make_crazy_pil_format(arcimg, cuts)
+    lensresidlist = make_crazy_pil_format(lensonly_resid, cuts)
+    mlist = make_crazy_pil_format(model, cuts)
+    slist = make_crazy_pil_format(source, cuts)
+    rlist = make_crazy_pil_format(resid, cuts)
+    normresidlist = make_crazy_pil_format(normresid_rgb, normresid_cuts)
+
+    s = data[0].shape
+    dim = Image.new('RGB', s, 'black')
+    lsubim = Image.new('RGB', s, 'black')
+    maskim = Image.new('RGB', s, 'black')
+    arcim = Image.new('RGB', s, 'black')
+    lresim = Image.new('RGB', s, 'black')
+    mim = Image.new('RGB', s, 'black')
+    sim = Image.new('RGB', s, 'black')
+    rim = Image.new('RGB', s, 'black')
+    nim = Image.new('RGB', s, 'black')
+
+    dim.putdata(dlist)
+    lsubim.putdata(lsublist)
+    maskim.putdata(masklist)
+    arcim.putdata(arclist)
+    lresim.putdata(lensresidlist)
+    mim.putdata(mlist)
+    sim.putdata(slist)
+    rim.putdata(rlist)
+    nim.putdata(normresidlist)
+
+    x0 = s[1]/2
+    y0 = s[0]/2
+    if maskedge is not None:
+        maskdraw = ImageDraw.Draw(maskim)
+        maskdraw.ellipse((x0 - maskedge, y0 - maskedge, x0 + maskedge, y0 + maskedge), fill=None, outline='yellow')
+
+    im = Image.new('RGB', (8*data[0].shape[0], data[0].shape[1]), 'black')
+
+    im.paste(dim, (0, 0,))
+    im.paste(lsubim, (s[1], 0))
+    im.paste(maskim, (2*s[1], 0))
+    #im.paste(arcim, (3*s[1], 0))
+    im.paste(lresim, (3*s[1], 0))
+    im.paste(mim, (4*s[1], 0))
+    im.paste(sim, (5*s[1], 0))
+    im.paste(rim, (6*s[1], 0))
+    im.paste(nim, (7*s[1], 0))
 
     im.save(outname)
 
 
-def make_large_rgb_png(data, lenssub, model, source, arcmask, outname='rgb.png'):
+def make_fail_curv_rgb(data, lenssub, arcimg, arccoords, arcmask, crapmask=None, fuzzmask=None, maskedge=None, \
+                       outname='wrong_curvature.png'):
 
     cuts = []
-    resids = []
-    invresids = []
-    masks = []
+    mask = []
     i = 0
     for img in data:
         cut = np.percentile(img, 99.)
         cuts.append(cut)
-        resids.append(img - model[i])
-        invresids.append(model[i] - img)
-        masks.append(arcmask*cut)
+        if i==0:
+            maskdata = arcmask*cut
+            if crapmask is not None:
+                maskdata += crapmask*cut
+            if fuzzmask is not None:
+                maskdata += 0.4*fuzzmask*cut
+            mask.append(maskdata)
+        else:
+            mask.append(arcmask*cut)
         i += 1
 
     dlist = make_crazy_pil_format(data, cuts)
-    mlist = make_crazy_pil_format(model, cuts)
+    lsublist = make_crazy_pil_format(lenssub, cuts)
+    masklist = make_crazy_pil_format(mask, cuts)
+    arclist = make_crazy_pil_format(arcimg, cuts)
 
-    rlist = make_crazy_pil_format(resids, cuts)
-    ilist = make_crazy_pil_format(invresids, cuts)
-    alist = make_crazy_pil_format(masks, cuts)
-    slist = make_crazy_pil_format(source, cuts)
-    sublist = make_crazy_pil_format(lenssub, cuts)
     s = data[0].shape
-
     dim = Image.new('RGB', s, 'black')
-    subim = Image.new('RGB', s, 'black')
-    mim = Image.new('RGB', s, 'black')
-    rim = Image.new('RGB', s, 'black')
-    iim = Image.new('RGB', s, 'black')
-    aim = Image.new('RGB', s, 'black')
-    sim = Image.new('RGB', s, 'black')
+    lsubim = Image.new('RGB', s, 'black')
+    maskim = Image.new('RGB', s, 'black')
+    arcim = Image.new('RGB', s, 'black')
 
-    sim.putdata(slist)
     dim.putdata(dlist)
-    mim.putdata(mlist)
-    rim.putdata(rlist)
-    iim.putdata(ilist)
-    aim.putdata(alist)
-    subim.putdata(sublist)
+    lsubim.putdata(lsublist)
+    maskim.putdata(masklist)
+    arcim.putdata(arclist)
 
-    im = Image.new('RGB', (3*data[0].shape[0], 3*data[0].shape[1]), 'black')
+    x0 = s[1]/2
+    y0 = s[0]/2
+    if maskedge is not None:
+        maskdraw = ImageDraw.Draw(maskim)
+        maskdraw.ellipse((x0 - maskedge, y0 - maskedge, x0 + maskedge, y0 + maskedge), fill=None, outline='yellow')
+
+    # draws the lines from the edges of the arc to the center
+
+    def line_y(x, x1, x2, y1, y2):
+        return (y2 - y1)/(x2 - x1)*(x - x2) + y2
+
+    def line_x(y, x1, x2, y1, y2):
+        return (x2 - x1)/(y2 - y1)*(y - y2) + x2
+
+    def get_vertex(x1, x2, y1, y2):
+        if x1 < 0.:
+            xedge = 0.
+            yedge = line_y(xedge, x1, x2, y1, y2)
+            if yedge < 0.:
+                yedge = 0.
+                xedge = line_x(0., x1, x2, y1, y2)
+            elif yedge > s[0]:
+                yedge = s[0]
+                xedge = line_x(yedge, x1, x2, y1, y2)
+        elif x1 > s[1]:
+            xedge = s[1]
+            yedge = line_y(xedge, x1, x2, y1, y2)
+            if yedge < 0.:
+                yedge = 0.
+                xedge = line_x(yedge, x1, x2, y1, y2)
+            elif yedge > s[0]:
+                yedge = s[0]
+                xedge = line_x(yedge, x1, x2, y1, y2)
+        else:
+            if y1 < 0.:
+                yedge = 0.
+                xedge = line_x(yedge, x1, x2, y1, y2)
+            elif y1 > s[0]:
+                yedge = s[0]
+                xedge = line_x(yedge, x1, x2, y1, y2)
+            else:
+                xedge = x1
+                yedge = y1
+        return (xedge, yedge)
+
+    draw = ImageDraw.Draw(arcim)
+
+    for coord in arccoords:
+        xc, yc = coord[0]
+        xa, ya = coord[1]
+        xb, yb = coord[2]
+
+        ca_coords = get_vertex(xc, xa, yc, ya)
+        cb_coords = get_vertex(xc, xb, yc, yb)
+
+
+        draw.line((ca_coords[0], s[1] - ca_coords[1], xa, s[1] - ya), fill=(255, 255, 255))
+        draw.line((cb_coords[0], s[1] - cb_coords[1], xb, s[1] - yb), fill=(255, 255, 255))
+
+    im = Image.new('RGB', (4*data[0].shape[0], data[0].shape[1]), 'black')
 
     im.paste(dim, (0, 0,))
-    im.paste(subim, (s[1], 0))
-    im.paste(aim, (2*s[1], 0))
-    im.paste(mim, (0, s[0]))
-    im.paste(sim, (s[1], s[0]))
-    im.paste(rim, (2*s[1], s[0]))
-    im.paste(iim, (2*s[1], 2*s[0]))
+    im.paste(lsubim, (s[1], 0))
+    im.paste(maskim, (2*s[1], 0))
+    im.paste(arcim, (3*s[1], 0))
+
+    im.save(outname)
+
+
+def make_fuzz_rgb(data, lenssub, arcmask=None, crapmask=None, fuzzmask=None, maskedge=None, \
+                  outname='too_much_fuzz.png'):
+
+    cuts = []
+    mask = []
+    i = 0
+    for img in data:
+        cut = np.percentile(img, 99.)
+        cuts.append(cut)
+        if i==0:
+            mask.append(arcmask*cut + crapmask*cut + 0.4*fuzzmask*cut)
+        else:
+            mask.append(arcmask*cut)
+        i += 1
+
+    dlist = make_crazy_pil_format(data, cuts)
+    lsublist = make_crazy_pil_format(lenssub, cuts)
+    masklist = make_crazy_pil_format(mask, cuts)
+
+    s = data[0].shape
+    dim = Image.new('RGB', s, 'black')
+    lsubim = Image.new('RGB', s, 'black')
+    maskim = Image.new('RGB', s, 'black')
+
+    dim.putdata(dlist)
+    lsubim.putdata(lsublist)
+    maskim.putdata(masklist)
+
+    x0 = s[1]/2
+    y0 = s[0]/2
+    if maskedge is not None:
+        maskdraw = ImageDraw.Draw(maskim)
+        maskdraw.ellipse((x0 - maskedge, y0 - maskedge, x0 + maskedge, y0 + maskedge), fill=None, outline='yellow')
+
+    im = Image.new('RGB', (3*data[0].shape[0], data[0].shape[1]), 'black')
+
+    im.paste(dim, (0, 0,))
+    im.paste(lsubim, (s[1], 0))
+    im.paste(maskim, (2*s[1], 0))
 
     im.save(outname)
 
@@ -203,3 +389,173 @@ def make_arcfinder_mask_png(data, mask, outname='arcfinder_mask.png'):
     im.paste(mim, (s[1], 0))
 
     im.save(outname)
+
+
+def make_image_set_rgb(candidate, image_set, maskedge=None, outname='image_set.png'):
+
+    cuts = []
+    data = []
+    lenssub = []
+    mask = []
+    i = 0
+    for band in rgbbands:
+        img = candidate.sci[band]
+        data.append(img)
+        maskimg = 0.*img
+        cut = np.percentile(img, 99.)
+        cuts.append(cut)
+        lenssub.append(candidate.lenssub_resid[band])
+
+        for image in image_set['images']:
+            maskimg[image['footprint'] > 0] = cut
+
+        if i==0:
+            for junk in image_set['junk']:
+                maskimg[junk['footprint'] > 0] = cut
+        elif i==1:
+            for arc in image_set['arcs']:
+                maskimg[arc['footprint'] > 0] = cut
+
+        mask.append(maskimg)
+        i += 1
+
+    dlist = make_crazy_pil_format(data, cuts)
+    lsublist = make_crazy_pil_format(lenssub, cuts)
+    masklist = make_crazy_pil_format(mask, cuts)
+
+    s = data[0].shape
+    dim = Image.new('RGB', s, 'black')
+    lsubim = Image.new('RGB', s, 'black')
+    maskim = Image.new('RGB', s, 'black')
+
+    dim.putdata(dlist)
+    lsubim.putdata(lsublist)
+    maskim.putdata(masklist)
+
+    x0 = s[1]/2
+    y0 = s[0]/2
+    if maskedge is not None:
+        maskdraw = ImageDraw.Draw(maskim)
+        maskdraw.ellipse((x0 - maskedge, y0 - maskedge, x0 + maskedge, y0 + maskedge), fill=None, outline='yellow')
+
+    im = Image.new('RGB', (3*data[0].shape[0], data[0].shape[1]), 'black')
+
+    im.paste(dim, (0, 0,))
+    im.paste(lsubim, (s[1], 0))
+    im.paste(maskim, (2*s[1], 0))
+
+    im.save(outname)
+
+def make_full_rgb(candidate, image_set, maskedge=None, outname='full_model.png', nsig_cut=5.):
+
+    cuts = []
+    lens_normresid_cuts = []
+    ring_normresid_cuts = []
+    data = []
+    lenssub = []
+    ringresid = []
+    lensresid = []
+    lensmodel = []
+    ringmodel = []
+    source = []
+    lens_normresid = []
+    ring_normresid = []
+    mask = []
+    i = 0
+    for band in rgbbands:
+        img = candidate.sci[band]
+        data.append(img)
+        maskimg = 0.*img
+        cut = np.percentile(img, 99.)
+        cuts.append(cut)
+        lenssub.append(candidate.lenssub_resid[band])
+        ringmodel.append(candidate.ringfit_model[band][0] + candidate.ringfit_model[band][1])
+        lensmodel.append(candidate.lensfit_model[band][0] + candidate.lensfit_model[band][1])
+        source.append(candidate.lensfit_model[band][1])
+        rres = candidate.sci[band] - candidate.ringfit_model[band][0] - candidate.ringfit_model[band][1]
+        lres = candidate.sci[band] - candidate.lensfit_model[band][0] - candidate.lensfit_model[band][1]
+        lensresid.append(lres)
+        ringresid.append(rres)
+        lens_normresid.append((candidate.sci['g'] - candidate.lensfit_model['g'][0] - candidate.lensfit_model['g'][1])/candidate.err['g'] + nsig_cut)
+        lens_normresid_cuts.append(2.*nsig_cut)
+        ring_normresid.append((candidate.sci['g'] - candidate.ringfit_model['g'][0] - candidate.ringfit_model['g'][1])/candidate.err['g'] + nsig_cut)
+        ring_normresid_cuts.append(2.*nsig_cut)
+
+        for image in image_set['images']:
+            maskimg[image['footprint'] > 0] = cut
+
+        if i==0:
+            for junk in image_set['junk']:
+                maskimg[junk['footprint'] > 0] = cut
+        elif i==1:
+            for arc in image_set['arcs']:
+                maskimg[arc['footprint'] > 0] = cut
+
+        mask.append(maskimg)
+        i += 1
+
+    dlist = make_crazy_pil_format(data, cuts)
+    lsublist = make_crazy_pil_format(lenssub, cuts)
+    masklist = make_crazy_pil_format(mask, cuts)
+    slist = make_crazy_pil_format(source, cuts)
+    rmlist = make_crazy_pil_format(ringmodel, cuts)
+    lmlist = make_crazy_pil_format(lensmodel, cuts)
+    lrlist = make_crazy_pil_format(lensresid, cuts)
+    rrlist = make_crazy_pil_format(ringresid, cuts)
+    nlrlist = make_crazy_pil_format(lens_normresid, lens_normresid_cuts)
+    nrrlist = make_crazy_pil_format(ring_normresid, ring_normresid_cuts)
+
+    s = data[0].shape
+    dim = Image.new('RGB', s, 'black')
+    lsubim = Image.new('RGB', s, 'black')
+    maskim = Image.new('RGB', s, 'black')
+    sim = Image.new('RGB', s, 'black')
+    rmim = Image.new('RGB', s, 'black')
+    lmim = Image.new('RGB', s, 'black')
+    lrim = Image.new('RGB', s, 'black')
+    rrim = Image.new('RGB', s, 'black')
+    nlrim = Image.new('RGB', s, 'black')
+    nrrim = Image.new('RGB', s, 'black')
+
+    dim.putdata(dlist)
+    lsubim.putdata(lsublist)
+    maskim.putdata(masklist)
+    sim.putdata(slist)
+    rmim.putdata(rmlist)
+    lmim.putdata(lmlist)
+    lrim.putdata(lrlist)
+    rrim.putdata(rrlist)
+    nlrim.putdata(nlrlist)
+    nrrim.putdata(nrrlist)
+
+    x0 = s[1]/2
+    y0 = s[0]/2
+    if maskedge is not None:
+        maskdraw = ImageDraw.Draw(maskim)
+        maskdraw.ellipse((x0 - maskedge, y0 - maskedge, x0 + maskedge, y0 + maskedge), fill=None, outline='yellow')
+
+    im = Image.new('RGB', (10*data[0].shape[0], data[0].shape[1]), 'black')
+
+    im.paste(dim, (0, 0,))
+    im.paste(lsubim, (s[1], 0))
+    im.paste(maskim, (2*s[1], 0))
+    im.paste(lmim, (3*s[1], 0))
+    im.paste(sim, (4*s[1], 0))
+    im.paste(lrim, (5*s[1], 0))
+    im.paste(nlrim, (6*s[1], 0))
+    im.paste(rmim, (7*s[1], 0))
+    im.paste(rrim, (8*s[1], 0))
+    im.paste(nrrim, (9*s[1], 0))
+
+    draw = ImageDraw.Draw(im)
+    draw.text((10, 10), 'HSCJ'+candidate.name, font=font, fill='white')
+
+    draw.text((10 + 5*s[1], s[0] - 20), '%2.1f'%candidate.lensfit_chi2, font=font, fill='white')
+    draw.text((10 + 7*s[1], s[0] - 20), '%2.1f'%candidate.ringfit_chi2, font=font, fill='white')
+
+    if candidate.lensfit_footprint_chi2 is not None:
+        draw.text((10 + 6*s[1], s[0] - 20), '%2.1f'%candidate.lensfit_footprint_chi2, font=font, fill='white')
+        draw.text((10 + 8*s[1], s[0] - 20), '%2.1f'%candidate.ringfit_footprint_chi2, font=font, fill='white')
+
+    im.save(outname)
+

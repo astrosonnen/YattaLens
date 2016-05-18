@@ -1,11 +1,15 @@
 import os
 
 datadir = os.environ.get('YATTA_DATADIR')
+psfdir = os.environ.get('YATTA_PSFDIR')
 logdir = os.environ.get('YATTA_LOGDIR')
 modeldir = os.environ.get('YATTA_MODELDIR')
 
 if datadir is None:
-    datadir = 'data/'
+    datadir = 'cutout_dir/'
+
+if psfdir is None:
+    psfdir = datadir
 
 if logdir is None:
     logdir = 'logs/'
@@ -13,11 +17,3 @@ if logdir is None:
 if modeldir is None:
     modeldir = 'models/'
 
-maxarcdist = 30.
-minarcdist = 3.
-minarcsize = 20.
-maxarcsize = 500.
-maxarcdang = 30.
-
-fitband = ['g']
-lightband = ['i']

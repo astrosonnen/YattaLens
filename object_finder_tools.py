@@ -1,47 +1,5 @@
 import pyfits
 import numpy as np
-from scipy.optimize import minimize
-
-def compare_colors(f1a, f1b, f2a, f2b, e1a, e1b, e2a, e2b, nsigma=4.):
-    """
-    Compares fluxes of two objects, 1 and 2, in two bands, a and b, and determines whether they have the same color
-    :param f1a: band a flux of object 1
-    :param f1b: band b flux of object 1
-    :param f2a: band a flux of object 2
-    :param f2b: band b flux of object 2
-    :param e1a: measurement error on f1a
-    :param e1b: measurement error on f1b
-    :param e2a: measurement error on f2a
-    :param e2b: measurement error on f2b
-    :param nsigma: number of sigmas required to reject the null hypothesis of identical color
-    :return: consistent: bool-type
-    """
-
-    #if f1a > nsigma*e1a and f1b > nsigma*e1b and f2a > nsigma*e2a and f2b > nsigma*e2b:
-    def nloglike(p):
-        f1, f2, c = p
-        #t1a = -0.5*np.log(2.*np.pi) - np.log(e1a) - 0.5*(f1a - f1)**2/e1a**2
-        #t1b = -0.5*np.log(2.*np.pi) - np.log(e1b) - 0.5*(f1a - f1*c)**2/e1b**2
-        #t2a = -0.5*np.log(2.*np.pi) - np.log(e2a) - 0.5*(f2a - f2)**2/e2a**2
-        #t2b = -0.5*np.log(2.*np.pi) - np.log(e2b) - 0.5*(f2a - f2*c)**2/e2b**2
-        t1a = -0.5*(f1a - f1)**2/e1a**2
-        t1b = -0.5*(f1b - f1*c)**2/e1b**2
-        t2a = -0.5*(f2a - f2)**2/e2a**2
-        t2b = -0.5*(f2b - f2*c)**2/e2b**2
-        return -t1a -t1b -t2a -t2b
-
-    guess = (max(f1a, e1a), max(f2a, e2a), max(f1a/f1b, 0.01))
-
-    res = minimize(nloglike, guess, method='L-BFGS-B', bounds=((0., f1a + 5.*e1a), (0., f2a + 5.*e2a), (0.001, 1000.)), tol=0.1)
-
-    ml = -nloglike(res.x)
-
-    if ml < -0.5*nsigma:
-        samecolor = False
-    else:
-        samecolor = True
-
-    return samecolor, res.x, ml
 
 
 def find_peaks(image, sigma, peakthre=5., smooth=3):

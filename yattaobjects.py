@@ -104,6 +104,27 @@ class lens_model:
             self.source[band] = source
 
 
+class cigar_model:
+
+    def __init__(self, candidate):
+
+        self.x = pymc.Uniform('x', lower=candidate.x0 - 2., upper=candidate.x0 + 2., value=candidate.x0)
+        self.y = pymc.Uniform('y', lower=candidate.y0 - 2., upper=candidate.y0 + 2., value=candidate.y0)
+        self.pa = pymc.Uniform('pa', lower=-100., upper=100., value=0.)
+        self.q = pymc.Uniform('q', lower=0.1, upper=1., value=0.5)
+        self.re = pymc.Uniform('re', lower=1., upper=20., value=5.)
+
+        self.model = {}
+
+        for band in candidate.bands:
+            light = SBModels.Sersic('LensLight', {'x': self.x, 'y': self.y, 're': self.re, 'q': self.q, 'pa': self.pa, \
+                                                  'n': 1.})
+
+            light.convolve = convolve.convolve(candidate.sci[band], candidate.psf[band])[1]
+
+            self.model[band] = light
+
+
 class Candidate:
 
     def __init__(self, name, bands=('i', 'r', 'g'), zp=(27., 27., 27.)):
@@ -150,6 +171,12 @@ class Candidate:
         self.ring_hi = None
         self.ring_ho = None
 
+        self.cigar_x = None
+        self.cigar_y = None
+        self.cigar_re = None
+        self.cigar_pa = None
+        self.cigar_q = None
+
         self.light_pars_sample = None
         self.ring_pars_sample = None
         self.lens_pars_sample = None
@@ -158,9 +185,11 @@ class Candidate:
         self.lenssub_resid = {}
         self.ringfit_model = {}
         self.lensfit_model = {}
+        self.cigarfit_model = {}
 
         self.ringfit_chi2 = None
         self.lensfit_chi2 = None
+        self.cigarfit_chi2 = None
 
         self.image_sets = None
 
@@ -168,6 +197,7 @@ class Candidate:
 
         self.ringfit_footprint_chi2 = None
         self.lensfit_footprint_chi2 = None
+        self.cigarfit_footprint_chi2 = None
 
     def read_data(self):
 
@@ -236,6 +266,7 @@ class Candidate:
 
         lchi2 = 0.
         rchi2 = 0.
+        cchi2 = 0.
 
         mask = self.source_footprint
 
@@ -247,7 +278,8 @@ class Candidate:
         for band in fitband:
             lchi2 += (((self.sci[band] - self.lensfit_model[band][0] - self.lensfit_model[band][1])/self.err[band])**2)[mask > 0].sum()
             rchi2 += (((self.sci[band] - self.ringfit_model[band][0] - self.ringfit_model[band][1])/self.err[band])**2)[mask > 0].sum()
+            rchi2 += (((self.sci[band] - self.cigarfit_model[band][0] - self.cigarfit_model[band][1])/self.err[band])**2)[mask > 0].sum()
 
         self.lensfit_footprint_chi2 = lchi2
         self.ringfit_footprint_chi2 = rchi2
-
+        self.cigarfit_footprint_chi2 = rchi2

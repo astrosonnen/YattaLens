@@ -166,7 +166,6 @@ def quick_lens_subtraction(candidate, light_model, lfitband=('i'), niter=200, rm
         candidate.lenssub_model[band] = mimg
         candidate.lenssub_resid[band] = resid
 
-
 def fit_ring(candidate, ring_model, light_model, image_set=None, rmax=30., nsamp=200):
 
     ring_model.pa.value = candidate.light_pa
@@ -265,6 +264,127 @@ def fit_ring(candidate, ring_model, light_model, image_set=None, rmax=30., nsamp
             chi2 += (((candidate.sci[band] - mimg[0] - mimg[1])/candidate.err[band])**2)[mask > 0].sum()
 
     candidate.ringfit_chi2 = chi2
+
+
+def fit_cigar(candidate, cigar_model, light_model, image_set, rmax=30., nsamp=200):
+
+    x_brightest = -1.
+    y_brightest = -1.
+    size_brightest = 0
+    brightest = -np.inf
+
+    for arc in image_set['arcs']:
+        if arc['g_flux'] > brightest:
+            brightest = arc['g_flux']
+            x_brightest = arc['x']
+            y_brightest = arc['y']
+            size_brightest = arc['npix']
+
+    theta = np.rad2deg(np.arctan((y_brightest - candidate.y)/(x_brightest - candidate.x)))
+
+    cigar_model.x.value = x_brightest
+    cigar_model.y.value = y_brightest
+    cigar_model.x.parents['lower'] = x_brightest - 3.
+    cigar_model.x.parents['upper'] = x_brightest + 3.
+
+    cigar_model.y.parents['lower'] = y_brightest - 3.
+    cigar_model.y.parents['upper'] = y_brightest + 3.
+
+    cigar_model.pa.value = theta + 90.
+    cigar_model.pa.parents['lower'] = theta + 60.
+    cigar_model.pa.parents['upper'] = theta + 120.
+
+    mask = np.ones(candidate.imshape)
+
+    for junk in image_set['junk']:
+        mask[junk['footprint'] > 0] = 0
+
+    mask[candidate.R > rmax] = 0
+
+    mask_r = (mask > 0).ravel()
+
+    pars = [cigar_model.x, cigar_model.y, cigar_model.pa, cigar_model.q, cigar_model.re]
+
+    npars = len(pars)
+
+    bounds = []
+
+    for par in pars:
+        bounds.append((par.parents['lower'], par.parents['upper']))
+
+    npars = len(pars)
+    nwalkers = 6*npars
+
+    def logprior(allpars):
+        for i in range(0, npars):
+            if allpars[i] < bounds[i][0] or allpars[i] > bounds[i][1]:
+                return -np.inf
+        return 0.
+
+    def logpfunc(allpars):
+        lp = logprior(allpars)
+        if not np.isfinite(lp):
+            return -np.inf
+
+        for j in range(0, npars):
+            pars[j].value = allpars[j]
+        sumlogp = 0.
+        i = 0
+
+        for band in fitband:
+            logp, mags = pylens.getModel_lightonly_ncomponents([light_model.model[band], cigar_model.model[band]], \
+                                                               candidate.sci[band], candidate.err[band], candidate.X, \
+                                                               candidate.Y, zp=candidate.zp[band], mask=mask_r)
+
+            if logp != logp:
+                return -np.inf
+            sumlogp += logp
+            i += 1
+
+        return sumlogp
+
+    sampler = emcee.EnsembleSampler(nwalkers, npars, logpfunc)
+
+    start = []
+    for i in range(nwalkers):
+        tmp = np.zeros(npars)
+        urand = np.random.rand(npars)
+        for j in range(0, npars):
+            p0 = urand[j]*(bounds[j][1] - bounds[j][0]) + bounds[j][0]
+            tmp[j] = p0
+
+        start.append(tmp)
+
+    print "fitting cigar model..."
+
+    sampler.run_mcmc(start, nsamp)
+
+    candidate.cigar_pars_sample = sampler.chain
+
+    ML = sampler.flatlnprobability.argmax()
+
+    for j in range(0, npars):
+        pars[j].value = sampler.flatchain[ML, j]
+
+    candidate.cigar_pa = cigar_model.pa.value
+    candidate.cigar_q = cigar_model.q.value
+    candidate.cigar_x = cigar_model.x.value
+    candidate.cigar_y = cigar_model.y.value
+    candidate.cigar_re = cigar_model.re.value
+
+    # removes the best-fit i-band model from all bands and saves the residuals
+    chi2 = 0.
+    for band in candidate.bands:
+
+        logp, lmag, mimg = pylens.getModel_lightonly_ncomponents([light_model.model[band], cigar_model.model[band]], candidate.sci[band], candidate.err[band], \
+                                                     candidate.X, candidate.Y, zp=candidate.zp[band], returnImg=True, mask=mask_r)
+
+        candidate.cigarfit_model[band] = mimg
+
+        if band in fitband:
+            chi2 += (((candidate.sci[band] - mimg[0] - mimg[1])/candidate.err[band])**2)[mask > 0].sum()
+
+    candidate.cigarfit_chi2 = chi2
 
 def fit_lens(candidate, lens_model, light_model, image_set, rmax=30., nsamp=200):
 

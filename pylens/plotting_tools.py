@@ -446,7 +446,7 @@ def make_image_set_rgb(candidate, image_set, maskedge=None, outname='image_set.p
 
     im.save(outname)
 
-def make_full_rgb(candidate, image_set, maskedge=None, outname='full_model.png', nsig_cut=5.):
+def make_full_rgb(candidate, image_set, maskedge=None, outname='full_model.png', nsig_cut=5., success=None):
 
     cuts = []
     lens_normresid_cuts = []
@@ -455,8 +455,10 @@ def make_full_rgb(candidate, image_set, maskedge=None, outname='full_model.png',
     lenssub = []
     ringresid = []
     lensresid = []
+    cigarresid = []
     lensmodel = []
     ringmodel = []
+    cigarmodel = []
     source = []
     lens_normresid = []
     ring_normresid = []
@@ -470,12 +472,15 @@ def make_full_rgb(candidate, image_set, maskedge=None, outname='full_model.png',
         cuts.append(cut)
         lenssub.append(candidate.lenssub_resid[band])
         ringmodel.append(candidate.ringfit_model[band][0] + candidate.ringfit_model[band][1])
+        cigarmodel.append(candidate.cigarfit_model[band][0] + candidate.cigarfit_model[band][1])
         lensmodel.append(candidate.lensfit_model[band][0] + candidate.lensfit_model[band][1])
         source.append(candidate.lensfit_model[band][1])
         rres = candidate.sci[band] - candidate.ringfit_model[band][0] - candidate.ringfit_model[band][1]
         lres = candidate.sci[band] - candidate.lensfit_model[band][0] - candidate.lensfit_model[band][1]
+        cres = candidate.sci[band] - candidate.cigarfit_model[band][0] - candidate.cigarfit_model[band][1]
         lensresid.append(lres)
         ringresid.append(rres)
+        cigarresid.append(cres)
         lens_normresid.append((candidate.sci['g'] - candidate.lensfit_model['g'][0] - candidate.lensfit_model['g'][1])/candidate.err['g'] + nsig_cut)
         lens_normresid_cuts.append(2.*nsig_cut)
         ring_normresid.append((candidate.sci['g'] - candidate.ringfit_model['g'][0] - candidate.ringfit_model['g'][1])/candidate.err['g'] + nsig_cut)
@@ -499,9 +504,11 @@ def make_full_rgb(candidate, image_set, maskedge=None, outname='full_model.png',
     masklist = make_crazy_pil_format(mask, cuts)
     slist = make_crazy_pil_format(source, cuts)
     rmlist = make_crazy_pil_format(ringmodel, cuts)
+    cmlist = make_crazy_pil_format(cigarmodel, cuts)
     lmlist = make_crazy_pil_format(lensmodel, cuts)
     lrlist = make_crazy_pil_format(lensresid, cuts)
     rrlist = make_crazy_pil_format(ringresid, cuts)
+    crlist = make_crazy_pil_format(cigarresid, cuts)
     nlrlist = make_crazy_pil_format(lens_normresid, lens_normresid_cuts)
     nrrlist = make_crazy_pil_format(ring_normresid, ring_normresid_cuts)
 
@@ -510,10 +517,12 @@ def make_full_rgb(candidate, image_set, maskedge=None, outname='full_model.png',
     lsubim = Image.new('RGB', s, 'black')
     maskim = Image.new('RGB', s, 'black')
     sim = Image.new('RGB', s, 'black')
-    rmim = Image.new('RGB', s, 'black')
     lmim = Image.new('RGB', s, 'black')
+    rmim = Image.new('RGB', s, 'black')
+    cmim = Image.new('RGB', s, 'black')
     lrim = Image.new('RGB', s, 'black')
     rrim = Image.new('RGB', s, 'black')
+    crim = Image.new('RGB', s, 'black')
     nlrim = Image.new('RGB', s, 'black')
     nrrim = Image.new('RGB', s, 'black')
 
@@ -521,10 +530,12 @@ def make_full_rgb(candidate, image_set, maskedge=None, outname='full_model.png',
     lsubim.putdata(lsublist)
     maskim.putdata(masklist)
     sim.putdata(slist)
-    rmim.putdata(rmlist)
     lmim.putdata(lmlist)
+    rmim.putdata(rmlist)
+    cmim.putdata(cmlist)
     lrim.putdata(lrlist)
     rrim.putdata(rrlist)
+    crim.putdata(crlist)
     nlrim.putdata(nlrlist)
     nrrim.putdata(nrrlist)
 
@@ -542,20 +553,27 @@ def make_full_rgb(candidate, image_set, maskedge=None, outname='full_model.png',
     im.paste(lmim, (3*s[1], 0))
     im.paste(sim, (4*s[1], 0))
     im.paste(lrim, (5*s[1], 0))
-    im.paste(nlrim, (6*s[1], 0))
-    im.paste(rmim, (7*s[1], 0))
-    im.paste(rrim, (8*s[1], 0))
-    im.paste(nrrim, (9*s[1], 0))
+    #im.paste(nlrim, (6*s[1], 0))
+    im.paste(rmim, (6*s[1], 0))
+    im.paste(rrim, (7*s[1], 0))
+    im.paste(cmim, (8*s[1], 0))
+    im.paste(crim, (9*s[1], 0))
+    #im.paste(nrrim, (9*s[1], 0))
 
     draw = ImageDraw.Draw(im)
-    draw.text((10, 10), 'HSCJ'+candidate.name, font=font, fill='white')
+    draw.text((10, s[0] - 20), 'HSCJ'+candidate.name, font=font, fill='white')
 
     draw.text((10 + 5*s[1], s[0] - 20), '%2.1f'%candidate.lensfit_chi2, font=font, fill='white')
     draw.text((10 + 7*s[1], s[0] - 20), '%2.1f'%candidate.ringfit_chi2, font=font, fill='white')
+    draw.text((10 + 9*s[1], s[0] - 20), '%2.1f'%candidate.cigarfit_chi2, font=font, fill='white')
 
-    if candidate.lensfit_footprint_chi2 is not None:
-        draw.text((10 + 6*s[1], s[0] - 20), '%2.1f'%candidate.lensfit_footprint_chi2, font=font, fill='white')
-        draw.text((10 + 8*s[1], s[0] - 20), '%2.1f'%candidate.ringfit_footprint_chi2, font=font, fill='white')
+    if success is not None:
+        if success:
+            draw.ellipse((10, 10, 30, 30), fill=None, outline=(0, 255, 0))
+            draw.ellipse((11, 11, 29, 29), fill=None, outline=(0, 255, 0))
+        else:
+            draw.line((10, 10, 30, 30), fill=(255, 0, 0), width=2)
+            draw.line((30, 10, 10, 30), fill=(255, 0, 0), width=2)
 
     im.save(outname)
 

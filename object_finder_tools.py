@@ -5,7 +5,7 @@ from scipy.optimize import minimize
 import os
 
 
-def find_objects(candidate, detect_band='g', detect_thresh=3., meas_bands=['i', 'g'], model_err=0.1):
+def find_objects(candidate, detect_band='g', detect_thresh=3.):
 
     lsubname = modeldir+'/%s_%s_lenssub.fits'%(candidate.name, detect_band)
     varname = datadir+'/%s_%s_var.fits'%(candidate.name, detect_band)
@@ -13,8 +13,7 @@ def find_objects(candidate, detect_band='g', detect_thresh=3., meas_bands=['i', 
     segname = modeldir+'/%s_%s_segmap.fits'%(candidate.name, detect_band)
     catname = modeldir+'/%s_%s_secat.cat'%(candidate.name, detect_band)
 
-    pyfits.PrimaryHDU(candidate.lenssub_resid[detect_band]).writeto(lsubname, \
-                                                        clobber=True)
+    pyfits.PrimaryHDU(candidate.lenssub_resid[detect_band]).writeto(lsubname, clobber=True)
 
     os.system('sex %s -c seconfig.sex -WEIGHT_IMAGE %s -CATALOG_NAME %s -CHECKIMAGE_NAME %s -DETECT_THRESH %f'%\
               (lsubname, varname, catname, segname, detect_thresh))
@@ -62,14 +61,22 @@ def find_objects(candidate, detect_band='g', detect_thresh=3., meas_bands=['i', 
         else:
             obj['arclike'] = False
 
-        for band in meas_bands:
-            obj['%s_flux'%band] = candidate.lenssub_resid[band][segmap==ind].sum()
-            modeling_err = model_err*candidate.lenssub_model[band][segmap==ind].sum()
-            obj['%s_err'%band] = (candidate.var[band][segmap==ind].sum() + modeling_err**2)**0.5
-
         objects[i] = obj
 
     return objects, segmap, foundarcs, arclist
+
+
+def measure_fluxes(objects, candidate, meas_bands=('g', 'i'), model_err=0.1):
+
+    nobj = len(objects)
+    for i in objects:
+        obj = objects[i]
+        for band in meas_bands:
+            obj['%s_flux'%band] = candidate.lenssub_resid[band][obj['footprint'] > 0].sum()
+            modeling_err = model_err*candidate.lenssub_model[band][obj['footprint'] > 0].sum()
+            obj['%s_err'%band] = (candidate.var[band][obj['footprint'] > 0].sum() + modeling_err**2)**0.5
+
+    return objects
 
 
 def compare_colors(f1a, f1b, f2a, f2b, e1a, e1b, e2a, e2b, nsigma=4.):

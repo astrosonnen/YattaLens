@@ -18,13 +18,18 @@ minarcdist = 3.
 minarcsize = 20.
 maxarcsize = 500.
 maxarcdang = 30.
-crapstart = 1.3
+junkstart = 1.3
+modeluntil = 1.4
 abmin = 1.4
+min_aperture = 35.
+tooclose = 0.03
+se_minap = 25.
+gmi_max = 2.
 
 source_range = 8.
 
 fitband = ('g')
-lightband = ('i')
+lightband = 'i'
 
 rgbbands = ('i', 'r', 'g')
 

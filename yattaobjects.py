@@ -3,10 +3,8 @@ import numpy as np
 import pyfits
 import os
 from photofit import indexTricks as iT, convolve
-import pymc, emcee
+import pymc
 from pylens import pylens, SBModels
-from scipy.optimize import basinhopping
-from scipy.stats import truncnorm
 from pylens import MassModels
 
 
@@ -77,6 +75,32 @@ class ring_model:
             self.model[band] = ring
 
 
+class new_ring_model:
+
+    def __init__(self, candidate):
+
+        self.pa = pymc.Uniform('pa', lower=-100., upper=100., value=0.)
+        self.q = pymc.Uniform('q', lower=0.2, upper=2., value=0.6)
+        self.rr = pymc.Uniform('rr', lower=0., upper=30., value=10.)
+        self.width = pymc.Uniform('width', lower=0., upper=5., value=3.)
+        self.smooth = pymc.Uniform('smooth', lower=0., upper=10., value=1.)
+
+        self.model = {}
+
+        for band in candidate.bands:
+            ring = SBModels.StoneRing('Ring', {'x': candidate.x, \
+                                          'y': candidate.y, \
+                                          'rr': self.rr, \
+                                          'q': self.q, \
+                                          'pa': self.pa, \
+                                          'spa': 0., \
+                                          'omega': 180., 'smooth': self.smooth, 'stone': 0., 'width': self.width})
+
+            ring.convolve = convolve.convolve(candidate.sci[band], candidate.psf[band])[1]
+
+            self.model[band] = ring
+
+
 class lens_model:
 
     def __init__(self, candidate):
@@ -88,7 +112,7 @@ class lens_model:
         self.source_y = pymc.Uniform('hi', lower=candidate.y0 - source_range, upper=candidate.y0 + source_range, value=candidate.y0)
         self.source_pa = pymc.Uniform('pa', lower=-100., upper=100., value=0.)
         self.source_q = pymc.Uniform('q', lower=0.2, upper=2., value=1.)
-        self.source_re = pymc.Uniform('q', lower=0.5, upper=5., value=2.)
+        self.source_re = pymc.Uniform('q', lower=0., upper=2., value=2.)
 
         self.lens = MassModels.PowerLaw('lens', {'x': candidate.x, 'y': candidate.y, 'b': self.rein, \
                                                        'pa': self.pa, 'q': self.q, 'eta': 1.})
@@ -104,7 +128,7 @@ class lens_model:
             self.source[band] = source
 
 
-class cigar_model:
+class sersic_model:
 
     def __init__(self, candidate):
 
@@ -113,16 +137,155 @@ class cigar_model:
         self.pa = pymc.Uniform('pa', lower=-100., upper=100., value=0.)
         self.q = pymc.Uniform('q', lower=0.1, upper=1., value=0.5)
         self.re = pymc.Uniform('re', lower=1., upper=20., value=5.)
+        self.b4 = pymc.Uniform('b4', lower=-0.1, upper=0.1, value=0.)
 
         self.model = {}
 
         for band in candidate.bands:
-            light = SBModels.Sersic('LensLight', {'x': self.x, 'y': self.y, 're': self.re, 'q': self.q, 'pa': self.pa, \
-                                                  'n': 1.})
+            light = SBModels.Sersic_wboxyness('LensLight', {'x': self.x, 'y': self.y, 're': self.re, 'q': self.q, 'pa': self.pa, \
+                                                  'n': 1., 'b4': self.b4})
 
             light.convolve = convolve.convolve(candidate.sci[band], candidate.psf[band])[1]
 
             self.model[band] = light
+
+
+class foreground_model:
+
+    def __init__(self, candidate, objects, arcs):
+
+        self.bad_arcs = None
+        self.components = []
+        mask_all = np.ones(candidate.imshape, dtype=int)
+
+        furthest = 0.
+        for arc in arcs:
+            mask_all[arc['footprint'] > 0] = 0
+            if arc['r'] > furthest:
+                furthest = arc['r']
+
+        arc_mask = 1 - mask_all
+
+        nobj = len(objects)
+
+        fluxes = []
+        inner_objects = []
+        print 'foreground objects:'
+        for obj in objects:
+            mask_all[obj['footprint'] > 0] = 0
+            if obj['r'] < modeluntil*furthest and obj['r'] > minarcdist and arc_mask[obj['y'] - 1, obj['x'] - 1] == 0:
+                fluxes.append(candidate.sci[lightband][obj['footprint'] > 0].sum())
+                inner_objects.append(obj)
+
+        foregrounds = []
+
+        if len(inner_objects) > 0:
+            tmp = zip(fluxes, inner_objects)
+
+            tmp.sort(reverse=True)
+
+            fluxes, inner_objects = zip(*tmp)
+
+
+            mask = mask_all.copy()
+
+            for obj in inner_objects:
+
+                component = {}
+
+                xobj = obj['x']
+                yobj = obj['y']
+
+                remax = (obj['npix']/np.pi)**0.5
+
+                x = pymc.Uniform('x', lower=xobj - 3., upper=xobj + 3., value=xobj)
+                y = pymc.Uniform('y', lower=yobj - 3., upper=yobj + 3., value=yobj)
+
+                pa = pymc.Uniform('pa', lower=-100., upper=100., value=0.)
+                q = pymc.Uniform('q', lower=0.1, upper=2., value=0.7)
+                re = pymc.Uniform('re', lower=1., upper=remax, value=min(5., remax))
+
+                model = {}
+
+                for band in candidate.bands:
+                    light = SBModels.Sersic('LensLight', {'x': x, 'y': y, 're': re, 'q': q, 'pa': pa, \
+                                                      'n': 4.})
+
+                    light.convolve = convolve.convolve(candidate.sci[band], candidate.psf[band])[1]
+
+                    model[band] = light
+
+                component['pars'] = [x, y, pa, q, re]
+                component['model'] = model
+
+                mask[obj['footprint'] > 0] = 1
+
+                component['mask'] = mask.copy()
+                component['dofit'] = True
+
+                foregrounds.append(component)
+
+        self.components = foregrounds
+
+    def update(self, candidate, image_set):
+
+        ncomp = len(self.components)
+
+        for i in range(ncomp):
+            xcomp = self.components[i]['pars'][0].value
+            ycomp = self.components[i]['pars'][1].value
+
+            for image in image_set['images']:
+
+                if image['footprint'][int(round(ycomp)), int(round(xcomp))] > 0:
+                    self.components[i]['dofit'] = False
+                    print 'foreground %d at x: %2.1f y: %2.1f is not included'%(i+1, xcomp, ycomp)
+                else:
+                    print 'foreground %d at x: %2.1f y: %2.1f is modeled'%(i+1, xcomp, ycomp)
+                    self.components[i]['dofit'] = True
+
+        bad_arcs = []
+
+        for arc in image_set['bad_arcs']:
+
+            component = {}
+
+            xarc = arc['x']
+            yarc = arc['y']
+
+            ang = np.arctan((yarc - candidate.y)/(xarc - candidate.x))
+
+            if xarc < candidate.x:
+                ang += np.pi
+
+            ang *= 180./np.pi
+
+            remax = (arc['npix']/np.pi*arc['ab'])**0.5
+
+            x = pymc.Uniform('x', lower=xarc - 3., upper=xarc + 3., value=xarc)
+            y = pymc.Uniform('y', lower=yarc - 3., upper=yarc + 3., value=yarc)
+
+            invrc = pymc.Uniform('invrc', lower=-0.2, upper=0.2, value=0.0001)
+            pa = pymc.Uniform('pa', lower=ang - 30., upper=ang + 30., value=ang)
+            length = pymc.Uniform('length', lower=0., upper=remax, value=0.5*remax)
+            h = pymc.Uniform('h', lower=0., upper=5., value=2.)
+
+            model = {}
+
+            for band in candidate.bands:
+                light = SBModels.Arc('Arc', {'x': x, 'y': y, 'invrc': invrc, 'length': length, 'pa': pa, 'hr': h, \
+                                             'ht': h})
+
+                light.convolve = convolve.convolve(candidate.sci[band], candidate.psf[band])[1]
+
+                model[band] = light
+
+            component['pars'] = [x, y, pa, invrc, length, h]
+            component['model'] = model
+
+            bad_arcs.append(component)
+
+        self.bad_arcs = bad_arcs
 
 
 class Candidate:
@@ -164,32 +327,42 @@ class Candidate:
         self.source_re = None
         self.source_pa = None
         self.source_q = None
+        self.soruce_re = None
 
         self.ring_pa = None
         self.ring_q = None
         self.ring_rr = None
         self.ring_hi = None
         self.ring_ho = None
+        self.ring_smooth = None
+        self.ring_width = None
 
-        self.cigar_x = None
-        self.cigar_y = None
-        self.cigar_re = None
-        self.cigar_pa = None
-        self.cigar_q = None
+        self.sersic_x = None
+        self.sersic_y = None
+        self.sersic_re = None
+        self.sersic_pa = None
+        self.sersic_q = None
+        self.sersic_b4 = None
 
         self.light_pars_sample = None
-        self.ring_pars_sample = None
         self.lens_pars_sample = None
+        self.ring_pars_sample = None
+        self.sersic_pars_sample = None
 
         self.lenssub_model = {}
         self.lenssub_resid = {}
+        self.foreground_model = {}
         self.ringfit_model = {}
         self.lensfit_model = {}
-        self.cigarfit_model = {}
+        self.sersicfit_model = {}
+
+        self.lensfit_mask = None
+        self.ringfit_mask = None
+        self.sersicfit_mask = None
 
         self.ringfit_chi2 = None
         self.lensfit_chi2 = None
-        self.cigarfit_chi2 = None
+        self.sersicfit_chi2 = None
 
         self.image_sets = None
 
@@ -197,7 +370,9 @@ class Candidate:
 
         self.ringfit_footprint_chi2 = None
         self.lensfit_footprint_chi2 = None
-        self.cigarfit_footprint_chi2 = None
+        self.sersicfit_footprint_chi2 = None
+
+        self.model_angular_aperture = None
 
     def read_data(self):
 
@@ -251,12 +426,12 @@ class Candidate:
 
         return self.dataok
 
-    def get_source_footprint(self, nsig=3.):
+    def get_source_footprint(self, nsig=2.):
 
         footprint = np.zeros(self.imshape, dtype=int)
 
         for band in fitband:
-            sdet = self.lensfit_model[band][1] > nsig*self.err[band]
+            sdet = self.lensfit_model[band][-1] > nsig*self.err[band]
 
             footprint[sdet] = 1
 
@@ -278,8 +453,27 @@ class Candidate:
         for band in fitband:
             lchi2 += (((self.sci[band] - self.lensfit_model[band][0] - self.lensfit_model[band][1])/self.err[band])**2)[mask > 0].sum()
             rchi2 += (((self.sci[band] - self.ringfit_model[band][0] - self.ringfit_model[band][1])/self.err[band])**2)[mask > 0].sum()
-            rchi2 += (((self.sci[band] - self.cigarfit_model[band][0] - self.cigarfit_model[band][1])/self.err[band])**2)[mask > 0].sum()
+            rchi2 += (((self.sci[band] - self.sersicfit_model[band][0] - self.sersicfit_model[band][1])/self.err[band])**2)[mask > 0].sum()
 
         self.lensfit_footprint_chi2 = lchi2
         self.ringfit_footprint_chi2 = rchi2
-        self.cigarfit_footprint_chi2 = rchi2
+        self.sersicfit_footprint_chi2 = rchi2
+
+    def get_model_angular_aperture(self):
+
+        ypix = self.Y[self.source_footprint > 0]
+        xpix = self.X[self.source_footprint > 0]
+        rpix = ((xpix - self.x)**2 + (ypix - self.y)**2)**0.5
+        cospix = (xpix - self.x)/rpix
+        sinpix = (ypix - self.y)/rpix
+
+        npix = len(xpix)
+
+        max_aperture = 0.
+        for j in range(npix):
+            cosdiff = cospix[j]*cospix + sinpix[j]*sinpix
+            aperture = 180.*np.arccos(cosdiff).max()/np.pi
+            if aperture > max_aperture:
+                max_aperture = aperture
+
+        self.model_angular_aperture = max_aperture

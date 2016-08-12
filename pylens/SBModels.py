@@ -1,4 +1,4 @@
-import SBProfiles
+import SBProfiles as SBProfiles
 from math import pi
 
 def cnts2mag(cnts,zp):
@@ -74,9 +74,62 @@ class Sersic(SBModel,SBProfiles.Sersic):
         return self.getMag(self.amp,zp)
 
 
+class Sersic_wboxyness(SBModel, SBProfiles.Sersic_wboxyness):
+    _baseProfile = SBProfiles.Sersic_wboxyness
+    _SBkeys = [['amp','b4', 'n','pa','q','re','x','y'],
+                ['b4', 'logamp','n','pa','q','re','x','y'],
+                ['amp','b4', 'n','q','re','theta','x','y'],
+                ['b4', 'logamp','n','q','re','theta','x','y']]
+
+    def __init__(self,name,pars,convolve=0):
+        SBModel.__init__(self,name,pars,convolve)
+
+    def getMag(self,amp,zp):
+        from scipy.special import gamma
+        from math import exp,pi
+        n = self.n
+        re = self.re
+        k = 2.*n-1./3+4./(405.*n)+46/(25515.*n**2)
+        cnts = (re**2)*amp*exp(k)*n*(k**(-2*n))*gamma(2*n)*2*pi
+        return cnts2mag(cnts,zp)
+
+    def Mag(self,zp):
+        return self.getMag(self.amp,zp)
+
+
+class Spiral(SBModel, SBProfiles.Spiral):
+    _baseProfile = SBProfiles.Spiral
+    _SBkeys = [['amp', 'bar', 'disk', 'h', 'omega', 'pa', 'q', 'ra', 'x', 'y']]
+
+    def __init__(self, name, pars, convolve=0):
+        SBModel.__init__(self, name, pars, convolve)
+
+    def getMag(self, amp, zp):
+	cnts = amp
+        return cnts2mag(cnts, zp)
+
+    def Mag(self, zp):
+        return self.getMag(self.amp, zp)
+
+
 class Ring(SBModel, SBProfiles.Ring):
     _baseProfile = SBProfiles.Ring
     _SBkeys = [['amp', 'hi', 'ho', 'pa', 'q', 'rr', 'x', 'y']]
+
+    def __init__(self, name, pars, convolve=0):
+        SBModel.__init__(self, name, pars, convolve)
+
+    def getMag(self, amp, zp):
+	cnts = amp
+        return cnts2mag(cnts, zp)
+
+    def Mag(self, zp):
+        return self.getMag(self.amp, zp)
+
+
+class StoneRing(SBModel, SBProfiles.StoneRing):
+    _baseProfile = SBProfiles.StoneRing
+    _SBkeys = [['amp', 'omega', 'pa', 'q', 'rr', 'smooth', 'spa', 'stone', 'width', 'x', 'y']]
 
     def __init__(self, name, pars, convolve=0):
         SBModel.__init__(self, name, pars, convolve)

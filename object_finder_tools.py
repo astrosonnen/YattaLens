@@ -5,6 +5,69 @@ from scipy.optimize import minimize
 import os
 
 
+def find_lens(candidate, detect_band='i', detect_thresh=3.):
+
+    sciname = datadir+'/%s_%s_sci.fits'%(candidate.name, detect_band)
+    varname = datadir+'/%s_%s_var.fits'%(candidate.name, detect_band)
+
+    segname = modeldir+'/%s_%s_segmap.fits'%(candidate.name, detect_band)
+    catname = modeldir+'/%s_%s_secat.cat'%(candidate.name, detect_band)
+
+    os.system('sex %s -c seconfig.sex -WEIGHT_IMAGE %s -CATALOG_NAME %s -CHECKIMAGE_NAME %s -DETECT_THRESH %f'%\
+              (sciname, varname, catname, segname, detect_thresh))
+
+    f = open(catname, 'r')
+    cat = np.atleast_2d(np.loadtxt(f))
+    f.close()
+
+    cs = cat.shape
+    if cs[1] == 0:
+        nobj = 0
+    else:
+        nobj = cs[0]
+
+    segmap = pyfits.open(segname)[0].data.copy()
+
+    junkmask = np.ones(candidate.imshape, dtype='int')
+
+    objects = []
+
+    closestdist = np.inf
+    closestind = -1
+
+    for i in range(nobj):
+        ind = i+1
+        obj = {}
+        x = cat[i, 0] - 1.
+        y = cat[i, 1] - 1.
+        obj['x'] = x
+        obj['y'] = y
+        obj['r'] = ((x - candidate.x0) ** 2 + (y - candidate.y0) ** 2) ** 0.5
+        obj['pa'] = cat[i, 5]
+        obj['ab'] = cat[i, 4]
+        obj['npix'] = cat[i, 3]
+        if obj['r'] < closestdist and obj['npix'] > 50:
+            closestdist = obj['r']
+            closestind = ind
+
+        footprint = np.zeros(segmap.shape, dtype=int)
+        footprint[segmap==ind] = 1
+
+        obj['footprint'] = footprint
+
+        objects.append(obj)
+
+    lens = None
+    for i in range(nobj):
+        ind = i+1
+        if ind == closestind:
+            lens = objects[i]
+        else:
+            junkmask[objects[i]['footprint'] > 0] = 0
+
+    return lens, junkmask
+
+
 def find_objects(candidate, detect_band='g', detect_thresh=3.):
 
     lsubname = modeldir+'/%s_%s_lenssub.fits'%(candidate.name, detect_band)
@@ -31,9 +94,9 @@ def find_objects(candidate, detect_band='g', detect_thresh=3.):
 
     segmap = pyfits.open(segname)[0].data.copy()
 
-    objects = {}
+    objects = []
     foundarcs = False
-    arclist = []
+    arcs = []
 
     for i in range(nobj):
         ind = i+1
@@ -48,38 +111,66 @@ def find_objects(candidate, detect_band='g', detect_thresh=3.):
         obj['ab'] = cat[i, 4]
         obj['npix'] = cat[i, 3]
 
+        # obj['angap'] = 2.*(obj['npix']/np.pi*obj['ab'])**0.5/obj['r']*180./np.pi
+
         footprint = np.zeros(segmap.shape, dtype=int)
         footprint[segmap==ind] = 1
 
         obj['footprint'] = footprint
 
-        if obj['r'] > minarcdist and obj['r'] < maxarcdist and obj['npix'] < maxarcsize \
-            and obj['npix'] > minarcsize and obj['ang_diff'] < maxarcdang and obj['ab'] > abmin:
+        xpix = candidate.X[footprint > 0]
+        ypix = candidate.Y[footprint > 0]
+
+        rpix = ((xpix - candidate.x)**2 + (ypix - candidate.y)**2)**0.5
+        cospix = (xpix - candidate.x)/rpix
+        sinpix = (ypix - candidate.y)/rpix
+
+        npix = len(xpix)
+
+        max_aperture = 0.
+        for j in range(npix):
+            cosdiff = cospix[j]*cospix + sinpix[j]*sinpix
+            aperture = 180.*np.arccos(cosdiff).max()/np.pi
+            if aperture > max_aperture:
+                max_aperture = aperture
+
+        obj['angap'] = max_aperture
+
+        if obj['r'] > minarcdist and obj['r'] < maxarcdist and obj['npix'] < maxarcsize and obj['npix'] > minarcsize \
+                and obj['ang_diff'] < maxarcdang and obj['ab'] > abmin and obj['angap'] > se_minap:
             foundarcs = True
-            arclist.append(i)
-            obj['arclike'] = True
+            arcs.append(obj)
         else:
-            obj['arclike'] = False
+            objects.append(obj)
 
-        objects[i] = obj
-
-    return objects, segmap, foundarcs, arclist
+    return objects, arcs, segmap, foundarcs
 
 
-def measure_fluxes(objects, candidate, meas_bands=('g', 'i'), model_err=0.1):
+def measure_fluxes(objects, candidate, foreground_model, meas_bands=('g', 'i'), model_err=0.1):
 
-    nobj = len(objects)
-    for i in objects:
-        obj = objects[i]
+    for obj in objects:
         for band in meas_bands:
-            obj['%s_flux'%band] = candidate.lenssub_resid[band][obj['footprint'] > 0].sum()
-            modeling_err = model_err*candidate.lenssub_model[band][obj['footprint'] > 0].sum()
+            model = candidate.foreground_model[band][0].copy()
+            ncomp = 1
+            for comp in foreground_model.components:
+                xcomp = comp['pars'][0].value
+                ycomp = comp['pars'][1].value
+
+                if obj['footprint'][int(round(ycomp)), int(round(xcomp))] == 0:
+                    model += candidate.foreground_model[band][ncomp]
+                ncomp += 1
+
+            resid = candidate.sci[band] - model
+
+            obj['%s_flux'%band] = resid[obj['footprint'] > 0].sum()
+            modeling_err = model_err*model[obj['footprint'] > 0].sum()
+
             obj['%s_err'%band] = (candidate.var[band][obj['footprint'] > 0].sum() + modeling_err**2)**0.5
 
     return objects
 
 
-def compare_colors(f1a, f1b, f2a, f2b, e1a, e1b, e2a, e2b, nsigma=4.):
+def compare_colors(f1a, f1b, f2a, f2b, e1a, e1b, e2a, e2b, nsigma=1.):
     """
     Compares fluxes of two objects, 1 and 2, in two bands, a and b, and determines whether they have the same color
     :param f1a: band a flux of object 1
@@ -94,6 +185,7 @@ def compare_colors(f1a, f1b, f2a, f2b, e1a, e1b, e2a, e2b, nsigma=4.):
     :return: consistent: bool-type
     """
 
+    """
     def nloglike(p):
         f1, f2, c = p
         t1a = -0.5*(f1a - f1)**2/e1a**2
@@ -113,11 +205,31 @@ def compare_colors(f1a, f1b, f2a, f2b, e1a, e1b, e2a, e2b, nsigma=4.):
         samecolor = False
     else:
         samecolor = True
+    """
 
-    return samecolor, res.x, ml
+    r1 = f1b/f1a
+    r1err = r1*(e1b/f1b + e1a/f1a)
+
+    r2 = f2b/f2a
+    r2err = r2*(e2b/f2b + e2a/f2a)
+
+    ratios = [r1, r2]
+    errors = [r1err, r2err]
+
+    tmp = zip(ratios, errors)
+    tmp.sort()
+
+    ratios, errors = zip(*tmp)
+
+    if ratios[0] + nsigma*errors[0] > ratios[1] - nsigma*errors[1]:
+        samecolor = True
+    else:
+        samecolor = False
+
+    return samecolor
 
 
-def color_compatibility(objects, band1='g', band2='i', nsigma=4.):
+def color_compatibility(objects, band1='g', band2='i', nsigma=2.):
 
     nobj = len(objects)
     # checks color compatibility
@@ -128,7 +240,7 @@ def color_compatibility(objects, band1='g', band2='i', nsigma=4.):
         for j in range(i+1, nobj):
             obj2 = objects[j]
 
-            samecolor, pars, logp = compare_colors(obj1['%s_flux'%band1], obj1['%s_flux'%band2], \
+            samecolor = compare_colors(obj1['%s_flux'%band1], obj1['%s_flux'%band2], \
                                                    obj2['%s_flux'%band1], obj2['%s_flux'%band2], \
                                                    obj1['%s_err'%band1], obj1['%s_err'%band2], \
                                                    obj2['%s_err'%band1], obj2['%s_err'%band2], nsigma=nsigma)
@@ -142,7 +254,7 @@ def color_compatibility(objects, band1='g', band2='i', nsigma=4.):
 
 def determine_image_sets(objects, arcs):
 
-    color_matrix = color_compatibility(objects)
+    color_matrix = color_compatibility(objects + arcs)
 
     narcs = len(arcs)
     nobj = len(objects)
@@ -155,36 +267,49 @@ def determine_image_sets(objects, arcs):
         arc = arcs[i]
 
         arcs_here = []
-        image_set = {'arcs': [objects[arc]], 'images': [], 'junk': [], 'furthest_arc': None, 'mean_arc_dist': None}
+        image_set = {'arcs': [arc], 'bad_arcs': [], 'images': [], 'foregrounds': [], 'junk': [], 'furthest_arc': None, \
+                     'mean_arc_dist': None}
 
-        arcs_here.append(arc)
+        arcs_here.append(i)
 
-        furthest = objects[arc]['r']
-        meandist = objects[arc]['r']
+        furthest = arc['r']
+        meandist = arc['r']
+        brightest = arc['g_flux']
 
-        colorcheck = color_matrix[arc]
+        colorcheck = color_matrix[nobj + i]
 
+        tmp_bad_arcs = []
         for j in range(narcs):
             if j != i:
-                if color_matrix[arcs[i], arcs[j]] == 1:
-                    arcs_here.append(arcs[j])
-                    image_set['arcs'].append(objects[arcs[j]])
-                    colorcheck *= color_matrix[arcs[j]]
-                    if objects[arcs[j]]['r'] > furthest:
-                        furthest = objects[arcs[j]]['r']
-                    meandist += objects[arcs[j]]['r']
+                if color_matrix[nobj + i, nobj + j] == 1:
+                    arcs_here.append(j)
+                    image_set['arcs'].append(arcs[j])
+                    colorcheck *= color_matrix[nobj + j]
+                    if arcs[j]['r'] > furthest:
+                        furthest = arcs[j]['r']
+                    if arcs[j]['g_flux'] > brightest:
+                        brightest = arcs[j]['g_flux']
+                    meandist += arcs[j]['r']
 
                 else:
-                    image_set['junk'].append(objects[arcs[j]])
+                    tmp_bad_arcs.append(arcs[j])
+                    #image_set['bad_arcs'].append(arcs[j])
+
+        for bad_arc in tmp_bad_arcs:
+            if bad_arc['r'] < modeluntil*furthest:
+                image_set['bad_arcs'].append(bad_arc)
+            else:
+                image_set['junk'].append(bad_arc)
 
         meandist /= float(len(image_set['arcs']))
 
         for j in range(nobj):
-            if j not in arcs_here:
-                if colorcheck[j] == 1 and objects[j]['r'] < crapstart*furthest:
-                    image_set['images'].append(objects[j])
-                else:
-                    image_set['junk'].append(objects[j])
+            if objects[j]['r'] > junkstart*furthest:
+                image_set['junk'].append(objects[j])
+            elif colorcheck[j] == 1 and objects[j]['g_flux'] < 2.*brightest:
+                image_set['images'].append(objects[j])
+            else:
+                image_set['foregrounds'].append(objects[j])
 
         image_set['furthest_arc'] = furthest
         image_set['mean_arc_dist'] = meandist

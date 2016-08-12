@@ -172,7 +172,8 @@ def objf(x, lhs, rhs):
 def objdf(x, lhs, rhs):
     return np.dot(lhs.T, np.dot(lhs, x) - rhs)
 
-def getModel(lens, light, source, image, sigma, X, Y, zp=30., shear=None, do_convol=True, returnImg=False, mask=None):
+
+def getModel(lenses, light_profiles, source_profiles, image, sigma, X, Y, zp=30., shear=None, returnImg=False, mask=None):
     """
     This subroutine calculates the value of chi
     cut from the original built-in subroutine at pylens main function
@@ -180,175 +181,40 @@ def getModel(lens, light, source, image, sigma, X, Y, zp=30., shear=None, do_con
 # This evaluates the model at the given parameters and finds the best amplitudes for the surface brightness components
     I = image.flatten()
     S = sigma.flatten()
-# We need to update the parameters of the objects to the values proposed by the optimizer
-    light.setPars()
-    source.setPars()
-    lens.setPars()
 
-    light.amp = 1.
-    source.amp = 1.
+    if type(lenses) != type([]):
+        lenses = [lenses]
+    if type(light_profiles) != type([]):
+        light_profiles = [light_profiles]
+    if type(source_profiles) != type([]):
+        source_profiles = [source_profiles]
 
     if shear is not None:
         shear.setPars()
-        components = [lens, shear]
-    else:
-        components = [lens]
-
-    xl, yl = getDeflections(components, [X, Y])
-
-    if mask is None:
-        mask = np.ones(image.size, dtype=bool)
-
-    if do_convol:
-        lmodel = (convolve.convolve(light.pixeval(X,Y), light.convolve,False)[0].ravel()/S)
-        smodel = (convolve.convolve(source.pixeval(xl,yl), source.convolve,False)[0].ravel()/S)
-    else:
-        lmodel = light.pixeval(X, Y).ravel()/S
-        smodel = source.pixeval(xl, yl).ravel()/S
-
-    model = np.array((lmodel[mask], smodel[mask])).T
-
-    if np.isnan(model).any():
-        return -np.inf, (99., 99.)
-
-    amps,chi = optimize.nnls(model,(I/S)[mask])
-
-    light.amp *= amps[0]
-    source.amp *= amps[1]
-    if amps[0] <=0.:
-        lmag = 99.
-    else:
-        lmag = light.Mag(zp)
-    if amps[1] <= 0.:
-        smag = 99.
-    else:
-        smag = source.Mag(zp)
-
-    logp = -0.5*chi - np.log(S[mask].sum())
-
-    if returnImg:
-        #fullmodel = np.array((lmodel, smodel))
-        #mimage = (amps*(fullmodel*S).T).sum(axis=1)
-        limage = amps[0]*lmodel*S
-        simage = amps[1]*smodel*S
-        return logp, (lmag, smag), (limage.reshape(image.shape), simage.reshape(image.shape))
-
-    else:
-        return logp, (lmag, smag)
-
-
-def getModel_sourceonly(lens, source, image, sigma, X, Y, zp=30., do_convol=True, returnImg=False, mask=None):
-    """
-    This subroutine calculates the value of chi
-    cut from the original built-in subroutine at pylens main function
-    """
-# This evaluates the model at the given parameters and finds the best amplitudes for the surface brightness components
-    I = image.flatten()
-    S = sigma.flatten()
-# We need to update the parameters of the objects to the values proposed by the optimizer
-    source.setPars()
-    lens.setPars()
-
-    source.amp = 1.
-
-    xl,yl = getDeflections(lens,[X,Y])
-
-    if mask is None:
-        mask = np.ones(image.size, dtype=bool)
-
-    if do_convol:
-        smodel = (convolve.convolve(source.pixeval(xl,yl), source.convolve,False)[0].ravel()/S)
-    else:
-        smodel = source.pixeval(xl, yl).ravel()/S
-
-    model = np.array((smodel[mask], )).T
-
-    if np.isnan(model).any():
-        return -np.inf, (99., 99.)
-
-    amps,chi = optimize.nnls(model,(I/S)[mask])
-
-    source.amp *= amps[0]
-    if amps[0] <= 0.:
-        smag = 99.
-    else:
-        smag = source.Mag(zp)
-
-    logp = -0.5*chi - np.log(S[mask].sum())
-
-    if returnImg:
-        simage = amps[0]*smodel*S
-        return logp, smag, simage.reshape(image.shape)
-
-    else:
-        return logp, smag
-
-
-def getModel_lightonly(light, image, sigma, X, Y, zp=30., do_convol=True, returnImg=False, mask=None):
-    """
-    This subroutine calculates the value of chi
-    cut from the original built-in subroutine at pylens main function
-    """
-# This evaluates the model at the given parameters and finds the best amplitudes for the surface brightness components
-    I = image.flatten()
-    S = sigma.flatten()
-# We need to update the parameters of the objects to the values proposed by the optimizer
-    light.setPars()
-
-    light.amp = 1.
-
-    if mask is None:
-        mask = np.ones(image.size, dtype=bool)
-
-    if do_convol:
-        lmodel = (convolve.convolve(light.pixeval(X,Y), light.convolve, False)[0].ravel()/S)
-    else:
-        lmodel = light.pixeval(X, Y).ravel()/S
-
-    model = np.array((lmodel[mask], )).T
-
-    if np.isnan(model).any():
-        return -np.inf, (99., 99.)
-
-    amps, chi = optimize.nnls(model, (I/S)[mask])
-
-    light.amp *= amps[0]
-    if amps[0] <=0.:
-        lmag = 99.
-    else:
-        lmag = light.Mag(zp)
-
-    logp = -0.5*chi
-
-    if returnImg:
-        limage = amps[0]*lmodel*S
-        return logp, lmag, limage.reshape(image.shape)
-
-    else:
-        return logp, lmag
-
-
-def getModel_lightonly_ncomponents(lights, image, sigma, X, Y, zp=30., returnImg=False, mask=None):
-    """
-    This subroutine calculates the value of chi
-    cut from the original built-in subroutine at pylens main function
-    """
-# This evaluates the model at the given parameters and finds the best amplitudes for the surface brightness components
-    I = image.flatten()
-    S = sigma.flatten()
-# We need to update the parameters of the objects to the values proposed by the optimizer
-    ncomp = len(lights)
-
-    if mask is None:
-        mask = np.ones(image.size, dtype=bool)
+        lenses += [shear]
 
     modlist = []
-    for light in lights:
+
+    if mask is None:
+        mask = np.ones(image.size, dtype=bool)
+
+# We need to update the parameters of the objects to the values proposed by the optimizer
+    for lens in lenses:
+        lens.setPars()
+
+    xl, yl = getDeflections(lenses, [X, Y])
+
+    for light in light_profiles:
         light.setPars()
         light.amp = 1.
-
-        lmodel = (convolve.convolve(light.pixeval(X,Y), light.convolve, False)[0].ravel()/S)
+        lmodel = (convolve.convolve(light.pixeval(X, Y), light.convolve, False)[0].ravel()/S)
         modlist.append(lmodel[mask])
+
+    for source in source_profiles:
+        source.setPars()
+        source.amp = 1.
+        smodel = (convolve.convolve(source.pixeval(xl, yl), source.convolve, False)[0].ravel()/S)
+        modlist.append(smodel[mask])
 
     model = np.array(modlist).T
 
@@ -356,27 +222,41 @@ def getModel_lightonly_ncomponents(lights, image, sigma, X, Y, zp=30., returnImg
         return -np.inf, (99., 99.)
 
     amps, chi = optimize.nnls(model, (I/S)[mask])
-    lmags = np.zeros(ncomp)
 
-    for i in range(ncomp):
-        lights[i].amp *= amps[i]
+    nlight = len(light_profiles)
+    nsource = len(source_profiles)
+
+    lmags = []
+    for i in range(nlight):
+        light_profiles[i].amp *= amps[i]
         if amps[i] <=0.:
-            lmags[i] = 99.
+            lmags.append(99.)
         else:
-            lmags[i] = lights[i].Mag(zp)
+            lmags.append(light_profiles[i].Mag(zp))
+
+    for i in range(nsource):
+        source_profiles[i].amp *= amps[i+nlight]
+        if amps[i+nlight] <=0.:
+            lmags.append(99.)
+        else:
+            lmags.append(source_profiles[i].Mag(zp))
 
     logp = -0.5*chi
 
     if returnImg:
         mimages = []
-        for light in lights:
-            lmodel = (convolve.convolve(light.pixeval(X,Y), light.convolve, False)[0].ravel())
+        for light in light_profiles:
+            lmodel = (convolve.convolve(light.pixeval(X, Y), light.convolve, False)[0].ravel())
+            mimages.append(lmodel.reshape(image.shape))
+        for source in source_profiles:
+            lmodel = (convolve.convolve(source.pixeval(xl, yl), source.convolve, False)[0].ravel())
             mimages.append(lmodel.reshape(image.shape))
 
         return logp, lmags, mimages
 
     else:
         return logp, lmags
+
 
 
 def do_fit(pars, cov, bands, lens, lights, sources, images, sigmas, X, Y, mask_r, zps, do_convol=True, Nsamp=11000, \
@@ -437,44 +317,6 @@ def do_fit(pars, cov, bands, lens, lights, sources, images, sigmas, X, Y, mask_r
     return trace
 
 
-def do_fit_lightonly(lpars, lcov, bands, lights, images, sigmas, X, Y, mask_r, zps, do_convol=True, Nsamp=11000, \
-                     burnin=1000):
-
-    @pymc.deterministic
-    def lightonlylogp(lp=lpars):
-        sumlogp = 0.
-        for lband in bands:
-            logp, mag = getModel_lightonly(lights[lband], images[lband], sigmas[lband], X, Y, zp=zps[lband], \
-                                           mask=mask_r, do_convol=do_convol)
-
-            if logp != logp:
-                return -1e300
-            sumlogp += logp
-        return sumlogp
-
-    @pymc.stochastic(observed=True, name='logp')
-    def logp(value=0., lp=lpars):
-        return lightonlylogp
-
-    print 'sampling light parameters only'
-
-    M = pymc.MCMC(lpars + [lightonlylogp])
-    M.use_step_method(pymc.AdaptiveMetropolis, lpars, cov=np.diag(lcov))
-    M.sample(Nsamp, burnin)
-
-    trace = {}
-
-    for par in lpars:
-        trace[str(par)] = M.trace(par)[:]
-
-    trace['logp'] = M.trace('lightonlylogp')[:]
-
-    ML = trace['logp'].argmax()
-    for par in lpars:
-        mlval = trace[str(par)][ML]
-        par.value = mlval
-
-    return trace
 
 def do_fit_emcee(pars, bands, lens, lights, sources, images, sigmas, X, Y, mask_r, zps, shear=None, nwalkers=50, nsamp=100,\
                  gaussprior=None, stepsize=None, do_convol=True):
@@ -597,203 +439,4 @@ def do_fit_emcee_inputwalkers(candidate, pars, fitbands, start, mask_r, nsamp=50
     return output
 
 
-def do_fit_lightonly_emcee(pars, bands, lights, images, sigmas, X, Y, mask_r, zps, nwalkers=50, nsamp=100,\
-                           gaussprior=None, stepsize=None, do_convol=True):
 
-    bounds = []
-    for par in pars:
-        bounds.append((par.parents['lower'], par.parents['upper']))
-
-    npars = len(pars)
-
-    def logprior(allpars):
-        for i in range(0, npars):
-            if allpars[i] < bounds[i][0] or allpars[i] > bounds[i][1]:
-                return -np.inf
-        return 0.
-
-
-    def logpfunc(allpars):
-        lp = logprior(allpars)
-        if not np.isfinite(lp):
-            return -np.inf
-
-        for j in range(0, npars):
-            pars[j].value = allpars[j]
-        sumlogp = 0.
-        i = 0
-
-        for band in bands:
-            logp, mags = getModel_lightonly(lights[band], images[band], sigmas[band], X, Y, zp=zps[band], mask=mask_r, \
-                                            do_convol=do_convol)
-            if logp != logp:
-                return -np.inf
-            sumlogp += logp
-            i += 1
-
-        return sumlogp
-
-    sampler = emcee.EnsembleSampler(nwalkers, npars, logpfunc)
-
-    start = []
-    for i in range(nwalkers):
-        tmp = np.zeros(npars)
-        urand = np.random.rand(npars)
-        for j in range(0, npars):
-            p0 = urand[j]*(bounds[j][1] - bounds[j][0]) + bounds[j][0]
-            if gaussprior is not None:
-                if gaussprior[j]:
-                    a, b = (bounds[j][0] - pars[j].value)/stepsize[j], (bounds[j][1] - pars[j].value)/stepsize[j]
-                    p0 = truncnorm.rvs(a, b, size=1)*stepsize[j] + pars[j].value
-            tmp[j] = p0
-
-        start.append(tmp)
-
-
-    print "Sampling"
-
-    sampler.run_mcmc(start, nsamp)
-
-    output = {'chain': sampler.chain, 'logp': sampler.lnprobability}
-
-    ML = sampler.flatlnprobability.argmax()
-
-    for j in range(0, npars):
-        pars[j].value = sampler.flatchain[ML, j]
-
-    return output
-
-
-def do_fit_ncomponents_emcee(pars, bands, lights, images, sigmas, X, Y, mask_r, zps, nwalkers=50, nsamp=100,\
-                           gaussprior=None, stepsize=None, do_convol=True):
-
-    bounds = []
-    for par in pars:
-        bounds.append((par.parents['lower'], par.parents['upper']))
-
-    npars = len(pars)
-
-    def logprior(allpars):
-        for i in range(0, npars):
-            if allpars[i] < bounds[i][0] or allpars[i] > bounds[i][1]:
-                return -np.inf
-        return 0.
-
-
-    def logpfunc(allpars):
-        lp = logprior(allpars)
-        if not np.isfinite(lp):
-            return -np.inf
-
-        for j in range(0, npars):
-            pars[j].value = allpars[j]
-        sumlogp = 0.
-        i = 0
-
-        for band in bands:
-            logp, mags = getModel_lightonly_ncomponents(lights[band], images[band], sigmas[band], X, Y, \
-                                                        zp=zps[band], mask=mask_r)
-            if logp != logp:
-                return -np.inf
-            sumlogp += logp
-            i += 1
-
-        return sumlogp
-
-    sampler = emcee.EnsembleSampler(nwalkers, npars, logpfunc)
-
-    start = []
-    for i in range(nwalkers):
-        tmp = np.zeros(npars)
-        urand = np.random.rand(npars)
-        for j in range(0, npars):
-            p0 = urand[j]*(bounds[j][1] - bounds[j][0]) + bounds[j][0]
-            if gaussprior is not None:
-                if gaussprior[j]:
-                    a, b = (bounds[j][0] - pars[j].value)/stepsize[j], (bounds[j][1] - pars[j].value)/stepsize[j]
-                    p0 = truncnorm.rvs(a, b, size=1)*stepsize[j] + pars[j].value
-            tmp[j] = p0
-
-        start.append(tmp)
-
-
-    print "Sampling"
-
-    sampler.run_mcmc(start, nsamp)
-
-    output = {'chain': sampler.chain, 'logp': sampler.lnprobability}
-
-    ML = sampler.flatlnprobability.argmax()
-
-    for j in range(0, npars):
-        pars[j].value = sampler.flatchain[ML, j]
-
-    return output
-
-
-def do_fit_emcee_lensonly(pars, bands, lens, sources, images, sigmas, X, Y, mask_r, zps, nwalkers=50, \
-                          nsamp=100, gaussprior=None, stepsize=None, do_convol=True):
-
-    bounds = []
-    for par in pars:
-        bounds.append((par.parents['lower'], par.parents['upper']))
-
-    npars = len(pars)
-
-    def logprior(allpars):
-        for i in range(0, npars):
-            if allpars[i] < bounds[i][0] or allpars[i] > bounds[i][1]:
-                return -np.inf
-        return 0.
-
-
-    def logpfunc(allpars):
-        lp = logprior(allpars)
-        if not np.isfinite(lp):
-            return -np.inf
-
-        for j in range(0, npars):
-            pars[j].value = allpars[j]
-        sumlogp = 0.
-        i = 0
-
-        for band in bands:
-            logp, mags = getModel_sourceonly(lens, sources[band], images[band], sigmas[band], X, Y, zp=zps[band], \
-                                             mask=mask_r, do_convol=do_convol)
-            if logp != logp:
-                return -np.inf
-            sumlogp += logp
-            i += 1
-
-        return sumlogp
-
-    sampler = emcee.EnsembleSampler(nwalkers, npars, logpfunc)
-
-    start = []
-    for i in range(nwalkers):
-        tmp = np.zeros(npars)
-        urand = np.random.rand(npars)
-        for j in range(0, npars):
-            p0 = urand[j]*(bounds[j][1] - bounds[j][0]) + bounds[j][0]
-            if gaussprior is not None:
-                if gaussprior[j]:
-                    a, b = (bounds[j][0] - pars[j].value)/stepsize[j], (bounds[j][1] - pars[j].value)/stepsize[j]
-                    #p0 = np.random.normal(pars[j].value, steps[j], 1)
-                    p0 = truncnorm.rvs(a, b, size=1)*stepsize[j] + pars[j].value
-            tmp[j] = p0
-
-        start.append(tmp)
-
-
-    print "Sampling"
-
-    sampler.run_mcmc(start, nsamp)
-
-    output = {'chain': sampler.chain, 'logp': sampler.lnprobability}
-
-    ML = sampler.flatlnprobability.argmax()
-
-    for j in range(0, npars):
-        pars[j].value = sampler.flatchain[ML, j]
-
-    return output

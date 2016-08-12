@@ -56,7 +56,6 @@ def visual_comparison(data, models, sources=None):
         pylab.xticks(())
         pylab.yticks(())
 
-
 def make_crazy_pil_format(data, cuts):
 
     newlist = []
@@ -449,44 +448,39 @@ def make_image_set_rgb(candidate, image_set, maskedge=None, outname='image_set.p
 def make_full_rgb(candidate, image_set, maskedge=None, outname='full_model.png', nsig_cut=5., success=None):
 
     cuts = []
-    lens_normresid_cuts = []
-    ring_normresid_cuts = []
     data = []
     lenssub = []
     ringresid = []
     lensresid = []
-    cigarresid = []
+    sersicresid = []
     lensmodel = []
     ringmodel = []
-    cigarmodel = []
+    sersicmodel = []
     source = []
-    lens_normresid = []
-    ring_normresid = []
+
     mask = []
     i = 0
+
+    ncol = 6
+
     for band in rgbbands:
         img = candidate.sci[band]
         data.append(img)
         maskimg = 0.*img
-        cut = np.percentile(img, 99.)
+        cut = np.percentile(img[candidate.R < 30.], 99.)
         cuts.append(cut)
         lenssub.append(candidate.lenssub_resid[band])
-        ringmodel.append(candidate.ringfit_model[band][0] + candidate.ringfit_model[band][1])
-        cigarmodel.append(candidate.cigarfit_model[band][0] + candidate.cigarfit_model[band][1])
-        lensmodel.append(candidate.lensfit_model[band][0] + candidate.lensfit_model[band][1])
-        source.append(candidate.lensfit_model[band][1])
-        rres = candidate.sci[band] - candidate.ringfit_model[band][0] - candidate.ringfit_model[band][1]
-        lres = candidate.sci[band] - candidate.lensfit_model[band][0] - candidate.lensfit_model[band][1]
-        cres = candidate.sci[band] - candidate.cigarfit_model[band][0] - candidate.cigarfit_model[band][1]
-        lensresid.append(lres)
-        ringresid.append(rres)
-        cigarresid.append(cres)
-        lens_normresid.append((candidate.sci['g'] - candidate.lensfit_model['g'][0] - candidate.lensfit_model['g'][1])/candidate.err['g'] + nsig_cut)
-        lens_normresid_cuts.append(2.*nsig_cut)
-        ring_normresid.append((candidate.sci['g'] - candidate.ringfit_model['g'][0] - candidate.ringfit_model['g'][1])/candidate.err['g'] + nsig_cut)
-        ring_normresid_cuts.append(2.*nsig_cut)
 
-        for image in image_set['images']:
+        lmodel = 0.*img
+        for mimg in candidate.lensfit_model[band]:
+            lmodel += mimg
+        lensmodel.append(lmodel)
+
+        source.append(candidate.lensfit_model[band][-1])
+
+        lensresid.append(candidate.sci[band] - lmodel)
+
+        for image in image_set['images'] + image_set['foregrounds'] + image_set['bad_arcs']:
             maskimg[image['footprint'] > 0] = cut
 
         if i==0:
@@ -503,41 +497,62 @@ def make_full_rgb(candidate, image_set, maskedge=None, outname='full_model.png',
     lsublist = make_crazy_pil_format(lenssub, cuts)
     masklist = make_crazy_pil_format(mask, cuts)
     slist = make_crazy_pil_format(source, cuts)
-    rmlist = make_crazy_pil_format(ringmodel, cuts)
-    cmlist = make_crazy_pil_format(cigarmodel, cuts)
+
     lmlist = make_crazy_pil_format(lensmodel, cuts)
     lrlist = make_crazy_pil_format(lensresid, cuts)
-    rrlist = make_crazy_pil_format(ringresid, cuts)
-    crlist = make_crazy_pil_format(cigarresid, cuts)
-    nlrlist = make_crazy_pil_format(lens_normresid, lens_normresid_cuts)
-    nrrlist = make_crazy_pil_format(ring_normresid, ring_normresid_cuts)
 
-    s = data[0].shape
+    s = (data[0].shape[1], data[0].shape[0])
     dim = Image.new('RGB', s, 'black')
     lsubim = Image.new('RGB', s, 'black')
     maskim = Image.new('RGB', s, 'black')
     sim = Image.new('RGB', s, 'black')
     lmim = Image.new('RGB', s, 'black')
-    rmim = Image.new('RGB', s, 'black')
-    cmim = Image.new('RGB', s, 'black')
     lrim = Image.new('RGB', s, 'black')
-    rrim = Image.new('RGB', s, 'black')
-    crim = Image.new('RGB', s, 'black')
-    nlrim = Image.new('RGB', s, 'black')
-    nrrim = Image.new('RGB', s, 'black')
 
     dim.putdata(dlist)
     lsubim.putdata(lsublist)
     maskim.putdata(masklist)
     sim.putdata(slist)
     lmim.putdata(lmlist)
-    rmim.putdata(rmlist)
-    cmim.putdata(cmlist)
     lrim.putdata(lrlist)
-    rrim.putdata(rrlist)
-    crim.putdata(crlist)
-    nlrim.putdata(nlrlist)
-    nrrim.putdata(nrrlist)
+
+    if len(candidate.ringfit_model) > 0:
+        rcol = ncol
+        ncol += 2
+        for band in rgbbands:
+            rmodel = 0.*img
+            for mimg in candidate.ringfit_model[band]:
+                rmodel += mimg
+            ringmodel.append(rmodel)
+            ringresid.append(candidate.sci[band] - rmodel)
+
+        rmlist = make_crazy_pil_format(ringmodel, cuts)
+        rrlist = make_crazy_pil_format(ringresid, cuts)
+
+        rmim = Image.new('RGB', s, 'black')
+        rrim = Image.new('RGB', s, 'black')
+
+        rmim.putdata(rmlist)
+        rrim.putdata(rrlist)
+
+    if len(candidate.sersicfit_model) > 0:
+        scol = ncol
+        ncol += 2
+        for band in rgbbands:
+            smodel = 0.*img
+            for mimg in candidate.sersicfit_model[band]:
+                smodel += mimg
+            sersicmodel.append(smodel)
+            sersicresid.append(candidate.sci[band] - smodel)
+
+        cmlist = make_crazy_pil_format(sersicmodel, cuts)
+        crlist = make_crazy_pil_format(sersicresid, cuts)
+
+        cmim = Image.new('RGB', s, 'black')
+        crim = Image.new('RGB', s, 'black')
+
+        cmim.putdata(cmlist)
+        crim.putdata(crlist)
 
     x0 = s[1]/2
     y0 = s[0]/2
@@ -545,7 +560,7 @@ def make_full_rgb(candidate, image_set, maskedge=None, outname='full_model.png',
         maskdraw = ImageDraw.Draw(maskim)
         maskdraw.ellipse((x0 - maskedge, y0 - maskedge, x0 + maskedge, y0 + maskedge), fill=None, outline='yellow')
 
-    im = Image.new('RGB', (10*data[0].shape[0], data[0].shape[1]), 'black')
+    im = Image.new('RGB', (ncol*data[0].shape[0], data[0].shape[1]), 'black')
 
     im.paste(dim, (0, 0,))
     im.paste(lsubim, (s[1], 0))
@@ -553,19 +568,20 @@ def make_full_rgb(candidate, image_set, maskedge=None, outname='full_model.png',
     im.paste(lmim, (3*s[1], 0))
     im.paste(sim, (4*s[1], 0))
     im.paste(lrim, (5*s[1], 0))
-    #im.paste(nlrim, (6*s[1], 0))
-    im.paste(rmim, (6*s[1], 0))
-    im.paste(rrim, (7*s[1], 0))
-    im.paste(cmim, (8*s[1], 0))
-    im.paste(crim, (9*s[1], 0))
-    #im.paste(nrrim, (9*s[1], 0))
 
     draw = ImageDraw.Draw(im)
     draw.text((10, s[0] - 20), 'HSCJ'+candidate.name, font=font, fill='white')
-
     draw.text((10 + 5*s[1], s[0] - 20), '%2.1f'%candidate.lensfit_chi2, font=font, fill='white')
-    draw.text((10 + 7*s[1], s[0] - 20), '%2.1f'%candidate.ringfit_chi2, font=font, fill='white')
-    draw.text((10 + 9*s[1], s[0] - 20), '%2.1f'%candidate.cigarfit_chi2, font=font, fill='white')
+
+    if len(candidate.ringfit_model) > 0:
+        im.paste(rmim, (rcol*s[1], 0))
+        im.paste(rrim, ((rcol+1)*s[1], 0))
+        draw.text((10 + rcol*s[1], s[0] - 20), '%2.1f'%candidate.ringfit_chi2, font=font, fill='white')
+
+    if len(candidate.sersicfit_model) > 0:
+        im.paste(cmim, (scol*s[1], 0))
+        im.paste(crim, ((scol+1)*s[1], 0))
+        draw.text((10 + scol*s[1], s[0] - 20), '%2.1f'%candidate.sersicfit_chi2, font=font, fill='white')
 
     if success is not None:
         if success:

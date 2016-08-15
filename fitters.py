@@ -671,6 +671,109 @@ def fit_foregrounds(candidate, foreground_model, light_model, lfitband=(lightban
         candidate.foreground_model[band] = mimgs
 
 
+def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband=(lightband), rmax=30., nsamp=100):
+
+    allmodels = {}
+    allamps = {}
+    for band in candidate.bands:
+        allmodels[band] = [light_model.model[band]]
+        allamps[band] = [1.]
+        foreground_model.amps[band] = []
+
+    mask = np.ones(candidate.imshape, dtype=int)
+    mask[candidate.R > rmax] = 0
+    mask_r = (mask > 0).ravel()
+
+    count = 1
+    for comp in foreground_model.components:
+
+        tmp_mask = comp['mask'].copy()
+        tmp_mask[candidate.R > rmax] = 0
+        mask_r = (tmp_mask > 0).ravel()
+
+        for band in candidate.bands:
+            allmodels[band].append(comp['model'][band])
+            allamps[band].append(-1.)
+
+        pars = comp['pars']
+
+        npars = len(pars)
+
+        bounds = []
+
+        for par in pars:
+            bounds.append((par.parents['lower'], par.parents['upper']))
+
+        npars = len(pars)
+        nwalkers = 6*npars
+
+        def logprior(allpars):
+            for i in range(0, npars):
+                if allpars[i] < bounds[i][0] or allpars[i] > bounds[i][1]:
+                    return -np.inf
+            return 0.
+
+        def logpfunc(allpars):
+            lp = logprior(allpars)
+            if not np.isfinite(lp):
+                return -np.inf
+
+            for j in range(0, npars):
+                pars[j].value = allpars[j]
+            sumlogp = 0.
+            i = 0
+
+            for band in lfitband:
+                logp, mags = pylens.getModel_fixedamps([], allmodels[band], [], allamps[band], candidate.sci[band], \
+                                                       candidate.err[band], candidate.X, candidate.Y, zp=candidate.zp[band], \
+                                                       mask=mask_r)
+
+                if logp != logp:
+                    return -np.inf
+                sumlogp += logp
+                i += 1
+
+            return sumlogp
+
+        sampler = emcee.EnsembleSampler(nwalkers, npars, logpfunc)
+
+        start = []
+        for i in range(nwalkers):
+            tmp = np.zeros(npars)
+            urand = np.random.rand(npars)
+            for j in range(0, npars):
+                p0 = urand[j]*(bounds[j][1] - bounds[j][0]) + bounds[j][0]
+                tmp[j] = p0
+
+            start.append(tmp)
+
+        print "fitting foreground no. %d at x: %2.1f y: %2.1f"%(count, pars[0].value, pars[1].value)
+
+        count += 1
+
+        sampler.run_mcmc(start, nsamp)
+
+        ML = sampler.flatlnprobability.argmax()
+
+        for j in range(0, npars):
+            pars[j].value = sampler.flatchain[ML, j]
+
+    # removes the best-fit i-band model from all bands, saves the residuals and fixes the amplitude of the foreground
+    for band in candidate.bands:
+
+        logp, lmag, mimgs = pylens.getModel_fixedamps([], allmodels[band], [], tmp_amps, candidate.sci[band], \
+                                                      candidate.err[band], candidate.X, candidate.Y, \
+                                                      zp=candidate.zp[band], returnImg=True, mask=mask_r)
+
+        allamps[band][-1] = allmodels[band][-1].amp / allmodels[band][0].amp
+        foreground_model.amps[band].append(allamps[band][-1])
+        resid = candidate.sci[band].copy()
+        for mimg in mimgs:
+            resid -= mimg
+
+        candidate.foreground_model[band] = mimgs
+
+
 def fit_bad_arcs(candidate, foreground_model, light_model, rmax=30., nsamp=200):
 
     allmodels = {}

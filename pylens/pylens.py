@@ -258,6 +258,92 @@ def getModel(lenses, light_profiles, source_profiles, image, sigma, X, Y, zp=30.
         return logp, lmags
 
 
+def getModel_fixedamps(lenses, light_profiles, source_profiles, amps, image, sigma, X, Y, zp=30., shear=None, \
+                       returnImg=False, mask=None):
+    """
+    This subroutine calculates the value of chi
+    cut from the original built-in subroutine at pylens main function
+    """
+# This evaluates the model at the given parameters and finds the best amplitudes for the surface brightness components
+    I = image.flatten()
+    S = sigma.flatten()
+
+    if type(lenses) != type([]):
+        lenses = [lenses]
+    if type(light_profiles) != type([]):
+        light_profiles = [light_profiles]
+    if type(source_profiles) != type([]):
+        source_profiles = [source_profiles]
+
+    if shear is not None:
+        shear.setPars()
+        lenses += [shear]
+
+    modlist = []
+
+    if mask is None:
+        mask = np.ones(image.size, dtype=bool)
+
+# We need to update the parameters of the objects to the values proposed by the optimizer
+    for lens in lenses:
+        lens.setPars()
+
+    xl, yl = getDeflections(lenses, [X, Y])
+
+    for light in light_profiles:
+        light.setPars()
+        light.amp = 1.
+        lmodel = (convolve.convolve(light.pixeval(X, Y), light.convolve, False)[0].ravel()/S)
+        modlist.append(lmodel[mask])
+
+    for source in source_profiles:
+        source.setPars()
+        source.amp = 1.
+        smodel = (convolve.convolve(source.pixeval(xl, yl), source.convolve, False)[0].ravel()/S)
+        modlist.append(smodel[mask])
+
+    model = np.array(modlist).T
+
+    if np.isnan(model).any():
+        return -np.inf, (99., 99.)
+
+    amps, chi = optimize.nnls(model, (I/S)[mask])
+
+    nlight = len(light_profiles)
+    nsource = len(source_profiles)
+
+    lmags = []
+    for i in range(nlight):
+        light_profiles[i].amp *= amps[i]
+        if amps[i] <=0.:
+            lmags.append(99.)
+        else:
+            lmags.append(light_profiles[i].Mag(zp))
+
+    for i in range(nsource):
+        source_profiles[i].amp *= amps[i+nlight]
+        if amps[i+nlight] <=0.:
+            lmags.append(99.)
+        else:
+            lmags.append(source_profiles[i].Mag(zp))
+
+    logp = -0.5*chi
+
+    if returnImg:
+        mimages = []
+        for light in light_profiles:
+            lmodel = (convolve.convolve(light.pixeval(X, Y), light.convolve, False)[0].ravel())
+            mimages.append(lmodel.reshape(image.shape))
+        for source in source_profiles:
+            lmodel = (convolve.convolve(source.pixeval(xl, yl), source.convolve, False)[0].ravel())
+            mimages.append(lmodel.reshape(image.shape))
+
+        return logp, lmags, mimages
+
+    else:
+        return logp, lmags
+
+
 
 def do_fit(pars, cov, bands, lens, lights, sources, images, sigmas, X, Y, mask_r, zps, do_convol=True, Nsamp=11000, \
            burnin=1000):

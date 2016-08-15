@@ -156,6 +156,7 @@ class foreground_model:
 
         self.bad_arcs = None
         self.components = []
+        self.amps = []
         mask_all = np.ones(candidate.imshape, dtype=int)
 
         furthest = 0.

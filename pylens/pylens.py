@@ -290,11 +290,17 @@ def getModel_fixedamps(lenses, light_profiles, source_profiles, amps, image, sig
 
     xl, yl = getDeflections(lenses, [X, Y])
 
-    for light in light_profiles:
+    nlight = len(light_profiles)
+    nsource = len(source_profiles)
+
+    lmodel = 0.*I
+    for i in range(nlight):
+        light = light_profiles[i]
         light.setPars()
-        light.amp = 1.
-        lmodel = (convolve.convolve(light.pixeval(X, Y), light.convolve, False)[0].ravel()/S)
-        modlist.append(lmodel[mask])
+        light.amp = amps[i]
+        lmodel += (convolve.convolve(light.pixeval(X, Y), light.convolve, False)[0].ravel()/S)
+
+    modlist.append(lmodel[mask])
 
     for source in source_profiles:
         source.setPars()
@@ -309,20 +315,18 @@ def getModel_fixedamps(lenses, light_profiles, source_profiles, amps, image, sig
 
     amps, chi = optimize.nnls(model, (I/S)[mask])
 
-    nlight = len(light_profiles)
-    nsource = len(source_profiles)
-
     lmags = []
     for i in range(nlight):
-        light_profiles[i].amp *= amps[i]
-        if amps[i] <=0.:
+        light_profiles[i].amp *= amps[0]
+        if amps[0] <=0.:
             lmags.append(99.)
         else:
             lmags.append(light_profiles[i].Mag(zp))
+    light_profiles[nlight-1].amp *= amps[1]
 
     for i in range(nsource):
-        source_profiles[i].amp *= amps[i+nlight]
-        if amps[i+nlight] <=0.:
+        source_profiles[i].amp *= amps[i+1]
+        if amps[i+1] <=0.:
             lmags.append(99.)
         else:
             lmags.append(source_profiles[i].Mag(zp))

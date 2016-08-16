@@ -3,7 +3,7 @@ import numpy as np
 from pylens import pylens
 from pylens import SBModels, MassModels
 import emcee
-from scipy.optimize import basinhopping
+from scipy.optimize import basinhopping, nnls
 from scipy.stats import truncnorm
 
 
@@ -675,6 +675,7 @@ def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband
 
     allmodels = {}
     allamps = {}
+
     for band in candidate.bands:
         allmodels[band] = [light_model.model[band]]
         allamps[band] = [1.]
@@ -693,7 +694,6 @@ def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband
 
         for band in candidate.bands:
             allmodels[band].append(comp['model'][band])
-            allamps[band].append(-1.)
 
         pars = comp['pars']
 
@@ -721,12 +721,33 @@ def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband
             for j in range(0, npars):
                 pars[j].value = allpars[j]
             sumlogp = 0.
-            i = 0
 
             for band in lfitband:
-                logp, mags = pylens.getModel_fixedamps([], allmodels[band], [], allamps[band], candidate.sci[band], \
-                                                       candidate.err[band], candidate.X, candidate.Y, zp=candidate.zp[band], \
-                                                       mask=mask_r)
+
+                lmodel = 0.*candidate.sci[band].ravel()
+                modlist = []
+                for i in range(count):
+                    allmodels[band][i].amp = allamps[band][i]
+                    allmodels[band][i].setPars()
+                    lmodel += (convolve.convolve(allmodels[band].pixeval(candidate.X, candidate.Y), \
+                                            allmodels[band].convolve, False)[0].ravel()/(candidate.sig[band].ravel()))
+
+                modlist.append(lmodel)
+
+                allmodels[band][count].amp = 1.
+                allmodels[band][count].setPars()
+
+                lmodel = (convolve.convolve(allmodels[band][count].pixeval(candidate.X, candidate.Y), \
+                                            allmodels[band][count].convolve, \
+                                            False)[0].ravel()/(candidate.sig[band].ravel()))
+
+                modlist.append(lmodel)
+
+                modarr = np.array(modlist).T
+
+                amps, chi = nnls(modarr, (candidate.sci[band]/candidate.sig[band]).ravel()[mask_r])
+
+                logp = -0.5*chi
 
                 if logp != logp:
                     return -np.inf
@@ -749,7 +770,6 @@ def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband
 
         print "fitting foreground no. %d at x: %2.1f y: %2.1f"%(count, pars[0].value, pars[1].value)
 
-        count += 1
 
         sampler.run_mcmc(start, nsamp)
 
@@ -758,20 +778,57 @@ def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband
         for j in range(0, npars):
             pars[j].value = sampler.flatchain[ML, j]
 
+        # fixes the amplitude to the best fit value
+        for band in candidate.bands:
+
+            lmodel = 0.*candidate.sci[band].ravel()
+            modlist = []
+            for i in range(count):
+                allmodels[band][i].amp = allamps[band][i]
+                allmodels[band][i].setPars()
+                lmodel += (convolve.convolve(allmodels[band].pixeval(candidate.X, candidate.Y), \
+                                        allmodels[band].convolve, False)[0].ravel()/(candidate.sig[band].ravel()))
+
+            modlist.append(lmodel)
+
+            allmodels[band][count].amp = 1.
+            allmodels[band][count].setPars()
+
+            lmodel = (convolve.convolve(allmodels[band][count].pixeval(candidate.X, candidate.Y), \
+                                        allmodels[band][count].convolve, \
+                                        False)[0].ravel()/(candidate.sig[band].ravel()))
+
+            modlist.append(lmodel)
+
+            modarr = np.array(modlist).T
+
+            amps, chi = nnls(modarr, (candidate.sci[band]/candidate.sig[band]).ravel()[mask_r])
+
+            allamps[band].append(amps[1]/amps[0])
+            foreground_model.amps[band].append(amps[1]/amps[0])
+
+        count += 1
+
     # removes the best-fit i-band model from all bands, saves the residuals and fixes the amplitude of the foreground
     for band in candidate.bands:
 
-        logp, lmag, mimgs = pylens.getModel_fixedamps([], allmodels[band], [], tmp_amps, candidate.sci[band], \
-                                                      candidate.err[band], candidate.X, candidate.Y, \
-                                                      zp=candidate.zp[band], returnImg=True, mask=mask_r)
+        lmodel = 0.*candidate.sci[band]
+        for i in range(count):
+            allmodels[band][i].amp = allamps[band][i]
+            allmodels[band][i].setPars()
+            lmodel += (convolve.convolve(allmodels[band].pixeval(candidate.X, candidate.Y), \
+                                    allmodels[band].convolve, False)[0])
 
-        allamps[band][-1] = allmodels[band][-1].amp / allmodels[band][0].amp
-        foreground_model.amps[band].append(allamps[band][-1])
+        fitmodel = np.atleast_2d((lmodel/candidate.sig[band]).ravel()[mask_r]).T
+
+        amps, chi = nnls(fitmodel, (candidate.sci[band]/candidate.sig[band]).ravel()[mask_r])
+
+        logp = -0.5*chi
+
         resid = candidate.sci[band].copy()
-        for mimg in mimgs:
-            resid -= mimg
+        resid -= lmodel*amps[0]
 
-        candidate.foreground_model[band] = mimgs
+        candidate.foreground_model[band] = lmodel*amps[0]
 
 
 def fit_bad_arcs(candidate, foreground_model, light_model, rmax=30., nsamp=200):

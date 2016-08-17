@@ -54,7 +54,7 @@ if cand.read_data():
 
         foreground_model = yo.foreground_model(cand, iobjs + iarcs, arcs)
 
-        fitters.fit_foregrounds(cand, foreground_model, light_model)
+        fitters.fit_foregrounds_fixedamps(cand, foreground_model, light_model)
 
         objects = oft.measure_fluxes(objects, cand, foreground_model)
         arcs = oft.measure_fluxes(arcs, cand, foreground_model)

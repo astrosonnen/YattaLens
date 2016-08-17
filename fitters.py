@@ -5,6 +5,7 @@ from pylens import SBModels, MassModels
 import emcee
 from scipy.optimize import basinhopping, nnls
 from scipy.stats import truncnorm
+from photofit import convolve
 
 
 def fit_light(candidate, light_model, lfitband=('i'), guess=None, step=None, nsamp=200, mask=None, rmax=20.):
@@ -697,6 +698,8 @@ def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband
 
         pars = comp['pars']
 
+        comp['amps'] = {}
+
         npars = len(pars)
 
         bounds = []
@@ -805,7 +808,8 @@ def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband
             amps, chi = nnls(modarr, (candidate.sci[band]/candidate.sig[band]).ravel()[mask_r])
 
             allamps[band].append(amps[1]/amps[0])
-            foreground_model.amps[band].append(amps[1]/amps[0])
+            #foreground_model.amps[band].append(amps[1]/amps[0])
+            comp['amps'][band] = amps[1]/amps[0]
 
         count += 1
 
@@ -989,11 +993,14 @@ def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rm
     nwalkers = 50
 
     allforegrounds = {}
+    allamps = {}
     for band in candidate.bands:
         allforegrounds[band] = [light_model.model[band]]
+        allamps[band] = [1.]
         for comp in foreground_model.components:
             if comp['dofit'] == True:
                 allforegrounds[band].append(comp['model'][band])
+                allamps[band].append(foreground_model.amps[band][i])
         for arc in foreground_model.bad_arcs:
             allforegrounds[band].append(arc['model'][band])
 
@@ -1027,9 +1034,9 @@ def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rm
         i = 0
 
         for band in fitband:
-            logp, mags = pylens.getModel([lens_model.lens], allforegrounds[band], [lens_model.source[band]], \
-                                  candidate.sci[band], candidate.err[band], candidate.X, candidate.Y, \
-                                  zp=candidate.zp[band], mask=mask_r)
+            logp, mags = pylens.getModel_fixedamps([lens_model.lens], allforegrounds[band], [lens_model.source[band]], \
+                                                   allamps[band], candidate.sci[band], candidate.err[band], \
+                                                   candidate.X, candidate.Y, zp=candidate.zp[band], mask=mask_r)
 
             if logp != logp:
                 return -np.inf

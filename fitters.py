@@ -1058,7 +1058,7 @@ def fit_bad_arcs(candidate, foreground_model, light_model, rmax=30., nsamp=200):
         for i in range(count):
             candidate.foreground_model[band].append(amps[0]*scalefreemodels[band][i])
 
-def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rmax=30., nsamp=200):
+def fit_lens_freeamps(candidate, lens_model, light_model, foreground_model, image_set, rmax=30., nsamp=200):
 
     mask = np.ones(candidate.imshape)
 
@@ -1165,6 +1165,7 @@ def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rm
             pars[j].value = allpars[j]
         sumlogp = 0.
 
+        lens_model.lens.setPars()
         xl, yl = pylens.getDeflections(lens_model.lens, [candidate.X, candidate.Y])
 
         for band in fitband:
@@ -1217,6 +1218,7 @@ def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rm
 
     chi2 = 0.
 
+    lens_model.lens.setPars()
     xl, yl = pylens.getDeflections(lens_model.lens, [candidate.X, candidate.Y])
 
     for band in candidate.bands:
@@ -1252,7 +1254,7 @@ def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rm
     candidate.lensfit_mask = mask
 
 
-def fit_lens_fixedamps(candidate, lens_model, light_model, foreground_model, image_set, rmax=30., nsamp=200):
+def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rmax=30., nsamp=200):
 
     mask = np.ones(candidate.imshape)
 
@@ -1323,7 +1325,7 @@ def fit_lens_fixedamps(candidate, lens_model, light_model, foreground_model, ima
         lmodel = convolve.convolve(light_model.model[band].pixeval(candidate.X, candidate.Y), \
                                             light_model.model[band].convolve, False)[0]
 
-        foregrounds[band]  = [lmodel]
+        foregrounds[band]  = [lmodel.copy()]
         for comp in foreground_model.components:
             if comp['dofit'] == True:
                 foregrounds[band].append(comp['scalefreemodel'][band])
@@ -1359,6 +1361,7 @@ def fit_lens_fixedamps(candidate, lens_model, light_model, foreground_model, ima
             pars[j].value = allpars[j]
         sumlogp = 0.
 
+        lens_model.lens.setPars()
         xl, yl = pylens.getDeflections(lens_model.lens, [candidate.X, candidate.Y])
 
         for band in fitband:
@@ -1414,6 +1417,7 @@ def fit_lens_fixedamps(candidate, lens_model, light_model, foreground_model, ima
 
     chi2 = 0.
 
+    lens_model.lens.setPars()
     xl, yl = pylens.getDeflections(lens_model.lens, [candidate.X, candidate.Y])
 
     for band in candidate.bands:
@@ -1450,5 +1454,4 @@ def fit_lens_fixedamps(candidate, lens_model, light_model, foreground_model, ima
 
     candidate.lensfit_chi2 = chi2
     candidate.lensfit_mask = mask
-
 

@@ -96,6 +96,8 @@ if cand.read_data():
 
                 fitters.fit_lens(cand, lens_model, light_model, foreground_model, cand.image_sets[i])
 
+                print cand.lens_rein
+
                 cand.get_model_angular_aperture()
 
                 loglines.append('LENS_MODEL_ANGULAR_APERTURE %2.1f\n'%cand.model_angular_aperture)

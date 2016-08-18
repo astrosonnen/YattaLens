@@ -236,14 +236,22 @@ class foreground_model:
             xcomp = self.components[i]['pars'][0].value
             ycomp = self.components[i]['pars'][1].value
 
+            dofit = True
             for image in image_set['images']:
 
                 if image['footprint'][int(round(ycomp)), int(round(xcomp))] > 0:
-                    self.components[i]['dofit'] = False
-                    print 'foreground %d at x: %2.1f y: %2.1f is not included'%(i+1, xcomp, ycomp)
-                else:
-                    print 'foreground %d at x: %2.1f y: %2.1f is modeled'%(i+1, xcomp, ycomp)
-                    self.components[i]['dofit'] = True
+                    dofit = False
+
+            for arc in image_set['arcs']:
+                if arc['footprint'][int(round(ycomp)), int(round(xcomp))] > 0:
+                    dofit = False
+
+            if dofit:
+                print 'foreground %d at x: %2.1f y: %2.1f is modeled'%(i+1, xcomp, ycomp)
+                self.components[i]['dofit'] = True
+            else:
+                self.components[i]['dofit'] = False
+                print 'foreground %d at x: %2.1f y: %2.1f is not included'%(i+1, xcomp, ycomp)
 
         bad_arcs = []
 

@@ -101,6 +101,7 @@ if cand.read_data():
                 loglines.append('LENS_MODEL_ANGULAR_APERTURE %2.1f\n'%cand.model_angular_aperture)
 
                 success = False
+
                 if cand.model_angular_aperture > min_aperture:
 
                     if len(arcs) > 1:
@@ -127,8 +128,7 @@ if cand.read_data():
 
                 plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=success)
 
-                os.system('cp %s %s/'%(figname, cpdir))
-                # os.system('rsync -a %s /gdrive/working_dir/yattalens/specz_atleast04/'%cpdir)
+                #os.system('cp %s %s/'%(figname, cpdir))
 
             f = open(modeldir+'/%s_model_set%d.dat'%(cand.name, i+1), 'w')
             pickle.dump(cand, f)

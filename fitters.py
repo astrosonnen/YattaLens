@@ -676,11 +676,17 @@ def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband
 
     allmodels = {}
     allamps = {}
+    scalefreeimages = {}
 
     for band in candidate.bands:
         allmodels[band] = [light_model.model[band]]
         allamps[band] = [1.]
-        foreground_model.amps[band] = []
+        #foreground_model.amps[band] = []
+        light_model.model[band].setPars()
+        light_model.model[band].amp = 1.
+        lmodel = convolve.convolve(light_model.model[band].pixeval(candidate.X, candidate.Y), \
+                                            light_model.model[band].convolve, False)[0]
+        scalefreeimages[band] = [lmodel]
 
     mask = np.ones(candidate.imshape, dtype=int)
     mask[candidate.R > rmax] = 0
@@ -698,7 +704,7 @@ def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband
 
         pars = comp['pars']
 
-        comp['amps'] = {}
+        comp['scalefreeimage'] = {}
 
         npars = len(pars)
 
@@ -727,24 +733,19 @@ def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband
 
             for band in lfitband:
 
-                lmodel = 0.*candidate.sci[band].ravel()
                 modlist = []
-                for i in range(count):
-                    allmodels[band][i].amp = allamps[band][i]
-                    allmodels[band][i].setPars()
-                    lmodel += (convolve.convolve(allmodels[band].pixeval(candidate.X, candidate.Y), \
-                                            allmodels[band].convolve, False)[0].ravel()/(candidate.sig[band].ravel()))
+                fixedcomps = 0.*candidate.sci[band]
+                for l in scalefreeimages[band]:
+                    fixedcomps += l
 
-                modlist.append(lmodel)
+                modlist.append((fixedcomps/candidate.sig[band]).ravel()[mask_r])
 
                 allmodels[band][count].amp = 1.
                 allmodels[band][count].setPars()
+                lmodel = convolve.convolve(allmodels[band].pixeval(candidate.X, candidate.Y), \
+                                            allmodels[band].convolve, False)[0]
 
-                lmodel = (convolve.convolve(allmodels[band][count].pixeval(candidate.X, candidate.Y), \
-                                            allmodels[band][count].convolve, \
-                                            False)[0].ravel()/(candidate.sig[band].ravel()))
-
-                modlist.append(lmodel)
+                modlist.append((lmodel/candidate.sig[band]).ravel()[mask_r])
 
                 modarr = np.array(modlist).T
 
@@ -755,7 +756,6 @@ def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband
                 if logp != logp:
                     return -np.inf
                 sumlogp += logp
-                i += 1
 
             return sumlogp
 
@@ -781,33 +781,29 @@ def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband
         for j in range(0, npars):
             pars[j].value = sampler.flatchain[ML, j]
 
-        # fixes the amplitude to the best fit value
-        for band in lfitband:
+        # fixes the amplitude to the best fit value, in each band
+        for band in candidate.bands:
 
-            lmodel = 0.*candidate.sci[band].ravel()
             modlist = []
-            for i in range(count):
-                allmodels[band][i].amp = allamps[band][i]
-                allmodels[band][i].setPars()
-                lmodel += (convolve.convolve(allmodels[band].pixeval(candidate.X, candidate.Y), \
-                                        allmodels[band].convolve, False)[0].ravel()/(candidate.sig[band].ravel()))
+            fixedcomps = 0.*candidate.sci[band]
+            for l in scalefreeimages[band]:
+                fixedcomps += l
 
-            modlist.append(lmodel)
+            modlist.append((fixedcomps/candidate.sig[band]).ravel()[mask_r])
 
             allmodels[band][count].amp = 1.
             allmodels[band][count].setPars()
+            lmodel = convolve.convolve(allmodels[band].pixeval(candidate.X, candidate.Y), \
+                                        allmodels[band].convolve, False)[0]
 
-            lmodel = (convolve.convolve(allmodels[band][count].pixeval(candidate.X, candidate.Y), \
-                                        allmodels[band][count].convolve, \
-                                        False)[0].ravel()/(candidate.sig[band].ravel()))
-
-            modlist.append(lmodel)
+            modlist.append((lmodel/candidate.sig[band]).ravel()[mask_r])
 
             modarr = np.array(modlist).T
 
             amps, chi = nnls(modarr, (candidate.sci[band]/candidate.sig[band]).ravel()[mask_r])
 
-            allamps[band].append(amps[1]/amps[0])
+            comp['scalefreeimage'][band] = amps[1]/amps[0]*lmodel
+            scalefreeimages[band].append(amps[1]/amps[0]*lmodel)
 
         count += 1
 
@@ -816,10 +812,7 @@ def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband
 
         lmodel = 0.*candidate.sci[band]
         for i in range(count):
-            allmodels[band][i].amp = allamps[band][i]
-            allmodels[band][i].setPars()
-            lmodel += (convolve.convolve(allmodels[band].pixeval(candidate.X, candidate.Y), \
-                                    allmodels[band].convolve, False)[0])
+            lmodel += scalefreeimages[band][i]
 
         fitmodel = np.atleast_2d((lmodel/candidate.sig[band]).ravel()[mask_r]).T
 

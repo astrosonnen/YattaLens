@@ -782,7 +782,7 @@ def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband
             pars[j].value = sampler.flatchain[ML, j]
 
         # fixes the amplitude to the best fit value
-        for band in candidate.bands:
+        for band in lfitband:
 
             lmodel = 0.*candidate.sci[band].ravel()
             modlist = []
@@ -808,8 +808,6 @@ def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband
             amps, chi = nnls(modarr, (candidate.sci[band]/candidate.sig[band]).ravel()[mask_r])
 
             allamps[band].append(amps[1]/amps[0])
-            #foreground_model.amps[band].append(amps[1]/amps[0])
-            comp['amps'][band] = amps[1]/amps[0]
 
         count += 1
 

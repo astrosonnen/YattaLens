@@ -216,10 +216,10 @@ def fit_ring(candidate, ring_model, light_model, foreground_model, image_set, rm
         foregrounds[band]  = [lmodel]
         for comp in foreground_model.components:
             if comp['dofit'] == True:
-                foregrounds[band].append(comp['scalefreeimage'][band])
+                foregrounds[band].append(comp['scalefreemodel'][band])
 
         for arc in foreground_model.bad_arcs:
-            foregrounds[band].append(arc['scalefreeimage'][band])
+            foregrounds[band].append(arc['scalefreemodel'][band])
 
     mask = np.ones(candidate.imshape)
     mask[candidate.R > rmax] = 0
@@ -521,10 +521,10 @@ def fit_sersic(candidate, sersic_model, light_model, foreground_model, image_set
         foregrounds[band]  = [lmodel]
         for comp in foreground_model.components:
             if comp['dofit'] == True:
-                foregrounds[band].append(comp['scalefreeimage'][band])
+                foregrounds[band].append(comp['scalefreemodel'][band])
 
         for arc in foreground_model.bad_arcs:
-            foregrounds[band].append(arc['scalefreeimage'][band])
+            foregrounds[band].append(arc['scalefreemodel'][band])
 
     mask = np.ones(candidate.imshape)
     mask[candidate.R > rmax] = 0
@@ -757,7 +757,7 @@ def fit_foregrounds(candidate, foreground_model, light_model, lfitband=(lightban
 
 def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband=(lightband), rmax=30., nsamp=100):
 
-    scalefreeimages = {}
+    scalefreemodels = {}
 
     for band in candidate.bands:
         #foreground_model.amps[band] = []
@@ -765,7 +765,7 @@ def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband
         light_model.model[band].amp = 1.
         lmodel = convolve.convolve(light_model.model[band].pixeval(candidate.X, candidate.Y), \
                                             light_model.model[band].convolve, False)[0]
-        scalefreeimages[band] = [lmodel]
+        scalefreemodels[band] = [lmodel]
 
     mask = np.ones(candidate.imshape, dtype=int)
     mask[candidate.R > rmax] = 0
@@ -780,7 +780,8 @@ def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband
 
         pars = comp['pars']
 
-        comp['scalefreeimage'] = {}
+        comp['scalefreemodel'] = {}
+        comp['unitampmodel'] = {}
 
         npars = len(pars)
 
@@ -811,7 +812,7 @@ def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband
 
                 modlist = []
                 fixedcomps = 0.*candidate.sci[band]
-                for l in scalefreeimages[band]:
+                for l in scalefreemodels[band]:
                     fixedcomps += l
 
                 modlist.append((fixedcomps/candidate.err[band]).ravel()[mask_r])
@@ -862,7 +863,7 @@ def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband
 
             modlist = []
             fixedcomps = 0.*candidate.sci[band]
-            for l in scalefreeimages[band]:
+            for l in scalefreemodels[band]:
                 fixedcomps += l
 
             modlist.append((fixedcomps/candidate.err[band]).ravel()[mask_r])
@@ -871,6 +872,7 @@ def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband
             comp['model'][band].setPars()
             lmodel = convolve.convolve(comp['model'][band].pixeval(candidate.X, candidate.Y), \
                                         comp['model'][band].convolve, False)[0]
+            comp['unitampmodel'][band] = lmodel
 
             modlist.append((lmodel/candidate.err[band]).ravel()[mask_r])
 
@@ -878,8 +880,8 @@ def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband
 
             amps, chi = nnls(modarr, (candidate.sci[band]/candidate.err[band]).ravel()[mask_r])
 
-            comp['scalefreeimage'][band] = amps[1]/amps[0]*lmodel
-            scalefreeimages[band].append(amps[1]/amps[0]*lmodel)
+            comp['scalefreemodel'][band] = amps[1]/amps[0]*lmodel
+            scalefreemodels[band].append(amps[1]/amps[0]*lmodel)
 
         count += 1
 
@@ -888,7 +890,7 @@ def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband
 
         lmodel = 0.*candidate.sci[band]
         for i in range(count):
-            lmodel += scalefreeimages[band][i]
+            lmodel += scalefreemodels[band][i]
 
         fitmodel = np.atleast_2d((lmodel/candidate.err[band]).ravel()[mask_r]).T
 
@@ -901,14 +903,14 @@ def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband
 
         candidate.foreground_model[band] = []
         for i in range(count):
-            candidate.foreground_model[band].append(amps[0]*scalefreeimages[band][i])
+            candidate.foreground_model[band].append(amps[0]*scalefreemodels[band][i])
 
         #candidate.foreground_model[band] = lmodel*amps[0]
 
 
 def fit_bad_arcs(candidate, foreground_model, light_model, rmax=30., nsamp=200):
 
-    scalefreeimages = {}
+    scalefreemodels = {}
 
     for band in candidate.bands:
         #foreground_model.amps[band] = []
@@ -916,11 +918,11 @@ def fit_bad_arcs(candidate, foreground_model, light_model, rmax=30., nsamp=200):
         light_model.model[band].amp = 1.
         lmodel = convolve.convolve(light_model.model[band].pixeval(candidate.X, candidate.Y), \
                                             light_model.model[band].convolve, False)[0]
-        scalefreeimages[band] = [lmodel]
+        scalefreemodels[band] = [lmodel]
 
         for comp in foreground_model.components:
             if comp['dofit'] == True:
-                scalefreeimages[band].append(comp['scalefreeimage'][band])
+                scalefreemodels[band].append(comp['scalefreemodel'][band])
 
     count = 1
     for arc in foreground_model.bad_arcs:
@@ -931,7 +933,8 @@ def fit_bad_arcs(candidate, foreground_model, light_model, rmax=30., nsamp=200):
 
         pars = arc['pars']
 
-        arc['scalefreeimage'] = {}
+        arc['scalefreemodel'] = {}
+        arc['unitampmodel'] = {}
 
         npars = len(pars)
 
@@ -963,7 +966,7 @@ def fit_bad_arcs(candidate, foreground_model, light_model, rmax=30., nsamp=200):
 
                 modlist = []
                 fixedcomps = 0.*candidate.sci[band]
-                for l in scalefreeimages[band]:
+                for l in scalefreemodels[band]:
                     fixedcomps += l
 
                 modlist.append((fixedcomps/candidate.err[band]).ravel()[mask_r])
@@ -1015,7 +1018,7 @@ def fit_bad_arcs(candidate, foreground_model, light_model, rmax=30., nsamp=200):
 
             modlist = []
             fixedcomps = 0.*candidate.sci[band]
-            for l in scalefreeimages[band]:
+            for l in scalefreemodels[band]:
                 fixedcomps += l
 
             modlist.append((fixedcomps/candidate.err[band]).ravel()[mask_r])
@@ -1024,6 +1027,7 @@ def fit_bad_arcs(candidate, foreground_model, light_model, rmax=30., nsamp=200):
             arc['model'][band].setPars()
             lmodel = convolve.convolve(arc['model'][band].pixeval(candidate.X, candidate.Y), \
                                         arc['model'][band].convolve, False)[0]
+            arc['unitampmodel'][band] = lmodel
 
             modlist.append((lmodel/candidate.err[band]).ravel()[mask_r])
 
@@ -1031,15 +1035,15 @@ def fit_bad_arcs(candidate, foreground_model, light_model, rmax=30., nsamp=200):
 
             amps, chi = nnls(modarr, (candidate.sci[band]/candidate.err[band]).ravel()[mask_r])
 
-            arc['scalefreeimage'][band] = amps[1]/amps[0]*lmodel
-            scalefreeimages[band].append(amps[1]/amps[0]*lmodel)
+            arc['scalefreemodel'][band] = amps[1]/amps[0]*lmodel
+            scalefreemodels[band].append(amps[1]/amps[0]*lmodel)
 
     # removes the best-fit i-band model from all bands and saves the residuals
     for band in candidate.bands:
 
         lmodel = 0.*candidate.sci[band]
         for i in range(count):
-            lmodel += scalefreeimages[band][i]
+            lmodel += scalefreemodels[band][i]
 
         fitmodel = np.atleast_2d((lmodel/candidate.err[band]).ravel()[mask_r]).T
 
@@ -1052,8 +1056,7 @@ def fit_bad_arcs(candidate, foreground_model, light_model, rmax=30., nsamp=200):
 
         candidate.foreground_model[band] = []
         for i in range(count):
-            candidate.foreground_model[band].append(amps[0]*scalefreeimages[band][i])
-
+            candidate.foreground_model[band].append(amps[0]*scalefreemodels[band][i])
 
 def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rmax=30., nsamp=200):
 
@@ -1129,10 +1132,204 @@ def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rm
         foregrounds[band]  = [lmodel]
         for comp in foreground_model.components:
             if comp['dofit'] == True:
-                foregrounds[band].append(comp['scalefreeimage'][band])
+                foregrounds[band].append(comp['unitampmodel'][band])
 
         for arc in foreground_model.bad_arcs:
-            foregrounds[band].append(arc['scalefreeimage'][band])
+            foregrounds[band].append(arc['unitampmodel'][band])
+
+    start = []
+    for j in range(npars):
+        a, b = (bounds[j][0] - pars[j].value)/step[j], (bounds[j][1] - pars[j].value)/step[j]
+        tmp = truncnorm.rvs(a, b, size=nwalkers)*step[j] + pars[j].value
+
+        start.append(tmp)
+
+    start = np.array(start).T
+
+    npars = len(pars)
+
+    def logprior(allpars):
+        for i in range(0, npars):
+            if allpars[i] < bounds[i][0] or allpars[i] > bounds[i][1]:
+                return -np.inf
+        return 0.
+
+    nwalkers = len(start)
+
+    def logpfunc(allpars):
+        lp = logprior(allpars)
+        if not np.isfinite(lp):
+            return -np.inf
+
+        for j in range(0, npars):
+            pars[j].value = allpars[j]
+        sumlogp = 0.
+
+        xl, yl = pylens.getDeflections(lens_model.lens, [candidate.X, candidate.Y])
+
+        for band in fitband:
+
+            modlist = []
+            for l in foregrounds[band]:
+                modlist.append((l/candidate.err[band]).ravel()[mask_r])
+
+            lens_model.source[band].setPars()
+            lens_model.source[band].amp = 1.
+            smodel = convolve.convolve(lens_model.source[band].pixeval(xl, yl), lens_model.source[band].convolve, \
+                                       False)[0]
+
+            modlist.append((smodel/candidate.err[band]).ravel()[mask_r])
+
+            modarr = np.array(modlist).T
+
+            if np.isnan(modarr).any():
+                return -1e300
+
+            amps, chi = nnls(modarr, (candidate.sci[band]/candidate.err[band]).ravel()[mask_r])
+
+            logp = -0.5*chi
+
+            if logp != logp:
+                return -np.inf
+            sumlogp += logp
+
+        return sumlogp
+
+    sampler = emcee.EnsembleSampler(nwalkers, npars, logpfunc)
+
+    print "fitting lens model..."
+
+    sampler.run_mcmc(start, nsamp)
+
+    candidate.lens_pars_sample = sampler.chain
+
+    ML = sampler.flatlnprobability.argmax()
+
+    for j in range(0, npars):
+        pars[j].value = sampler.flatchain[ML, j]
+
+    candidate.lens_pa = lens_model.pa.value
+    candidate.lens_q = lens_model.q.value
+    candidate.lens_rein = lens_model.rein.value
+    candidate.source_x = lens_model.source_x.value
+    candidate.source_y = lens_model.source_y.value
+    candidate.source_re = lens_model.source_re.value
+
+    chi2 = 0.
+
+    xl, yl = pylens.getDeflections(lens_model.lens, [candidate.X, candidate.Y])
+
+    for band in candidate.bands:
+
+        modlist = []
+        for l in foregrounds[band]:
+            modlist.append((l/candidate.err[band]).ravel()[mask_r])
+
+        lens_model.source[band].setPars()
+        lens_model.source[band].amp = 1.
+        smodel = convolve.convolve(lens_model.source[band].pixeval(xl, yl), lens_model.source[band].convolve, \
+                                   False)[0]
+
+        modlist.append((smodel/candidate.err[band]).ravel()[mask_r])
+
+        modarr = np.array(modlist).T
+
+        amps, chi = nnls(modarr, (candidate.sci[band]/candidate.err[band]).ravel()[mask_r])
+
+        candidate.lensfit_model[band] = []
+        for i in range(len(foregrounds[band])):
+            candidate.lensfit_model[band].append(amps[i]*foregrounds[band][i])
+
+        candidate.lensfit_model[band].append(amps[-1]*smodel)
+
+        if band in fitband:
+            resid = candidate.sci[band].copy()
+            for mimg in candidate.lensfit_model[band]:
+                resid -= mimg
+            chi2 += ((resid/candidate.err[band])**2)[mask > 0].sum()
+
+    candidate.lensfit_chi2 = chi2
+    candidate.lensfit_mask = mask
+
+
+def fit_lens_fixedamps(candidate, lens_model, light_model, foreground_model, image_set, rmax=30., nsamp=200):
+
+    mask = np.ones(candidate.imshape)
+
+    for junk in image_set['junk']:
+        mask[junk['footprint'] > 0] = 0
+
+    mask[candidate.R > rmax] = 0
+
+    mask_r = (mask > 0).ravel()
+
+    # guesses Einstein radius and source position
+    narcs = len(image_set['arcs'])
+    x_arcs = np.zeros(narcs)
+    y_arcs = np.zeros(narcs)
+
+    for i in range(narcs):
+        x_arcs[i] = image_set['arcs'][i]['x']
+        y_arcs[i] = image_set['arcs'][i]['y']
+
+    if narcs > 1:
+        lens_model.rein.value = image_set['mean_arc_dist']
+    else:
+        lens_model.rein.value = 0.7*image_set['mean_arc_dist']
+
+    if candidate.light_q < 1.:
+        lens_model.q.value = candidate.light_q
+        lens_model.pa.value = candidate.light_pa
+        if candidate.light_q < 0.7:
+            lens_model.pa.parents['lower'] = lens_model.pa.value - 30.
+            lens_model.pa.parents['upper'] = lens_model.pa.value + 30.
+        else:
+            lens_model.q.parents['lower'] = 0.5
+    else:
+        lens_model.q.value = 1./candidate.light_q
+        lens_model.pa.value = candidate.light_pa + 90.
+        if candidate.light_q > 1./0.7:
+            lens_model.pa.parents['lower'] = lens_model.pa.value - 30.
+            lens_model.pa.parents['upper'] = lens_model.pa.value + 30.
+        else:
+            lens_model.q.parents['lower'] = 0.5
+
+    lens_model.rein.parents['upper'] = image_set['furthest_arc']
+
+    lens_model.lens.setPars()
+
+    sx_guess, sy_guess = pylens.getDeflections(lens_model.lens, [x_arcs, y_arcs])
+
+    lens_model.source_x.value = sx_guess.mean()
+    lens_model.source_y.value = sy_guess.mean()
+
+    pars = [lens_model.rein, lens_model.q, lens_model.pa, lens_model.source_x, lens_model.source_y, \
+            lens_model.source_re]
+
+    step = [1., 0.1, 20., 1., 1., 0.1]
+
+    npars = len(pars)
+
+    bounds = []
+    for par in pars:
+        bounds.append((par.parents['lower'], par.parents['upper']))
+
+    nwalkers = 50
+
+    foregrounds = {}
+    for band in candidate.bands:
+        light_model.model[band].setPars()
+        light_model.model[band].amp = 1.
+        lmodel = convolve.convolve(light_model.model[band].pixeval(candidate.X, candidate.Y), \
+                                            light_model.model[band].convolve, False)[0]
+
+        foregrounds[band]  = [lmodel]
+        for comp in foreground_model.components:
+            if comp['dofit'] == True:
+                foregrounds[band].append(comp['scalefreemodel'][band])
+
+        for arc in foreground_model.bad_arcs:
+            foregrounds[band].append(arc['scalefreemodel'][band])
 
     start = []
     for j in range(npars):

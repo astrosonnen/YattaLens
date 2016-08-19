@@ -183,6 +183,7 @@ def make_fail_curv_rgb(data, lenssub, arcimg, arccoords, arcmask, crapmask=None,
 def make_full_rgb(candidate, image_set, maskedge=None, outname='full_model.png', nsig_cut=5., success=None):
 
     cuts = []
+    rescuts = []
     data = []
     lenssub = []
     ringresid = []
@@ -204,6 +205,7 @@ def make_full_rgb(candidate, image_set, maskedge=None, outname='full_model.png',
         maskimg = 0.*img
         cut = np.percentile(img[candidate.R < 30.], 99.)
         cuts.append(cut)
+        rescuts.append(np.percentile(img[candidate.R < 30.], 95.))
         lenssub.append(candidate.lenssub_resid[band])
 
         lmodel = 0.*img
@@ -229,7 +231,7 @@ def make_full_rgb(candidate, image_set, maskedge=None, outname='full_model.png',
         i += 1
 
     dlist = make_crazy_pil_format(data, cuts)
-    lsublist = make_crazy_pil_format(lenssub, cuts)
+    lsublist = make_crazy_pil_format(lenssub, rescuts)
     masklist = make_crazy_pil_format(mask, cuts)
     slist = make_crazy_pil_format(source, cuts)
 

@@ -130,7 +130,7 @@ if cand.read_data():
 
                 plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=success)
 
-                #os.system('cp %s %s/'%(figname, cpdir))
+                os.system('cp %s %s/'%(figname, cpdir))
 
             f = open(modeldir+'/%s_model_set%d.dat'%(cand.name, i+1), 'w')
             pickle.dump(cand, f)

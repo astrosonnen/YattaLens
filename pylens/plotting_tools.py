@@ -205,7 +205,7 @@ def make_full_rgb(candidate, image_set, maskedge=None, outname='full_model.png',
         maskimg = 0.*img
         cut = np.percentile(img[candidate.R < 30.], 99.)
         cuts.append(cut)
-        rescuts.append(np.percentile(img[candidate.R < 30.], 95.))
+        rescuts.append(np.percentile(img[candidate.R < 30.], 90.))
         lenssub.append(candidate.lenssub_resid[band])
 
         lmodel = 0.*img
@@ -233,7 +233,7 @@ def make_full_rgb(candidate, image_set, maskedge=None, outname='full_model.png',
     dlist = make_crazy_pil_format(data, cuts)
     lsublist = make_crazy_pil_format(lenssub, rescuts)
     masklist = make_crazy_pil_format(mask, cuts)
-    slist = make_crazy_pil_format(source, cuts)
+    slist = make_crazy_pil_format(source, rescuts)
 
     lmlist = make_crazy_pil_format(lensmodel, cuts)
     lrlist = make_crazy_pil_format(lensresid, cuts)

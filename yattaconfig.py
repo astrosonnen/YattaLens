@@ -26,6 +26,9 @@ tooclose = 0.03
 se_minap = 25.
 gmi_max = 2.
 
+chi2_thresh = 200.
+rms_thresh = 10.
+
 source_range = 8.
 
 fitband = ('g')

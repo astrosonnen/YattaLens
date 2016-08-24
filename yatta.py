@@ -101,10 +101,29 @@ if cand.read_data():
                 cand.get_model_angular_aperture()
 
                 loglines.append('LENS_MODEL_ANGULAR_APERTURE %2.1f\n'%cand.model_angular_aperture)
+		cand.get_source_footprint()
+		cand.get_footprint_chi2(cand.image_sets[i])
+		chi2 = cand.lensfit_footprint_chi2/(cand.source_footprint.sum())
 
-                success = False
+		modelf_rms = 0.
+		rms = 0.
 
-                if cand.model_angular_aperture > min_aperture:
+		for band in fitband:
+		    data = cand.sci[band].copy()
+		    model = 0.*data
+
+		    for comp in cand.lensfit_model[band]:
+			model += comp
+
+		    refflux = np.median(data[mask > 0])
+
+		    rms += ((((model - data)**2/refflux**2)[mask > 0]).sum())**0.5
+
+
+		    modelf_rms += ((((model - data)**2/refflux**2)[cand.source_footprint > 0]).sum())**0.5
+
+   
+                if cand.model_angular_aperture > min_aperture and modelf_rms < rms_thresh and rms < rms_thresh and chi2 < chi2_thresh:
 
                     if len(arcs) > 1:
                         fitters.fit_ring(cand, ring_model, light_model, foreground_model, cand.image_sets[i])

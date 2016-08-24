@@ -109,6 +109,8 @@ if cand.read_data():
 
                 if cand.model_angular_aperture > min_aperture and rchi2 < chi2_thresh:
 
+                    success = False
+
                     if len(arcs) > 1:
                         fitters.fit_ring(cand, ring_model, light_model, foreground_model, cand.image_sets[i])
                         if cand.lensfit_chi2 < cand.ringfit_chi2:
@@ -122,18 +124,18 @@ if cand.read_data():
                             if cand.lensfit_chi2 < cand.ringfit_chi2:
                                 success = True
 
-                if success:
-                    cpdir = 'success'
-                    print 'Yatta!'
-                else:
-                    print 'failed'
-                    cpdir = 'failure'
+                    if success:
+                        cpdir = 'success'
+                        print 'Yatta!'
+                    else:
+                        print 'failed'
+                        cpdir = 'failure'
 
-                figname = 'figs/%s_imset%d.png'%(cand.name, i+1)
+                    figname = 'figs/%s_imset%d.png'%(cand.name, i+1)
 
-                plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=None)
+                    plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=None)
 
-                os.system('cp %s %s/'%(figname, cpdir))
+                    os.system('cp %s %s/'%(figname, cpdir))
 
             f = open(modeldir+'/%s_model_set%d.dat'%(cand.name, i+1), 'w')
             pickle.dump(cand, f)

@@ -103,27 +103,10 @@ if cand.read_data():
                 loglines.append('LENS_MODEL_ANGULAR_APERTURE %2.1f\n'%cand.model_angular_aperture)
 		cand.get_source_footprint()
 		cand.get_footprint_chi2(cand.image_sets[i])
-		chi2 = cand.lensfit_footprint_chi2/(cand.source_footprint.sum())
+		cand.get_footprint_rms(cand.image_sets[i])
+		cand.get_sextractor_rms(cand.image_sets[i])
 
-		modelf_rms = 0.
-		rms = 0.
-
-		for band in fitband:
-		    data = cand.sci[band].copy()
-		    model = 0.*data
-
-		    for comp in cand.lensfit_model[band]:
-			model += comp
-
-		    refflux = np.median(data[mask > 0])
-
-		    rms += ((((model - data)**2/refflux**2)[mask > 0]).sum())**0.5
-
-
-		    modelf_rms += ((((model - data)**2/refflux**2)[cand.source_footprint > 0]).sum())**0.5
-
-   
-                if cand.model_angular_aperture > min_aperture and modelf_rms < rms_thresh and rms < rms_thresh and chi2 < chi2_thresh:
+                if cand.model_angular_aperture > min_aperture and cand.footprint_rms < rms_thresh and cand.sextractor_rms < rms_thresh and cand.lensfit_footprint_chi2 < chi2_thresh:
 
                     if len(arcs) > 1:
                         fitters.fit_ring(cand, ring_model, light_model, foreground_model, cand.image_sets[i])
@@ -147,7 +130,7 @@ if cand.read_data():
 
                 figname = 'figs/%s_imset%d.png'%(cand.name, i+1)
 
-                plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=success)
+                plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=None)
 
                 os.system('cp %s %s/'%(figname, cpdir))
 

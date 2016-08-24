@@ -381,6 +381,9 @@ class Candidate:
         self.lensfit_footprint_chi2 = None
         self.sersicfit_footprint_chi2 = None
 
+	self.footprint_rms = None
+	self.sextractor_rms = None
+
         self.model_angular_aperture = None
 
     def read_data(self):
@@ -449,8 +452,8 @@ class Candidate:
     def get_footprint_chi2(self, image_set):
 
         lchi2 = 0.
-        rchi2 = 0.
-        cchi2 = 0.
+        #rchi2 = 0.
+        #cchi2 = 0.
 
         mask = self.source_footprint
 
@@ -461,12 +464,54 @@ class Candidate:
 
         for band in fitband:
             lchi2 += (((self.sci[band] - self.lensfit_model[band][0] - self.lensfit_model[band][1])/self.err[band])**2)[mask > 0].sum()
-            rchi2 += (((self.sci[band] - self.ringfit_model[band][0] - self.ringfit_model[band][1])/self.err[band])**2)[mask > 0].sum()
-            rchi2 += (((self.sci[band] - self.sersicfit_model[band][0] - self.sersicfit_model[band][1])/self.err[band])**2)[mask > 0].sum()
+            #rchi2 += (((self.sci[band] - self.ringfit_model[band][0] - self.ringfit_model[band][1])/self.err[band])**2)[mask > 0].sum()
+            #rchi2 += (((self.sci[band] - self.sersicfit_model[band][0] - self.sersicfit_model[band][1])/self.err[band])**2)[mask > 0].sum()
 
         self.lensfit_footprint_chi2 = lchi2
-        self.ringfit_footprint_chi2 = rchi2
-        self.sersicfit_footprint_chi2 = rchi2
+        #self.ringfit_footprint_chi2 = rchi2
+        #self.sersicfit_footprint_chi2 = rchi2
+
+    def get_footprint_rms(self, image_set):
+
+        rms = 0.
+
+        mask = self.source_footprint
+
+        for junk in image_set['junk']:
+            mask[junk['footprint'] > 0] = 0
+
+        mask[self.R > maxarcdist] = 0
+
+        for band in fitband:
+	    medflux = np.median(self.sci[band][mask > 0])
+
+	    modflux = 0.*self.sci[band]
+	    for comp in cand.lensfit_model[band]:
+		modflux += comp
+
+            rms += (((self.sci[band] - modflux)/medflux**2)[mask > 0].sum()
+
+        self.footprint_rms = rms
+
+    def get_sextractor_rms(self, image_set):
+
+        rms = 0.
+
+        mask = np.zeros(self.imshape, dtype=int)
+
+	for arc in image_set['arcs']:
+	    mask[arc['footprint'] > 0] = 1
+
+        for band in fitband:
+	    medflux = np.median(self.sci[band][mask > 0])
+
+	    modflux = 0.*self.sci[band]
+	    for comp in cand.lensfit_model[band]:
+		modflux += comp
+
+            rms += (((self.sci[band] - modflux)/medflux**2)[mask > 0].sum()
+
+        self.sextractor_rms = rms
 
     def get_model_angular_aperture(self):
 

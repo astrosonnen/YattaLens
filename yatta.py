@@ -103,10 +103,10 @@ if cand.read_data():
                 loglines.append('LENS_MODEL_ANGULAR_APERTURE %2.1f\n'%cand.model_angular_aperture)
 		cand.get_source_footprint()
 		cand.get_footprint_chi2(cand.image_sets[i])
-		cand.get_footprint_rms(cand.image_sets[i])
-		cand.get_sextractor_rms(cand.image_sets[i])
 
-                if cand.model_angular_aperture > min_aperture and cand.footprint_rms < rms_thresh and cand.sextractor_rms < rms_thresh and cand.lensfit_footprint_chi2 < chi2_thresh:
+		rchi2 = cand.lensfit_footprint_chi2/(cand.source_footprint.sum())
+
+                if cand.model_angular_aperture > min_aperture and rchi2 < chi2_thresh:
 
                     if len(arcs) > 1:
                         fitters.fit_ring(cand, ring_model, light_model, foreground_model, cand.image_sets[i])

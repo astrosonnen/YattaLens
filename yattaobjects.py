@@ -486,10 +486,10 @@ class Candidate:
 	    medflux = np.median(self.sci[band][mask > 0])
 
 	    modflux = 0.*self.sci[band]
-	    for comp in cand.lensfit_model[band]:
+	    for comp in self.lensfit_model[band]:
 		modflux += comp
 
-            rms += (((self.sci[band] - modflux)/medflux**2)[mask > 0].sum()
+            rms += (((self.sci[band] - modflux)**2/medflux**2)[mask > 0].sum() / float(mask.sum()))**0.5
 
         self.footprint_rms = rms
 
@@ -506,10 +506,11 @@ class Candidate:
 	    medflux = np.median(self.sci[band][mask > 0])
 
 	    modflux = 0.*self.sci[band]
-	    for comp in cand.lensfit_model[band]:
+	    for comp in self.lensfit_model[band]:
 		modflux += comp
 
-            rms += (((self.sci[band] - modflux)/medflux**2)[mask > 0].sum()
+            #rms += (((self.sci[band] - modflux)/medflux**2)[mask > 0].sum()
+            rms += (((self.sci[band] - modflux)**2/medflux**2)[mask > 0].sum() / float(mask.sum()))**0.5
 
         self.sextractor_rms = rms
 

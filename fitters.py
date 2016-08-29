@@ -782,6 +782,7 @@ def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband
 
         comp['scalefreemodel'] = {}
         comp['unitampmodel'] = {}
+        comp['scalefreemags'] = {}
 
         npars = len(pars)
 
@@ -881,6 +882,14 @@ def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband
             amps, chi = nnls(modarr, (candidate.sci[band]/candidate.err[band]).ravel()[mask_r])
 
             comp['scalefreemodel'][band] = amps[1]/amps[0]*lmodel
+
+            if amps[1] <= 0.:
+                mag = 99.
+            else:
+                mag = comp['model'][band].Mag(candidate.zp[band]) - 2.5*np.log10(amps[1]/amps[0])
+
+            comp['scalefreemags'][band] = mag
+
             scalefreemodels[band].append(amps[1]/amps[0]*lmodel)
 
         count += 1
@@ -934,6 +943,7 @@ def fit_bad_arcs(candidate, foreground_model, light_model, rmax=30., nsamp=200):
         pars = arc['pars']
 
         arc['scalefreemodel'] = {}
+        arc['scalefreemags'] = {}
         arc['unitampmodel'] = {}
 
         npars = len(pars)
@@ -1037,6 +1047,13 @@ def fit_bad_arcs(candidate, foreground_model, light_model, rmax=30., nsamp=200):
 
             arc['scalefreemodel'][band] = amps[1]/amps[0]*lmodel
             scalefreemodels[band].append(amps[1]/amps[0]*lmodel)
+
+            if amps[1] <= 0.:
+                mag = 99.
+            else:
+                mag = arc['model'][band].Mag(candidate.zp[band]) - 2.5*np.log10(amps[1]/amps[0])
+
+            arc['scalefreemags'][band] = mag
 
     # removes the best-fit i-band model from all bands and saves the residuals
     for band in candidate.bands:
@@ -1296,7 +1313,8 @@ def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rm
         else:
             lens_model.q.parents['lower'] = 0.5
 
-    lens_model.rein.parents['upper'] = image_set['furthest_arc']
+    lens_model.rein.parents['upper'] = 1.5*image_set['furthest_arc']
+    lens_model.rein.parents['lower'] = 0.3*image_set['mean_arc_dist']
 
     lens_model.lens.setPars()
 
@@ -1319,6 +1337,7 @@ def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rm
     nwalkers = 50
 
     foregrounds = {}
+    scalefreemags = {}
     for band in candidate.bands:
         light_model.model[band].setPars()
         light_model.model[band].amp = 1.
@@ -1326,12 +1345,16 @@ def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rm
                                             light_model.model[band].convolve, False)[0]
 
         foregrounds[band]  = [lmodel.copy()]
+        scalefreemags[band] = [light_model.model[band].Mag(candidate.zp[band])]
+
         for comp in foreground_model.components:
             if comp['dofit'] == True:
                 foregrounds[band].append(comp['scalefreemodel'][band])
+                scalefreemags[band].append(comp['scalefreemags'][band])
 
         for arc in foreground_model.bad_arcs:
             foregrounds[band].append(arc['scalefreemodel'][band])
+            scalefreemags[band].append(arc['scalefreemags'][band])
 
     start = []
     for j in range(npars):
@@ -1444,7 +1467,17 @@ def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rm
         for l in foregrounds[band]:
             candidate.lensfit_model[band].append(amps[0]*l)
 
+        candidate.lensfit_mags[band] = []
+        for mag in scalefreemags[band]:
+            candidate.lensfit_mags[band].append(mag - 2.5*np.log10(amps[0]))
+
         candidate.lensfit_model[band].append(amps[1]*smodel)
+        if amps[1] <= 0.:
+            smag = 99.
+        else:
+            smag = lens_model.source[band].Mag(candidate.zp[band])
+
+        candidate.lensfit_mags[band].append(smag - 2.5*np.log10(amps[1]))
 
         if band in fitband:
             resid = candidate.sci[band].copy()

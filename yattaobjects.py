@@ -365,6 +365,8 @@ class Candidate:
         self.lensfit_model = {}
         self.sersicfit_model = {}
 
+        self.lensfit_mags = {}
+
         self.lensfit_mask = None
         self.ringfit_mask = None
         self.sersicfit_mask = None
@@ -381,8 +383,8 @@ class Candidate:
         self.lensfit_footprint_chi2 = None
         self.sersicfit_footprint_chi2 = None
 
-	self.footprint_rms = None
-	self.sextractor_rms = None
+        self.footprint_rms = None
+        self.sextractor_rms = None
 
         self.model_angular_aperture = None
 

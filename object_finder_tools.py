@@ -140,7 +140,7 @@ def find_objects(candidate, detect_band='g', detect_thresh=3.):
                 and obj['ang_diff'] < maxarcdang and obj['ab'] > abmin and obj['angap'] > se_minap:
             foundarcs = True
             arcs.append(obj)
-        else:
+        elif obj['r'] > minobjdist:
             objects.append(obj)
 
     return objects, arcs, segmap, foundarcs
@@ -170,7 +170,7 @@ def measure_fluxes(objects, candidate, foreground_model, meas_bands=('g', 'i'), 
     return objects
 
 
-def compare_colors(f1a, f1b, f2a, f2b, e1a, e1b, e2a, e2b, nsigma=1.):
+def compare_colors(f1a, f1b, f2a, f2b, e1a, e1b, e2a, e2b, nsigma=color_nsigma):
     """
     Compares fluxes of two objects, 1 and 2, in two bands, a and b, and determines whether they have the same color
     :param f1a: band a flux of object 1
@@ -229,7 +229,7 @@ def compare_colors(f1a, f1b, f2a, f2b, e1a, e1b, e2a, e2b, nsigma=1.):
     return samecolor
 
 
-def color_compatibility(objects, band1='g', band2='i', nsigma=2.):
+def color_compatibility(objects, band1='g', band2='i', nsigma=color_nsigma):
 
     nobj = len(objects)
     # checks color compatibility

@@ -107,7 +107,9 @@ if cand.read_data():
 
                 rchi2 = cand.lensfit_footprint_chi2/(cand.source_footprint.sum())
 
-                if cand.model_angular_aperture > min_aperture and rchi2 < chi2_thresh:
+                loglines.append('LENS_MODEL_AVG_CHI2 %2.1f'%rchi2)
+
+                if cand.model_angular_aperture > min_aperture:# and rchi2 < chi2_thresh:
 
                     success = False
 

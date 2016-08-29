@@ -24,9 +24,9 @@ def deg2hms(rr,dd):
     dd3=(((dd-dd1)*60)-dd2)*60
 
     if(flag):
-        return "%02d%02d%02d"%(rr1,rr2,round(rr3)), "-%02d%02d%02d"%(dd1,dd2,round(dd3))
+        return "%02d%02d%02d"%(rr1,rr2,floor(rr3)), "-%02d%02d%02d"%(dd1,dd2,floor(dd3))
     else:
-        return "%02d%02d%02d"%(rr1,rr2,round(rr3)), "+%02d%02d%02d"%(dd1,dd2,round(dd3))
+        return "%02d%02d%02d"%(rr1,rr2,floor(rr3)), "+%02d%02d%02d"%(dd1,dd2,floor(dd3))
 
 ################
 filename=sys.argv[1]

@@ -132,7 +132,7 @@ for jj in range(ra.size):
             patch1="%d,%d"%(patch[0].getIndex())
             input_image = parent_dir+coadd_dir+inpfilt[ii]+'/'+str(tract1)+'/'+str(patch1)
              
-            if os.path.isdir(input_image): 
+            if os.path.isdir(input_image) and not os.path.isfile(outdir1+'/'+rrh+ddh+'_'+filt[ii]+'_psf.fits'): 
                 coadd = butler.get("deepCoadd_calexp", tract=tract.getId(),
                                    patch="%d,%d" % patch[0].getIndex(),
                                    filter=inpfilt[ii])  # your filter here

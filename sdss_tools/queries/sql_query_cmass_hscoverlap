@@ -1,0 +1,12 @@
+SELECT
+   s.bestObjID,s.ra,s.dec,s.z,s.class, s.z,
+   s.velDisp,s.velDispErr
+FROM SpecObj AS s
+WHERE 
+   s.class='GALAXY'
+   AND s.survey='boss'
+   AND s.BOSS_TARGET1 % 2 = 0
+   AND s.SCIENCEPRIMARY = 1
+   AND s.ZWARNING_NOQSO = 0
+   AND (s.CHUNK != 'boss1') AND (s.CHUNK != 'boss2')
+   AND (((s.dec > -8.) AND (s.dec < 4.)) OR ((s.dec > 40.) AND (s.dec < 55.) AND (s.ra > 210.) AND (s.ra < 250.)))

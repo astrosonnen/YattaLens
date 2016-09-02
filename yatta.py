@@ -9,145 +9,225 @@ import fitters as fitters
 import time
 import os
 
+
 tstart = time.clock()
 
-name = sys.argv[1]
+write_config_file()
 
-cand = yo.Candidate(name=name, bands=('i', 'r', 'g'))
+catname = sys.argv[1]
 
-loglines = []
-logfile = open(logdir+name+'.txt', 'a')
+sumname = catname.split('.')[0] + '.summary'
 
-if cand.read_data():
+cand_names = []
+if os.path.isfile(catname):
+    f = open(catname, 'r')
+    lines = f.readlines()
+    f.close()
 
-    light_model = yo.light_model(cand)
+    for line in lines:
+        line = line.split()
+        cand_names.append(line[0])
 
-    lenspars, junkmask = oft.find_lens(cand, detect_band='i', detect_thresh=3.)
+else:
+    cand_names.append(catname)
 
-    if lenspars is None:
-        quit('No galaxies found. Quitting YattaLens.')
+summary_lines = []
+summary_lines.append('# Target_name\tSuccess\tReason\tbestmodel_no\n')
+for name in cand_names:
 
-    tlenssub_start = time.clock()
+    cand = yo.Candidate(name=name, bands=('i', 'r', 'g'))
 
-    #fitters.quick_lens_subtraction(cand, light_model, rmax=20., lfitband=(lightband), niter=200)
-    guess = [lenspars['x'], lenspars['y'], lenspars['pa'], 1./lenspars['ab'], lenspars['npix']**0.5/np.pi, 4.]
-    fitters.fit_light(cand, light_model, rmax=20., lfitband=(lightband), mask=junkmask, guess=guess, nsamp=50)
+    loglines = []
 
-    tlenssub_end = time.clock()
-    loglines.append('QUICK_SUBTRACTION_TIME %f\n'%(tlenssub_end - tlenssub_start))
+    isalens = False
+    reason = ''
 
-    objects, arcs, segmap, foundarcs = oft.find_objects(cand, detect_band='g', detect_thresh=3.)
-    tphase1_end = time.clock()
-    loglines.append('PHASE_1_TIME %f\n'%(tphase1_end - tstart))
-    loglines.append('ARC_CANDIDATES %d\n'%(len(arcs)))
+    lensness = []
+    lenssets = []
 
-    if foundarcs:
-        iobjs, iarcs, junkmask, ifoundarcs = oft.find_objects(cand, detect_band=lightband, detect_thresh=3.)
-        junkmask[junkmask > 0] = 1
-        junkmask = 1 - junkmask
-        junkmask[cand.R < 5.] = 1
+    if cand.read_data():
 
-        print 'arcs found: %d'%(len(arcs))
+        light_model = yo.light_model(cand)
 
-        guess = [cand.x, cand.y, cand.light_pa, cand.light_q, cand.light_re, cand.light_n]
-        fitters.fit_light(cand, light_model, lfitband=(lightband), mask=junkmask, guess=guess, nsamp=200, rmax=20.)
+        lenspars, junkmask = oft.find_lens(cand, detect_band='i', detect_thresh=3.)
 
-        foreground_model = yo.foreground_model(cand, iobjs + iarcs, arcs)
+        if lenspars is not None:
 
-        fitters.fit_foregrounds_fixedamps(cand, foreground_model, light_model)
+            tlenssub_start = time.clock()
 
-        objects = oft.measure_fluxes(objects, cand, foreground_model)
-        arcs = oft.measure_fluxes(arcs, cand, foreground_model)
+            #fitters.quick_lens_subtraction(cand, light_model, rmax=20., lfitband=(lightband), niter=200)
+            guess = [lenspars['x'], lenspars['y'], lenspars['pa'], 1./lenspars['ab'], lenspars['npix']**0.5/np.pi, 4.]
+            fitters.fit_light(cand, light_model, rmax=20., lfitband=(lightband), mask=junkmask, guess=guess, nsamp=50)
 
-        nobjs = len(objects)
+            tlenssub_end = time.clock()
+            loglines.append('QUICK_SUBTRACTION_TIME %f\n'%(tlenssub_end - tlenssub_start))
 
-        cand.image_sets = oft.determine_image_sets(objects, arcs)
+            objects, arcs, segmap, foundarcs = oft.find_objects(cand, detect_band='g', detect_thresh=3.)
+            tphase1_end = time.clock()
+            loglines.append('PHASE_1_TIME %f\n'%(tphase1_end - tstart))
+            loglines.append('ARC_CANDIDATES %d\n'%(len(arcs)))
 
-        nsets = len(cand.image_sets)
+            if foundarcs:
+                iobjs, iarcs, junkmask, ifoundarcs = oft.find_objects(cand, detect_band=lightband, detect_thresh=3.)
+                junkmask[junkmask > 0] = 1
+                junkmask = 1 - junkmask
+                junkmask[cand.R < 5.] = 1
 
-        print 'possible image sets: %d'%nsets
+                print 'arcs found: %d'%(len(arcs))
 
-        lens_model = yo.lens_model(cand)
-        ring_model = yo.ring_model(cand)
-        sersic_model = yo.sersic_model(cand)
+                guess = [cand.x, cand.y, cand.light_pa, cand.light_q, cand.light_re, cand.light_n]
+                fitters.fit_light(cand, light_model, lfitband=(lightband), mask=junkmask, guess=guess, nsamp=200, rmax=20.)
 
-        for i in range(nsets):
+                foreground_model = yo.foreground_model(cand, iobjs + iarcs, arcs)
 
-            bluest = np.inf
-            for arc in cand.image_sets[i]['arcs']:
-                ratio = (arc['i_flux'] - 3.*arc['i_err'])/(arc['g_flux'] + 3.*arc['g_err'])
-            if ratio < bluest:
-                bluest = ratio
+                fitters.fit_foregrounds_fixedamps(cand, foreground_model, light_model)
 
-            if bluest < 10.**(gmi_max/2.5):
+                objects = oft.measure_fluxes(objects, cand, foreground_model)
+                arcs = oft.measure_fluxes(arcs, cand, foreground_model)
 
-                print 'set %d: %d arcs, %d images'%(i+1, len(cand.image_sets[i]['arcs']), \
-                                                    len(cand.image_sets[i]['images']))
+                nobjs = len(objects)
 
-                for arc in cand.image_sets[i]['arcs']:
-                    print 'arc', arc['x'], arc['y']
-                for image in cand.image_sets[i]['images']:
-                    print 'image', image['x'], image['y']
+                cand.image_sets = oft.determine_image_sets(objects, arcs)
 
-                foreground_model.update(cand, cand.image_sets[i])
+                nsets = len(cand.image_sets)
 
-                if len(foreground_model.bad_arcs) > 0:
-                    fitters.fit_bad_arcs(cand, foreground_model, light_model)
+                print 'possible image sets: %d'%nsets
 
-                fitters.fit_lens(cand, lens_model, light_model, foreground_model, cand.image_sets[i])
+                lens_model = yo.lens_model(cand)
+                ring_model = yo.ring_model(cand)
+                sersic_model = yo.sersic_model(cand)
 
-                print cand.lens_rein
+                for i in range(nsets):
 
-                cand.get_model_angular_aperture()
+                    bluest = np.inf
+                    for arc in cand.image_sets[i]['arcs']:
+                        ratio = (arc['i_flux'] - 3.*arc['i_err'])/(arc['g_flux'] + 3.*arc['g_err'])
+                    if ratio < bluest:
+                        bluest = ratio
 
-                loglines.append('LENS_MODEL_ANGULAR_APERTURE %2.1f\n'%cand.model_angular_aperture)
+                    if bluest < 10.**(gmi_max/2.5):
 
-                cand.get_source_footprint()
-                cand.get_footprint_chi2(cand.image_sets[i])
+                        print 'set %d: %d arcs, %d images'%(i+1, len(cand.image_sets[i]['arcs']), \
+                                                            len(cand.image_sets[i]['images']))
 
-                rchi2 = cand.lensfit_footprint_chi2/(cand.source_footprint.sum())
+                        for arc in cand.image_sets[i]['arcs']:
+                            print 'arc', arc['x'], arc['y']
+                        for image in cand.image_sets[i]['images']:
+                            print 'image', image['x'], image['y']
 
-                loglines.append('LENS_MODEL_AVG_CHI2 %2.1f'%rchi2)
+                        foreground_model.update(cand, cand.image_sets[i])
 
-                if cand.model_angular_aperture > min_aperture:# and rchi2 < chi2_thresh:
+                        if len(foreground_model.bad_arcs) > 0:
+                            fitters.fit_bad_arcs(cand, foreground_model, light_model)
 
-                    success = False
+                        fitters.fit_lens(cand, lens_model, light_model, foreground_model, cand.image_sets[i])
 
-                    if len(arcs) > 1:
-                        fitters.fit_ring(cand, ring_model, light_model, foreground_model, cand.image_sets[i])
-                        if cand.lensfit_chi2 < cand.ringfit_chi2:
-                            fitters.fit_sersic(cand, sersic_model, light_model, foreground_model, cand.image_sets[i])
-                            if cand.lensfit_chi2 < cand.sersicfit_chi2:
-                                success = True
+                        print cand.lens_rein
+
+                        cand.get_model_angular_aperture()
+
+                        loglines.append('LENS_MODEL_ANGULAR_APERTURE %2.1f\n'%cand.model_angular_aperture)
+
+                        cand.get_source_footprint()
+                        cand.get_footprint_chi2(cand.image_sets[i])
+
+                        rchi2 = cand.lensfit_footprint_chi2/(cand.source_footprint.sum())
+
+                        loglines.append('LENS_MODEL_AVG_CHI2 %2.1f'%rchi2)
+
+                        if cand.model_angular_aperture > min_aperture:# and rchi2 < chi2_thresh:
+
+                            success = False
+
+                            if len(arcs) > 1:
+                                fitters.fit_ring(cand, ring_model, light_model, foreground_model, cand.image_sets[i])
+                                if cand.lensfit_chi2 < cand.ringfit_chi2:
+                                    fitters.fit_sersic(cand, sersic_model, light_model, foreground_model, cand.image_sets[i])
+                                    if cand.lensfit_chi2 < cand.sersicfit_chi2:
+                                        success = True
+
+                            else:
+                                fitters.fit_sersic(cand, sersic_model, light_model, foreground_model, cand.image_sets[i])
+                                if cand.lensfit_chi2 < cand.sersicfit_chi2:
+                                    fitters.fit_ring(cand, ring_model, light_model, foreground_model, cand.image_sets[i])
+                                    if cand.lensfit_chi2 < cand.ringfit_chi2:
+                                        success = True
+
+                            if success:
+                                isalens = True
+                                cpdir = 'success'
+                                reason = 'YATTA'
+                                print 'Yatta!'
+
+                                secondbest = min(cand.sersicfit_chi2, cand.ringfit_chi2)
+                                lensness.append((secondbest - cand.lensfit_chi2)/cand.lensfit_chi2)
+                                lenssets.append(i)
+
+                            else:
+                                if not isalens:
+                                    if len(reason) > 0:
+                                        reason += '_NON_LENS_FITS_BETTER'
+                                    else:
+                                        reason = 'NON_LENS_FITS_BETTER'
+
+                                print 'failed'
+                                cpdir = 'failure'
+
+                            figname = 'figs/%s_imset%d.png'%(cand.name, i+1)
+
+                            plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=None)
+
+                            os.system('cp %s %s/'%(figname, cpdir))
+
+                        else:
+                            if not isalens:
+                                if len(reason) > 0:
+                                    reason += '_LENSED_ARC_TOO_SMALL'
+                                else:
+                                    reason = 'LENSED_ARC_TOO_SMALL'
                     else:
-                        fitters.fit_sersic(cand, sersic_model, light_model, foreground_model, cand.image_sets[i])
-                        if cand.lensfit_chi2 < cand.sersicfit_chi2:
-                            fitters.fit_ring(cand, ring_model, light_model, foreground_model, cand.image_sets[i])
-                            if cand.lensfit_chi2 < cand.ringfit_chi2:
-                                success = True
+                        if not isalens:
+                            if len(reason) > 0:
+                                reason += '_ARC_TOO_RED'
+                            else:
+                                reason = 'ARC_TOO_RED'
 
-                    if success:
-                        cpdir = 'success'
-                        print 'Yatta!'
-                    else:
-                        print 'failed'
-                        cpdir = 'failure'
 
-                    figname = 'figs/%s_imset%d.png'%(cand.name, i+1)
+                    f = open(modeldir+'/%s_model_set%d.dat'%(cand.name, i+1), 'w')
+                    pickle.dump(cand, f)
+                    f.close()
 
-                    plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=None)
+                tphase2_end = time.clock()
+                loglines.append('PHASE_2_TIME %f\n'%(tphase2_end - tphase1_end))
 
-                    os.system('cp %s %s/'%(figname, cpdir))
+            else:
+                reason = 'NO_ARCS_FOUND'
 
-            f = open(modeldir+'/%s_model_set%d.dat'%(cand.name, i+1), 'w')
-            pickle.dump(cand, f)
-            f.close()
+        else:
+            reason = 'NO_GALAXY_FOUND'
 
-        tphase2_end = time.clock()
-        loglines.append('PHASE_2_TIME %f\n'%(tphase2_end - tphase1_end))
+    else:
+        reason = 'DATA_NOT_FOUND'
 
-tend = time.clock()
-loglines.append('TOTAL_TIME %f\n'%(tend - tstart))
-logfile.writelines(loglines)
-logfile.close()
+    if isalens:
+        zipped = zip(lensness, lenssets)
+        zipped.sort()
+        slensness, slenssets = zip(*zipped)
+
+        bset = slenssets[-1]
+
+        summary_line = '%s YES YATTA %d\n'%(name, bset+1)
+
+    else:
+        summary_line = '%s NO %s 0\n'%(name, reason)
+
+    f = open(sumname, 'a')
+    f.writelines([summary_line])
+    f.close()
+
+    tend = time.clock()
+    loglines.append('TOTAL_TIME %f\n'%(tend - tstart))
+    logfile = open(logdir+name+'.txt', 'w')
+    logfile.writelines(loglines)
+    logfile.close()
 

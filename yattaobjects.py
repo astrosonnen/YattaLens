@@ -237,14 +237,16 @@ class foreground_model:
             ycomp = self.components[i]['pars'][1].value
 
             dofit = True
-            for image in image_set['images']:
+	    if int(round(ycomp)) >= 0 and int(round(ycomp)) < candidate.imshape[0] and int(round(xcomp)) > 0 and int(round(xcomp)) < candidate.imshape[1]:
 
-                if image['footprint'][int(round(ycomp)), int(round(xcomp))] > 0:
-                    dofit = False
+		for image in image_set['images']:
 
-            for arc in image_set['arcs']:
-                if arc['footprint'][int(round(ycomp)), int(round(xcomp))] > 0:
-                    dofit = False
+		    if image['footprint'][int(round(ycomp)), int(round(xcomp))] > 0:
+			dofit = False
+
+		for arc in image_set['arcs']:
+		    if arc['footprint'][int(round(ycomp)), int(round(xcomp))] > 0:
+			dofit = False
 
             if dofit:
                 print 'foreground %d at x: %2.1f y: %2.1f is modeled'%(i+1, xcomp, ycomp)

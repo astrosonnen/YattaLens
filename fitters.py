@@ -881,6 +881,9 @@ def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband
 
             amps, chi = nnls(modarr, (candidate.sci[band]/candidate.err[band]).ravel()[mask_r])
 
+            if amps[0] == 0.:
+                amps[0] = 1.
+
             comp['scalefreemodel'][band] = amps[1]/amps[0]*lmodel
 
             if amps[1] <= 0.:
@@ -1045,6 +1048,8 @@ def fit_bad_arcs(candidate, foreground_model, light_model, rmax=30., nsamp=200):
 
             amps, chi = nnls(modarr, (candidate.sci[band]/candidate.err[band]).ravel()[mask_r])
 
+            if amps[0] == 0.:
+                amps[0] = 1.
             arc['scalefreemodel'][band] = amps[1]/amps[0]*lmodel
             scalefreemodels[band].append(amps[1]/amps[0]*lmodel)
 

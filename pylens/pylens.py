@@ -529,4 +529,154 @@ def do_fit_emcee_inputwalkers(candidate, pars, fitbands, start, mask_r, nsamp=50
     return output
 
 
+def read_config(filename):
+
+    f = open(filename, 'r')
+    lines = f.readlines()
+    f.close()
+
+    config = {'data_dir':'./', 'output_dir':'./', 'filters': None, 'zeropoints': None, 'filename': None, \
+              'science_tag':'_sci.fits', 'var_tag':'_var.fits', 'psf_tag':'_psf.fits', 'output_tag': '_resid.fits', \
+              'Nsteps':300, 'Nwalkers':30, 'burnin':None, 'maskname':None, 'components':None, 'config_file':filename}
+
+    preamble = True
+
+    i = 0
+    while preamble and i < len(lines):
+        if '#' in lines[i] and 'MODELS' in lines[i]:
+            preamble = False
+        else:
+            parname = lines[i].split()[0].split(':')[0]
+            if parname in config:
+                config[parname] = lines[i].split(':')[1].split('\n')[0].lstrip()
+        i += 1
+
+    filtlist = []
+    filternames = config['filters'].split(',')
+    for name in filternames:
+        filtlist.append(name.lstrip())
+    config['filters'] = filtlist
+    config['zeropoints'] = np.array(config['zeropoints'].split(','), dtype='float')
+    config['Nsteps'] = int(config['Nsteps'])
+
+    light_components = []
+    lens_components = []
+    source_components = []
+
+    while i < len(lines):
+
+        line = lines[i]
+        if 'light_model' in line[0]:
+            model_class = line[1].lstrip()
+
+            if model_class == 'Sersic':
+                npars = 6
+                parnames = ['x', 'y', 'q', 'pa', 're', 'n']
+            else:
+                df
+
+            comp = {'class':model_class, 'pars':{}}
+
+            foundpars = 0
+            j = 1
+
+            while foundpars < npars and j+i < len(lines):
+                line = lines[j+i].split()
+                if lines[j+i][0] != '#' and len(line) > 0:
+                    if line[0] in parnames:
+                        foundpars += 1
+                        par = line[0]
+                        link = None
+                        if len(line) > 6:
+                            link = line[6]
+                        tmp_par = {'value': float(line[1]), 'low': float(line[2]), 'up': float(line[3]), \
+                       'step': float(line[4]), 'var': int(line[5]), 'link':link}
+                        comp['pars'][par] = tmp_par
+                j += 1
+
+            i += j
+
+            if foundpars < npars:
+                print 'not all parameters found!'
+            else:
+                light_components.append(comp)
+
+
+        elif 'source_model' in line[0]:
+            model_class = line[1].lstrip()
+
+            if model_class == 'Sersic':
+                npars = 6
+                parnames = ['x', 'y', 'q', 'pa', 're', 'n']
+            else:
+                df
+
+            comp = {'class':model_class, 'pars':{}}
+
+            foundpars = 0
+            j = 1
+
+            while foundpars < npars and j+i < len(lines):
+                line = lines[j+i].split()
+                if lines[j+i][0] != '#' and len(line) > 0:
+                    if line[0] in parnames:
+                        foundpars += 1
+                        par = line[0]
+                        link = None
+                        if len(line) > 6:
+                            link = line[6]
+                        tmp_par = {'value': float(line[1]), 'low': float(line[2]), 'up': float(line[3]), \
+                       'step': float(line[4]), 'var': int(line[5]), 'link':link}
+                        comp['pars'][par] = tmp_par
+                j += 1
+
+            i += j
+
+            if foundpars < npars:
+                print 'not all parameters found!'
+            else:
+                source_components.append(comp)
+
+        elif 'lens_model' in line[0]:
+            model_class = line[1].lstrip()
+
+            if model_class == 'Powerlaw':
+                npars = 6
+                parnames = ['x', 'y', 'q', 'pa', 'b', 'eta']
+            else:
+                df
+
+            comp = {'class':model_class, 'pars':{}}
+
+            foundpars = 0
+            j = 1
+
+            while foundpars < npars and j+i < len(lines):
+                line = lines[j+i].split()
+                if lines[j+i][0] != '#' and len(line) > 0:
+                    if line[0] in parnames:
+                        foundpars += 1
+                        par = line[0]
+                        link = None
+                        if len(line) > 6:
+                            link = line[6]
+                        tmp_par = {'value': float(line[1]), 'low': float(line[2]), 'up': float(line[3]), \
+                       'step': float(line[4]), 'var': int(line[5]), 'link':link}
+                        comp['pars'][par] = tmp_par
+                j += 1
+
+            i += j
+
+            if foundpars < npars:
+                print 'not all parameters found!'
+            else:
+                source_components.append(comp)
+
+    config['light_components'] = light_components
+    config['source_components'] = source_components
+    config['lens_components'] = lens_components
+
+    return config
+
+
 

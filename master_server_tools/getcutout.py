@@ -77,5 +77,7 @@ for jj in range(ra.size):
                 ## if you want to extract the variance image
                 outfits2=rrh+ddh+'_'+filt[ii]+'_var.fits'
                 call("imcopy %s[3] %s/%s"%(outfits,outdir1,outfits2),shell=1)
+		# removes huge fits file
+		os.system('rm %s'%outfits)
             else:
                 print ra[jj],dec[jj], input_image,"not found"

@@ -109,7 +109,6 @@ skyMap = butler.get("deepCoadd_skyMap", immediate=True)
 
 inpfilt=['HSC-G','HSC-R','HSC-I','HSC-Y','HSC-Z']
 filt=['g','r','i','y','z']
-outdir0='fitsdir/'
 ra,dec=np.loadtxt(filename,usecols=(0,1),unpack=1)
 ra = np.atleast_1d(ra)
 dec = np.atleast_1d(dec)

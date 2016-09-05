@@ -34,7 +34,8 @@ outdir1=sys.argv[2]
 boxsize=int(sys.argv[3])
     
 #parent_dir="/lustre/Subaru/SSP/rerun/yasuda/SSP3.8.5_20150725/"
-parent_dir="/lustre2/HSC_DR/dr1/s15b/data/s15b_wide/"
+#parent_dir="/lustre2/HSC_DR/dr1/s15b/data/s15b_wide/" # use this for 15b
+parent_dir="/lustre2/HSC_DR/dr1/s16a/data/s16a_wide/"
 
 coadd_dir = 'deepCoadd/'
 

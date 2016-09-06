@@ -4,7 +4,6 @@ import Image, ImageDraw, ImageFont
 from yattaconfig import *
 
 
-font = ImageFont.truetype("/usr/local/texlive/2015/texmf-dist/fonts/truetype/public/dejavu/DejaVuSans-Bold.ttf", 12)
 
 def make_rgbarray(images, cuts):
 
@@ -181,6 +180,8 @@ def make_fail_curv_rgb(data, lenssub, arcimg, arccoords, arcmask, crapmask=None,
 
 
 def make_full_rgb(candidate, image_set, maskedge=None, outname='full_model.png', nsig_cut=5., success=None):
+
+    font = ImageFont.truetype("/usr/local/texlive/2015/texmf-dist/fonts/truetype/public/dejavu/DejaVuSans-Bold.ttf", 12)
 
     cuts = []
     rescuts = []

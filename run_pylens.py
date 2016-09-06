@@ -186,80 +186,89 @@ if config['rmax'] is not None:
 mask = MASK > 0
 mask_r = mask.ravel()
 
-start = []
-for j in range(npars):
-    a, b = (bounds[j][0] - pars[j].value)/steps[j], (bounds[j][1] - pars[j].value)/steps[j]
-    tmp = truncnorm.rvs(a, b, size=config['Nwalkers'])*steps[j] + pars[j].value
+output = {}
 
-    start.append(tmp)
+if config['do_fit'] == 'YES':
+    start = []
+    for j in range(npars):
+        a, b = (bounds[j][0] - pars[j].value)/steps[j], (bounds[j][1] - pars[j].value)/steps[j]
+        tmp = truncnorm.rvs(a, b, size=config['Nwalkers'])*steps[j] + pars[j].value
 
-start = np.array(start).T
+        start.append(tmp)
 
-npars = len(pars)
+    start = np.array(start).T
 
-def logprior(allpars):
-    for i in range(npars):
-        if allpars[i] < bounds[i][0] or allpars[i] > bounds[i][1]:
+    npars = len(pars)
+
+    def logprior(allpars):
+        for i in range(npars):
+            if allpars[i] < bounds[i][0] or allpars[i] > bounds[i][1]:
+                return -np.inf
+        return 0.
+
+    nwalkers = len(start)
+
+    def logpfunc(allpars):
+        lp = logprior(allpars)
+        if not np.isfinite(lp):
             return -np.inf
-    return 0.
 
-nwalkers = len(start)
+        for j in range(0, npars):
+            pars[j].value = allpars[j]
+        sumlogp = 0.
 
-def logpfunc(allpars):
-    lp = logprior(allpars)
-    if not np.isfinite(lp):
-        return -np.inf
+        for lens in lens_models:
+            lens.setPars()
+
+        xl, yl = pylens.getDeflections(lens_models, (X, Y))
+
+        for band in fitbands:
+
+            modlist = []
+
+            for light in light_models[band]:
+                light.setPars()
+                lmodel = convolve.convolve(light.pixeval(X, Y), light.convolve, False)[0]
+                modlist.append((lmodel/sigmas[band]).ravel()[mask_r])
+
+            for source in source_models[band]:
+                source.setPars()
+                smodel = convolve.convolve(source.pixeval(xl, yl), source.convolve, False)[0]
+                modlist.append((smodel/sigmas[band]).ravel()[mask_r])
+
+            modarr = np.array(modlist).T
+
+            if np.isnan(modarr).any():
+                return -1e300
+
+            amps, chi = nnls(modarr, (images[band]/sigmas[band]).ravel()[mask_r])
+
+            logp = -0.5*chi
+
+            if logp != logp:
+                return -np.inf
+            sumlogp += logp
+
+        return sumlogp
+
+    sampler = emcee.EnsembleSampler(nwalkers, npars, logpfunc)
+
+    print "fitting model..."
+
+    sampler.run_mcmc(start, config['Nsteps'])
+
+    chain = sampler.chain
+
+    ML = sampler.flatlnprobability.argmax()
 
     for j in range(0, npars):
-        pars[j].value = allpars[j]
-    sumlogp = 0.
+        pars[j].value = sampler.flatchain[ML, j]
 
-    for lens in lens_models:
-        lens.setPars()
+    outchain = {}
+    for i in range(npars):
+        outchain[index2par[i]] = chain[:, :, i]
 
-    xl, yl = pylens.getDeflections(lens_models, (X, Y))
-
-    for band in fitbands:
-
-        modlist = []
-
-        for light in light_models[band]:
-            light.setPars()
-            lmodel = convolve.convolve(light.pixeval(X, Y), light.convolve, False)[0]
-            modlist.append((lmodel/sigmas[band]).ravel()[mask_r])
-
-        for source in source_models[band]:
-            source.setPars()
-            smodel = convolve.convolve(source.pixeval(xl, yl), source.convolve, False)[0]
-            modlist.append((smodel/sigmas[band]).ravel()[mask_r])
-
-        modarr = np.array(modlist).T
-
-        if np.isnan(modarr).any():
-            return -1e300
-
-        amps, chi = nnls(modarr, (images[band]/sigmas[band]).ravel()[mask_r])
-
-        logp = -0.5*chi
-
-        if logp != logp:
-            return -np.inf
-        sumlogp += logp
-
-    return sumlogp
-
-sampler = emcee.EnsembleSampler(nwalkers, npars, logpfunc)
-
-print "fitting model..."
-
-sampler.run_mcmc(start, config['Nsteps'])
-
-chain = sampler.chain
-
-ML = sampler.flatlnprobability.argmax()
-
-for j in range(0, npars):
-    pars[j].value = sampler.flatchain[ML, j]
+    output['chain'] = outchain
 
 light_ml_model = {}
 source_ml_model = {}
@@ -270,6 +279,7 @@ for lens in lens_models:
 
 xl, yl = pylens.getDeflections(lens_models, (X, Y))
 
+sumlogp = 0.
 for band in filters:
 
     light_ml_model[band] = []
@@ -290,6 +300,9 @@ for band in filters:
     modarr = np.array(modlist).T
 
     amps, chi = nnls(modarr, (images[band]/sigmas[band]).ravel()[mask_r])
+
+    if band in fitbands:
+        sumlogp += -0.5*chi
 
     n = 0
     for light in light_models[band]:
@@ -331,12 +344,9 @@ for band in bandshere:
 
 plotting_tools.make_model_rgb(sci_list, light_list, source_list, outname=config['rgbname'])
 
-output = {'light_ml_model': light_ml_model, 'source_ml_model': source_ml_model}
-outchain = {}
-for i in range(npars):
-    outchain[index2par[i]] = chain[:, :, i]
-
-output['chain'] = outchain
+output['light_ml_model'] = light_ml_model
+output['source_ml_model'] = source_ml_model
+output['logp'] = sumlogp
 
 f = open(config['outname'], 'w')
 pickle.dump(output, f)
@@ -433,6 +443,9 @@ for lens in source_pardicts:
                 npar = par2index[lname]
                 conflines.append('%s %f %f %f %f 1 %s\n'%(par, pars[npar].value, bounds[npar][0], bounds[npar][1], steps[npar], lname))
     ncomp += 1
+
+conflines.append('\n')
+conflines.append('logp %f\n'%sumlogp)
 
 f = open(configfile+'.out', 'w')
 f.writelines(conflines)

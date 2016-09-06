@@ -538,7 +538,7 @@ def read_config(filename):
     config = {'data_dir':'./', 'output_dir':'./', 'filters': None, 'fitbands': None, 'rgbbands': None, \
               'zeropoints': None, \
               'filename': None, 'science_tag':'_sci.fits', 'var_tag':'_var.fits', 'psf_tag':'_psf.fits', \
-              'rmax': None, 'Nsteps':300, 'Nwalkers':30, 'burnin':None, 'maskname':None, \
+              'rmax': None, 'do_fit': 'YES', 'Nsteps':300, 'Nwalkers':30, 'burnin':None, 'maskname':None, \
               'rgbname': 'model_rgb.png', 'rgbcuts': None, 'outname': None}
 
     preamble = True

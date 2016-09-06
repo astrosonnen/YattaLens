@@ -539,7 +539,7 @@ def read_config(filename):
               'zeropoints': None, \
               'filename': None, 'science_tag':'_sci.fits', 'var_tag':'_var.fits', 'psf_tag':'_psf.fits', \
               'rmax': None, 'Nsteps':300, 'Nwalkers':30, 'burnin':None, 'maskname':None, \
-              'rgbname': 'model_rgb.png', 'outname': None}
+              'rgbname': 'model_rgb.png', 'rgbcuts': None, 'outname': None}
 
     preamble = True
 
@@ -568,6 +568,16 @@ def read_config(filename):
         config['fitbands'] = filtlist
     else:
         config['fitbands'] = config['filters']
+
+    if config['rgbcuts'] is not None:
+        cutlist = []
+        cuts = config['rgbcuts'].split(',')
+        for cut in cuts:
+            cutlist.append(float(cut))
+
+        config['rgbcuts'] = cutlist
+    else:
+        config['rgbcuts'] = (99., 99., 99.)
 
     if config['outname'] is None:
         config['outname'] = filename+'.output'

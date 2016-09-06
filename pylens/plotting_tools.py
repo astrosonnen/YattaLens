@@ -331,12 +331,10 @@ def make_full_rgb(candidate, image_set, maskedge=None, outname='full_model.png',
     im.save(outname)
 
 
-def make_model_rgb(sci, light_model, source_model, cuts=None, outname='model_rgb.png'):
+def make_model_rgb(sci, light_model, source_model, cuts=(99., 99., 99.), outname='model_rgb.png'):
 
     auto_cuts = []
-    rescuts = []
     data = []
-    lenssub = []
     lensresid = []
     lensmodel = []
 
@@ -346,21 +344,18 @@ def make_model_rgb(sci, light_model, source_model, cuts=None, outname='model_rgb
 
     for i in range(3):
         data.append(sci[i])
-        cut = np.percentile(sci[i], 99.)
+        cut = np.percentile(sci[i], cuts[i])
         auto_cuts.append(cut)
 
         lensmodel.append(light_model[i] + source_model[i])
 
         lensresid.append(sci[i] - light_model[i] - source_model[i])
 
-    if cuts is None:
-        cuts = auto_cuts
+    dlist = make_crazy_pil_format(data, auto_cuts)
+    slist = make_crazy_pil_format(source_model, auto_cuts)
 
-    dlist = make_crazy_pil_format(data, cuts)
-    slist = make_crazy_pil_format(source_model, cuts)
-
-    lmlist = make_crazy_pil_format(lensmodel, cuts)
-    lrlist = make_crazy_pil_format(lensresid, cuts)
+    lmlist = make_crazy_pil_format(lensmodel, auto_cuts)
+    lrlist = make_crazy_pil_format(lensresid, auto_cuts)
 
     s = (data[0].shape[1], data[0].shape[0])
     dim = Image.new('RGB', s, 'black')

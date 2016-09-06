@@ -87,7 +87,7 @@ for band in config['filters']:
 
     sigmas[band] = subvar**0.5
 
-    psf = pyfits.open(config['data_dir']+'/'+config['filename']+'_%s'%band+config['psf_tag'])[1].data.copy()
+    psf = pyfits.open(config['data_dir']+'/'+config['filename']+'_%s'%band+config['psf_tag'])[0].data.copy()
     m = (psf[:2].mean()+psf[-2:].mean()+psf[:,:2].mean()+psf[:,-2:].mean())/4.
     psf -= m
     psf /= psf.sum()
@@ -305,24 +305,31 @@ for band in filters:
         n += 1
 
 # makes model rgb
-if len(rgbbands) == 3:
+if len(rgbbands) >= 3:
+    bandshere = rgbbands
+else:
+    bandshere = filters
+    if len(bandshere) < 3:
+        bandshere += filters
+    if len(bandshere) < 3:
+        bandshere += filters
 
-    sci_list = []
-    light_list = []
-    source_list = []
-    for band in rgbbands:
-        sci_list.append(images[band])
-        lmodel = 0.*images[band]
-        smodel = 0.*images[band]
-        for light in light_ml_model[band]:
-            lmodel += light
-        light_list.append(lmodel)
+sci_list = []
+light_list = []
+source_list = []
+for band in bandshere:
+    sci_list.append(images[band])
+    lmodel = 0.*images[band]
+    smodel = 0.*images[band]
+    for light in light_ml_model[band]:
+        lmodel += light
+    light_list.append(lmodel)
 
-        for source in source_ml_model[band]:
-            smodel += source
-        source_list.append(smodel)
+    for source in source_ml_model[band]:
+        smodel += source
+    source_list.append(smodel)
 
-    plotting_tools.make_model_rgb(sci_list, light_list, source_list, outname=config['rgbname'])
+plotting_tools.make_model_rgb(sci_list, light_list, source_list, outname=config['rgbname'])
 
 output = {'light_ml_model': light_ml_model, 'source_ml_model': source_ml_model}
 outchain = {}

@@ -7,6 +7,9 @@ logdir = os.environ.get('YATTA_LOGDIR')
 modeldir = os.environ.get('YATTA_MODELDIR')
 figdir = os.environ.get('YATTA_FIGDIR')
 
+nx_expected = 101
+ny_expected = 101
+
 if datadir is None:
     datadir = 'data/'
 
@@ -32,6 +35,7 @@ min_aperture = 35.
 tooclose = 0.03
 se_minap = 25.
 gmi_max = 2.
+lightfitrmax = 20.
 
 color_nsigma = 2.
 

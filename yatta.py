@@ -32,7 +32,7 @@ else:
     cand_names.append(catname)
 
 summary_lines = []
-summary_lines.append('# Target_name\tSuccess\tReason\tbestmodel_no\n')
+summary_lines.append('# Target_name\tSuccess\tReason\tbestmodel_no\tdata_flag\n')
 for name in cand_names:
 
     cand = yo.Candidate(name=name, bands=('i', 'r', 'g'))
@@ -47,17 +47,23 @@ for name in cand_names:
 
     if cand.read_data():
 
+        if cand.imshape[0] == ny_expected and cand.imshape[1] == nx_expected:
+            data_flag = 0
+        else:
+            data_flag = 2
+
         light_model = yo.light_model(cand)
 
         lenspars, junkmask = oft.find_lens(cand, detect_band='i', detect_thresh=3.)
 
-        if lenspars is not None:
+        if lenspars is not None and junkmask[cand.R < lightfitrmax].sum() > 0:
 
             tlenssub_start = time.clock()
 
             #fitters.quick_lens_subtraction(cand, light_model, rmax=20., lfitband=(lightband), niter=200)
             guess = [lenspars['x'], lenspars['y'], lenspars['pa'], 1./lenspars['ab'], lenspars['npix']**0.5/np.pi, 4.]
-            fitters.fit_light(cand, light_model, rmax=20., lfitband=(lightband), mask=junkmask, guess=guess, nsamp=50)
+            fitters.fit_light(cand, light_model, rmax=lightfitrmax, lfitband=(lightband), mask=junkmask, guess=guess, \
+                              nsamp=50)
 
             tlenssub_end = time.clock()
             loglines.append('QUICK_SUBTRACTION_TIME %f\n'%(tlenssub_end - tlenssub_start))
@@ -76,7 +82,8 @@ for name in cand_names:
                 print 'arcs found: %d'%(len(arcs))
 
                 guess = [cand.x, cand.y, cand.light_pa, cand.light_q, cand.light_re, cand.light_n]
-                fitters.fit_light(cand, light_model, lfitband=(lightband), mask=junkmask, guess=guess, nsamp=200, rmax=20.)
+                fitters.fit_light(cand, light_model, lfitband=(lightband), mask=junkmask, guess=guess, nsamp=200, \
+                                  rmax=lightfitrmax)
 
                 foreground_model = yo.foreground_model(cand, iobjs + iarcs, arcs)
 
@@ -207,6 +214,7 @@ for name in cand_names:
             reason = 'NO_GALAXY_FOUND'
 
     else:
+        data_flag = 1
         reason = 'DATA_NOT_FOUND'
 
     if isalens:
@@ -216,10 +224,10 @@ for name in cand_names:
 
         bset = slenssets[-1]
 
-        summary_line = '%s YES YATTA %d\n'%(name, bset+1)
+        summary_line = '%s YES YATTA %d %d\n'%(name, bset+1, data_flag)
 
     else:
-        summary_line = '%s NO %s 0\n'%(name, reason)
+        summary_line = '%s NO %s 0 %d\n'%(name, reason, data_flag)
 
     f = open(sumname, 'a')
     f.writelines([summary_line])

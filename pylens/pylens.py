@@ -219,7 +219,10 @@ def getModel(lenses, light_profiles, source_profiles, image, sigma, X, Y, zp=30.
     model = np.array(modlist).T
 
     if np.isnan(model).any():
-        return -np.inf, (99., 99.)
+	if returnImg:
+	    return -np.inf, (99., 99.), 0.*image
+	else:
+	    return -np.inf, (99., 99.)
 
     amps, chi = optimize.nnls(model, (I/S)[mask])
 

@@ -26,7 +26,10 @@ def find_lens(candidate, detect_band='i', detect_thresh=3.):
     else:
         nobj = cs[0]
 
-    segmap = pyfits.open(segname)[0].data.copy()
+    if nobj > 0:
+        segmap = pyfits.open(segname)[0].data.copy()
+    else:
+        segmap = np.zeros(candidate.imshape, dtype=int)
 
     junkmask = np.ones(candidate.imshape, dtype='int')
 
@@ -92,7 +95,10 @@ def find_objects(candidate, detect_band='g', detect_thresh=3.):
     else:
         nobj = cs[0]
 
-    segmap = pyfits.open(segname)[0].data.copy()
+    if nobj > 0:
+        segmap = pyfits.open(segname)[0].data.copy()
+    else:
+        segmap = np.zeros(candidate.imshape, dtype=int)
 
     objects = []
     foundarcs = False
@@ -156,8 +162,9 @@ def measure_fluxes(objects, candidate, foreground_model, meas_bands=('g', 'i'), 
                 xcomp = comp['pars'][0].value
                 ycomp = comp['pars'][1].value
 
-                if obj['footprint'][int(round(ycomp)), int(round(xcomp))] == 0:
-                    model += candidate.foreground_model[band][ncomp]
+                if int(round(ycomp)) >= 0 and int(round(ycomp)) < candidate.imshape[0] and int(round(xcomp)) >= 0 and int(round(xcomp)) < candidate.imshape[1]:
+                    if obj['footprint'][int(round(ycomp)), int(round(xcomp))] == 0:
+                        model += candidate.foreground_model[band][ncomp]
                 ncomp += 1
 
             resid = candidate.sci[band] - model

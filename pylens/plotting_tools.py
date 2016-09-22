@@ -214,7 +214,7 @@ def make_full_rgb(candidate, image_set=None, maskedge=None, outname='full_model.
     dim = Image.new('RGB', s, 'black')
     dim.putdata(dlist)
 
-    if candidate.lenssub_model is not None:
+    if len(candidate.lenssub_model) > 0:
         ncol += 1
         for band in rgbbands:
             lenssub.append(candidate.lenssub_resid[band])

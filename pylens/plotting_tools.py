@@ -329,7 +329,8 @@ def make_full_rgb(candidate, image_set=None, maskedge=None, outname='full_model.
 
     draw = ImageDraw.Draw(im)
     draw.text((10, s[0] - 20), 'HSCJ'+candidate.name, font=font, fill='white')
-    draw.text((10 + 5*s[1], s[0] - 20), '%2.1f'%candidate.lensfit_chi2, font=font, fill='white')
+    if ncol > 5:
+        draw.text((10 + 5*s[1], s[0] - 20), '%2.1f'%candidate.lensfit_chi2, font=font, fill='white')
 
     if len(candidate.ringfit_model) > 0:
         im.paste(rmim, (rcol*s[1], 0))

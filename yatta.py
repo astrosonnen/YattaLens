@@ -3,7 +3,7 @@ import numpy as np
 import sys
 import yattaobjects as yo
 from pylens import plotting_tools
-import object_finder_tools as oft
+import object_finder_tools as ft
 import pickle
 import fitters as fitters
 import time
@@ -54,7 +54,7 @@ for name in cand_names:
 
         light_model = yo.light_model(cand)
 
-        lenspars, junkmask = oft.find_lens(cand, detect_band='i', detect_thresh=3.)
+        lenspars, junkmask = oft.find_lens(cand, detect_band=lightband, detect_thresh=3.)
 
         if lenspars is not None and junkmask[cand.R < lightfitrmax].sum() > 0:
 
@@ -68,7 +68,7 @@ for name in cand_names:
             tlenssub_end = time.clock()
             loglines.append('QUICK_SUBTRACTION_TIME %f\n'%(tlenssub_end - tlenssub_start))
 
-            objects, arcs, segmap, foundarcs = oft.find_objects(cand, detect_band='g', detect_thresh=3.)
+            objects, arcs, segmap, foundarcs = oft.find_objects(cand, detect_band=fitband, detect_thresh=3.)
             tphase1_end = time.clock()
             loglines.append('PHASE_1_TIME %f\n'%(tphase1_end - tstart))
             loglines.append('ARC_CANDIDATES %d\n'%(len(arcs)))
@@ -182,12 +182,12 @@ for name in cand_names:
                                 print 'failed'
                                 cpdir = 'failure'
 
-                            plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=None)
+                            plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=success)
 
                             os.system('cp %s %s/'%(figname, cpdir))
 
                         else:
-                            plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=None)
+                            plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=False)
 
                             if not isalens:
                                 if len(reason) > 0:

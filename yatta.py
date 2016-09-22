@@ -3,7 +3,7 @@ import numpy as np
 import sys
 import yattaobjects as yo
 from pylens import plotting_tools
-import object_finder_tools as ft
+import object_finder_tools as oft
 import pickle
 import fitters as fitters
 import time

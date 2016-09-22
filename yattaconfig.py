@@ -22,6 +22,7 @@ if modeldir is None:
 if figdir is None:
     figdir = 'figs/'
 
+makeallfigs = False
 maxarcdist = 30.
 minarcdist = 3.
 minobjdist = 3.

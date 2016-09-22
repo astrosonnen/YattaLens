@@ -106,6 +106,8 @@ for name in cand_names:
 
                 for i in range(nsets):
 
+                    figname = figdir+'/%s_imset%d.png'%(cand.name, i+1)
+
                     bluest = np.inf
                     for arc in cand.image_sets[i]['arcs']:
                         ratio = (arc['i_flux'] - 3.*arc['i_err'])/(arc['g_flux'] + 3.*arc['g_err'])
@@ -180,19 +182,24 @@ for name in cand_names:
                                 print 'failed'
                                 cpdir = 'failure'
 
-                            figname = 'figs/%s_imset%d.png'%(cand.name, i+1)
-
                             plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=None)
 
                             os.system('cp %s %s/'%(figname, cpdir))
 
                         else:
+                            plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=None)
+
                             if not isalens:
                                 if len(reason) > 0:
                                     reason += '_LENSED_ARC_TOO_SMALL'
                                 else:
                                     reason = 'LENSED_ARC_TOO_SMALL'
                     else:
+                        cand.lensfit_model = None
+                        cand.lensfit_chi2 = None
+
+                        plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=None)
+
                         if not isalens:
                             if len(reason) > 0:
                                 reason += '_ARC_TOO_RED'
@@ -208,9 +215,17 @@ for name in cand_names:
                 loglines.append('PHASE_2_TIME %f\n'%(tphase2_end - tphase1_end))
 
             else:
+                if makeallfigs:
+                    figname = figdir+'/%s_noarcs.png'%cand.name
+                    plotting_tools.make_full_rgb(cand, image_set=None, outname=figname, success=None)
+
                 reason = 'NO_ARCS_FOUND'
 
         else:
+            if makeallfigs:
+                figname = figdir+'/%s_nolens.png'%cand.name
+                plotting_tools.make_full_rgb(cand, image_set=None, outname=figname, success=None)
+
             reason = 'NO_GALAXY_FOUND'
 
     else:

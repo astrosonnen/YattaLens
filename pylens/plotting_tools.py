@@ -203,7 +203,6 @@ def make_full_rgb(candidate, image_set=None, maskedge=None, outname='full_model.
     for band in rgbbands:
         img = candidate.sci[band]
         data.append(img)
-        maskimg = 0.*img
         cut = np.percentile(img[candidate.R < 30.], 99.)
         cuts.append(cut)
         rescuts.append(np.percentile(img[candidate.R < 30.], 90.))
@@ -228,6 +227,7 @@ def make_full_rgb(candidate, image_set=None, maskedge=None, outname='full_model.
             i = 0
             for band in rgbbands:
 
+                maskimg = 0.*candidate.sci[band]
 
                 for image in image_set['images'] + image_set['foregrounds'] + image_set['bad_arcs']:
                     maskimg[image['footprint'] > 0] = cuts[i]

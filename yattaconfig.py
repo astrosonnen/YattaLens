@@ -35,7 +35,7 @@ abmin = 1.4
 min_aperture = 35.
 tooclose = 0.03
 se_minap = 25.
-gmi_max = 5.
+gmi_max = 2.
 lightfitrmax = 20.
 
 color_nsigma = 2.

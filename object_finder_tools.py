@@ -259,9 +259,9 @@ def color_compatibility(objects, band1='g', band2='i', nsigma=color_nsigma):
     return color_matrix
 
 
-def determine_image_sets(objects, arcs):
+def determine_image_sets(objects, arcs, band1='g', band2='i'):
 
-    color_matrix = color_compatibility(objects + arcs)
+    color_matrix = color_compatibility(objects + arcs, band1=band1, band2=band2)
 
     narcs = len(arcs)
     nobj = len(objects)

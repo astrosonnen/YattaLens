@@ -89,12 +89,12 @@ for name in cand_names:
 
                 fitters.fit_foregrounds_fixedamps(cand, foreground_model, light_model)
 
-                objects = oft.measure_fluxes(objects, cand, foreground_model)
-                arcs = oft.measure_fluxes(arcs, cand, foreground_model)
+                objects = oft.measure_fluxes(objects, cand, foreground_model, meas_bands=(fitband, lightband))
+                arcs = oft.measure_fluxes(arcs, cand, foreground_model, meas_bands=(fitband, lightband))
 
                 nobjs = len(objects)
 
-                cand.image_sets = oft.determine_image_sets(objects, arcs)
+                cand.image_sets = oft.determine_image_sets(objects, arcs, band1=fitband, band2=lightband)
 
                 nsets = len(cand.image_sets)
 
@@ -110,7 +110,8 @@ for name in cand_names:
 
                     bluest = np.inf
                     for arc in cand.image_sets[i]['arcs']:
-                        ratio = (arc['i_flux'] - 3.*arc['i_err'])/(arc['g_flux'] + 3.*arc['g_err'])
+                        ratio = (arc['%s_flux'%lightband] - 3.*arc['%s_err'%lightband])/\
+                                (arc['%s_flux'%fitband] + 3.*arc['%s_err'%fitband])
                     if ratio < bluest:
                         bluest = ratio
 

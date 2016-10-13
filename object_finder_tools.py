@@ -13,7 +13,7 @@ def find_lens(candidate, detect_band='i', detect_thresh=3.):
     segname = modeldir+'/%s_%s_segmap.fits'%(candidate.name, detect_band)
     catname = modeldir+'/%s_%s_secat.cat'%(candidate.name, detect_band)
 
-    os.system('sex %s -c seconfig.sex -WEIGHT_IMAGE %s -CATALOG_NAME %s -CHECKIMAGE_NAME %s -DETECT_THRESH %f'%\
+    os.system('sex %s -c $YATTADIR/sedir/seconfig.sex -WEIGHT_IMAGE %s -CATALOG_NAME %s -CHECKIMAGE_NAME %s -DETECT_THRESH %f'%\
               (sciname, varname, catname, segname, detect_thresh))
 
     f = open(catname, 'r')
@@ -81,7 +81,7 @@ def find_objects(candidate, detect_band='g', detect_thresh=3.):
 
     pyfits.PrimaryHDU(candidate.lenssub_resid[detect_band]).writeto(lsubname, clobber=True)
 
-    os.system('sex %s -c seconfig.sex -WEIGHT_IMAGE %s -CATALOG_NAME %s -CHECKIMAGE_NAME %s -DETECT_THRESH %f'%\
+    os.system('sex %s -c $YATTADIR/sedir/seconfig.sex -WEIGHT_IMAGE %s -CATALOG_NAME %s -CHECKIMAGE_NAME %s -DETECT_THRESH %f'%\
               (lsubname, varname, catname, segname, detect_thresh))
 
     f = open(catname, 'r')

@@ -35,7 +35,7 @@ summary_lines = []
 summary_lines.append('# Target_name\tSuccess\tReason\tbestmodel_no\tdata_flag\n')
 for name in cand_names:
 
-    cand = yo.Candidate(name=name, bands=('i', 'r', 'g'))
+    cand = yo.Candidate(name=name, bands=allbands)
 
     loglines = []
 
@@ -60,7 +60,6 @@ for name in cand_names:
 
             tlenssub_start = time.clock()
 
-            #fitters.quick_lens_subtraction(cand, light_model, rmax=20., lfitband=(lightband), niter=200)
             guess = [lenspars['x'], lenspars['y'], lenspars['pa'], 1./lenspars['ab'], lenspars['npix']**0.5/np.pi, 4.]
             fitters.fit_light(cand, light_model, rmax=lightfitrmax, lfitband=(lightband), mask=junkmask, guess=guess, \
                               nsamp=50)

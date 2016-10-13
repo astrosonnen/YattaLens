@@ -2,6 +2,7 @@ import os
 import numpy as np
 
 
+rootdir = os.environ.get('YATTADIR')
 datadir = os.environ.get('YATTA_DATADIR')
 logdir = os.environ.get('YATTA_LOGDIR')
 modeldir = os.environ.get('YATTA_MODELDIR')
@@ -49,6 +50,12 @@ fitband = 'g'
 lightband = 'i'
 
 rgbbands = ('i', 'r', 'g')
+
+allbands = list(rgbbands)
+if not fitband in allbands:
+    allbands.append(fitband)
+if not lightband in allbands:
+    allbands.append(lightband)
 
 def_config = {'datadir': datadir, \
               'logdir': logdir, \

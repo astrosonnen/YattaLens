@@ -479,15 +479,15 @@ def fit_sersic(candidate, sersic_model, light_model, foreground_model, image_set
     brightest = -np.inf
 
     for arc in image_set['arcs']:
-        if arc['g_flux'] > brightest:
-            brightest = arc['g_flux']
+        if arc['%s_flux'%fitband] > brightest:
+            brightest = arc['%s_flux'%fitband]
             x_brightest = arc['x']
             y_brightest = arc['y']
             size_brightest = arc['npix']
 
     for image in image_set['images']:
-        if image['g_flux'] > brightest:
-            brightest = image['g_flux']
+        if image['%s_flux'%fitband] > brightest:
+            brightest = image['%s_flux'%fitband]
             x_brightest = image['x']
             y_brightest = image['y']
             size_brightest = image['npix']
@@ -1447,6 +1447,8 @@ def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rm
 
     lens_model.lens.setPars()
     xl, yl = pylens.getDeflections(lens_model.lens, [candidate.X, candidate.Y])
+
+    candidate.lensfit_model = {}
 
     for band in candidate.bands:
 

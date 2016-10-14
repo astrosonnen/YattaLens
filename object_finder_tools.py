@@ -281,7 +281,7 @@ def determine_image_sets(objects, arcs, band1='g', band2='i'):
 
         furthest = arc['r']
         meandist = arc['r']
-        brightest = arc['g_flux']
+        brightest = arc['%s_flux'%band1]
 
         colorcheck = color_matrix[nobj + i]
 
@@ -294,8 +294,8 @@ def determine_image_sets(objects, arcs, band1='g', band2='i'):
                     colorcheck *= color_matrix[nobj + j]
                     if arcs[j]['r'] > furthest:
                         furthest = arcs[j]['r']
-                    if arcs[j]['g_flux'] > brightest:
-                        brightest = arcs[j]['g_flux']
+                    if arcs[j]['%s_flux'%band1] > brightest:
+                        brightest = arcs[j]['%s_flux'%band1]
                     meandist += arcs[j]['r']
 
                 else:
@@ -313,7 +313,7 @@ def determine_image_sets(objects, arcs, band1='g', band2='i'):
         for j in range(nobj):
             if objects[j]['r'] > junkstart*furthest:
                 image_set['junk'].append(objects[j])
-            elif colorcheck[j] == 1 and objects[j]['g_flux'] < 2.*brightest:
+            elif colorcheck[j] == 1 and objects[j]['%s_flux'%band1] < 2.*brightest:
                 image_set['images'].append(objects[j])
             else:
                 image_set['foregrounds'].append(objects[j])

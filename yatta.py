@@ -198,7 +198,8 @@ for name in cand_names:
                         cand.lensfit_model = None
                         cand.lensfit_chi2 = None
 
-                        plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=None)
+                        if makeallfigs:
+                            plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=None)
 
                         if not isalens:
                             if len(reason) > 0:

@@ -1,6 +1,6 @@
 SELECT
-   s.bestObjID,s.ra,s.dec,s.z,s.class, s.z,
-   s.velDisp,s.velDispErr
+   s.bestObjID,s.ra,s.dec,s.z,
+   s.velDisp,s.velDispErr, s.plate, s.mjd, s.fiberid
 FROM SpecObj AS s
 WHERE 
    s.class='GALAXY'

@@ -195,8 +195,9 @@ for n in range(2):
                     flagp=extract_posflag([input_image])
                     genpsfimage([input_image],flagp,[out_psffits])
 
-            # removes huge fits file
-            os.system('rm %s'%outfits)
+                    # removes huge fits file
+                    os.system('rm %s'%outfits)
+
                 else:
                     print ra[jj],dec[jj], input_image,"not found"
 

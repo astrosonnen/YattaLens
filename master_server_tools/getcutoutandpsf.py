@@ -131,8 +131,8 @@ for i in range(nobj):
         extra += ' %s'%field
 
     dic = {'name': name, 'ra': sra[i], 'dec': sdec[i], 'extra': extra}
-    for filt in inpfilt:
-        dic[filt] = None
+    for band in filt:
+        dic[band] = None
 
     catalog.append(dic)
 
@@ -181,7 +181,7 @@ for n in range(2):
                     outfits2=rrh+ddh+'_'+filt[ii]+'_var.fits'
                     call("imcopy %s[3] %s/%s"%(outfits,outdir1,outfits2),shell=1)
 
-                    catalog[jj][inpfilt[ii]] = '%s-0-0'%dr
+                    catalog[jj][filt[ii]] = '%s-0-0'%dr
 
                     coadd = butler.get("deepCoadd_calexp", tract=tract.getId(),
                                        patch="%d,%d" % patch[0].getIndex(),
@@ -204,8 +204,8 @@ for n in range(2):
 outlines = []
 for object in catalog:
     outline = '%s %f %f'%(object['name'], object['ra'], object['dec'])
-    for filt in inpfilt:
-        outline += ' %s'%object[filt]
+    for band in filt:
+        outline += ' %s'%object[band]
     outline += '%s\n'%object['extra']
     outlines.append(outline)
 

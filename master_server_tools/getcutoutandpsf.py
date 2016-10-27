@@ -182,7 +182,8 @@ for n in range(2):
                     outfits2=rrh+ddh+'_'+filt[ii]+'_var.fits'
                     call("imcopy %s[3] %s/%s"%(outfits,outdir1,outfits2),shell=1)
 
-		    boxshape = bbox.getDimensions()
+		            boxshape = bbox.getDimensions()
+
                     catalog[jj][filt[ii]] = '%s-%d-%d'%(dr, boxshape[0], boxshape[1])
 
                     coadd = butler.get("deepCoadd_calexp", tract=tract.getId(),

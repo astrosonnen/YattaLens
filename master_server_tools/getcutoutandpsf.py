@@ -205,7 +205,7 @@ outlines = []
 for object in catalog:
     outline = '%s %f %f'%(object['name'], object['ra'], object['dec'])
     for filt in inpfilt:
-        outline += ' %s'%object['filt']
+        outline += ' %s'%object[filt]
     outline += '%s\n'%object['extra']
     outlines.append(outline)
 

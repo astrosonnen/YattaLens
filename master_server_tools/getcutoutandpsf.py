@@ -14,6 +14,9 @@ inpfilt=['HSC-G','HSC-R','HSC-I','HSC-Z','HSC-Y']
 filt=['g','r','i','z','y']
 outdir0='fitsdir/'
 
+if not os.path.isdir(outdir0):
+    os.system('mkdir %s'%outdir0)
+
 def deg2hms(rr,dd):
     flag=0
     rr1=floor(rr/15.)
@@ -125,7 +128,7 @@ for i in range(nobj):
     line = slines[i].split()
     extra = ''
     for field in line[2:]:
-        extra += ' %s'field
+        extra += ' %s'%field
 
     dic = {'name': name, 'ra': sra[i], 'dec': sdec[i], 'extra': extra}
     for filt in inpfilt:

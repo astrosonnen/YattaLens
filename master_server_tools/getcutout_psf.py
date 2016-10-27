@@ -101,8 +101,8 @@ def genpsfimage(input_images,flagp,output):
 filename=sys.argv[1]
 outdir1=sys.argv[2]
 
-#parent_dir="/lustre2/HSC_DR/dr1/s15b/data/s15b_wide/" # use this for 15b
-parent_dir="/lustre2/HSC_DR/dr1/s16a/data/s16a_wide/"
+parent_dir="/lustre2/HSC_DR/dr1/s15b/data/s15b_wide/" # use this for 15b
+#parent_dir="/lustre2/HSC_DR/dr1/s16a/data/s16a_wide/"
 coadd_dir = 'deepCoadd/'
 
 butler = lsst.daf.persistence.Butler(parent_dir)

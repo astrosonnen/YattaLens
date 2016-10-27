@@ -9,6 +9,9 @@ from subprocess import call
 import os
 import sys
 
+from lsst.afw.image import ExposureF
+from lsst.pex.exceptions.exceptionsLib import LsstCppException
+
 
 inpfilt=['HSC-G','HSC-R','HSC-I','HSC-Z','HSC-Y']
 filt=['g','r','i','z','y']
@@ -99,6 +102,7 @@ def genpsfimage(input_images,flagp,output):
                 fitshdu.writeto(output[ii])
 
             else:
+		print 'not making psf because boh', os.path.isdir(input_images[ii])
                 continue
 
 ################
@@ -182,13 +186,9 @@ for n in range(2):
                     outfits2=rrh+ddh+'_'+filt[ii]+'_var.fits'
                     call("imcopy %s[3] %s/%s"%(outfits,outdir1,outfits2),shell=1)
 
-		            boxshape = bbox.getDimensions()
+		    boxshape = bbox.getDimensions()
 
                     catalog[jj][filt[ii]] = '%s-%d-%d'%(dr, boxshape[0], boxshape[1])
-
-                    coadd = butler.get("deepCoadd_calexp", tract=tract.getId(),
-                                       patch="%d,%d" % patch[0].getIndex(),
-                                       filter=inpfilt[ii])  # your filter here
 
                     x=pixel[0]
                     y=pixel[1]
@@ -196,7 +196,7 @@ for n in range(2):
                     out_psffits = rrh+ddh+'_'+filt[ii]+'_psf.fits'
 
                     flagp=extract_posflag([input_image])
-                    genpsfimage([input_image],flagp,[out_psffits])
+                    genpsfimage([input_image+'.fits'],flagp,[out_psffits])
 
                     # removes huge fits file
                     os.system('rm %s'%outfits)

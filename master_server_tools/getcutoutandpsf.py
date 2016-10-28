@@ -140,7 +140,7 @@ for i in range(nobj):
 
     catalog.append(dic)
 
-parent_dirs=["/lustre2/HSC_DR/dr1/s15b/data/s15b_wide/", "/lustre2/HSC_DR/dr1/s16a/data/s16a_wide/"]
+parent_dirs=["/lustre2/HSC_DR/dr1/s16a/data/s16a_wide/", "/lustre2/HSC_DR/dr1/s15b/data/s15b_wide/"]
 drs = ['16a', '15b']
 
 coadd_dir = 'deepCoadd/'

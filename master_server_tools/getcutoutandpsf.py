@@ -44,16 +44,14 @@ def deg2hms(rr,dd):
 
 def genpsfimage(input_image, xy, output):
 
-    flag_pos=0
-
     x, y = xy
     if os.path.isfile(input_image):
         exposure = ExposureF(input_image)
         psf = exposure.getPsf()
         pos = psf.getAveragePosition()
-        #pos = (int(float(x)+0.5), int(float(y)+0.5))
-	pos[0] = int(float(x)+0.5)
-	pos[1] = int(float(y)+0.5)
+
+        pos[0] = int(float(x)+0.5)
+        pos[1] = int(float(y)+0.5)
 
         try:
             psfImageKer = psf.computeKernelImage(pos)
@@ -174,7 +172,7 @@ for n in range(2):
                     x=pixel[0]
                     y=pixel[1]
 
-                    out_psffits = rrh+ddh+'_'+filt[ii]+'_psf.fits'
+                    out_psffits = outdir+rrh+ddh+'_'+filt[ii]+'_psf.fits'
 
                     genpsfimage(input_image, (x, y), out_psffits)
 

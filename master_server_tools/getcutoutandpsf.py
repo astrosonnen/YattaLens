@@ -8,6 +8,7 @@ import numpy as np
 from subprocess import call
 import os
 import sys
+import pyfits
 
 from lsst.afw.image import ExposureF
 from lsst.pex.exceptions.exceptionsLib import LsstCppException
@@ -61,12 +62,7 @@ def extract_posflag(input_images):
     return flag_pos
 
 ###########
-def genpsfimage(input_images,flagp,output):
-    for ii in range(len(input_images)):
-        if os.path.exists(output[ii]):
-           print output[ii],"exists already, skipping creation of this image"
-           continue
-        else:
+def genpsfimage(input_image, flagp, output):
             if os.path.exists(input_images[ii]):
                 exposure = ExposureF(input_images[ii])
                 psf = exposure.getPsf()
@@ -102,7 +98,6 @@ def genpsfimage(input_images,flagp,output):
                 fitshdu.writeto(output[ii])
 
             else:
-		print 'not making psf because boh', os.path.isdir(input_images[ii])
                 continue
 
 ################
@@ -160,9 +155,9 @@ for n in range(2):
             for ii in range(len(inpfilt)):
                 tract1=tract.getId()
                 patch1="%d,%d"%(patch[0].getIndex())
-                input_image = parent_dir+coadd_dir+inpfilt[ii]+'/'+str(tract1)+'/'+str(patch1)+'/calexp-'+inpfilt[ii]+'-'+str(tract1)+'-'+str(patch1)
+                input_image = parent_dir+coadd_dir+inpfilt[ii]+'/'+str(tract1)+'/'+str(patch1)+'/calexp-'+inpfilt[ii]+'-'+str(tract1)+'-'+str(patch1)+'.fits'
 
-                if os.path.isfile(input_image+'.fits') and not os.path.isfile(outdir1+'/'+rrh+ddh+'_'+filt[ii]+'_sci.fits'):
+                if os.path.isfile(input_image) and not os.path.isfile(outdir1+'/'+rrh+ddh+'_'+filt[ii]+'_sci.fits'):
                     coadd = butler.get("deepCoadd_calexp", tract=tract.getId(),
                                        patch="%d,%d" % patch[0].getIndex(),
                                        filter=inpfilt[ii])  # your filter here
@@ -196,7 +191,9 @@ for n in range(2):
                     out_psffits = rrh+ddh+'_'+filt[ii]+'_psf.fits'
 
                     flagp=extract_posflag([input_image])
-                    genpsfimage([input_image+'.fits'],flagp,[out_psffits])
+
+		    print catalog[jj]['name'], dr, filt[ii], flagp
+                    genpsfimage([input_image],flagp,[out_psffits])
 
                     # removes huge fits file
                     os.system('rm %s'%outfits)

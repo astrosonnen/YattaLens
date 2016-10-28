@@ -50,7 +50,10 @@ def genpsfimage(input_image, xy, output):
     if os.path.isfile(input_image):
         exposure = ExposureF(input_image)
         psf = exposure.getPsf()
-        pos = (int(float(x)+0.5), int(float(y)+0.5))
+        pos = psf.getAveragePosition()
+        #pos = (int(float(x)+0.5), int(float(y)+0.5))
+	pos[0] = int(float(x)+0.5)
+	pos[1] = int(float(y)+0.5)
 
         try:
             psfImageKer = psf.computeKernelImage(pos)
@@ -59,7 +62,6 @@ def genpsfimage(input_image, xy, output):
             print "Computing PSF at the center of the patch"
             pos = psf.getAveragePosition()
             psfImageKer = psf.computeKernelImage(pos)
-            break
 
         image_psf = psfImageKer.getArray()
 
@@ -76,13 +78,13 @@ def genpsfimage(input_image, xy, output):
         rx=lx+nx
         ry=ly+ny
 
-        hdu = pyfits.open(input_images[ii])
+        hdu = pyfits.open(input_image)
         fitshdu = hdu[1]
         fitshdu.data = image_psf[ly:ry,lx:rx]
         fitshdu.writeto(output)
 
     else:
-        continue
+        pass
 
 ################
 filename=sys.argv[1]

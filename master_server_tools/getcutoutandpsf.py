@@ -172,7 +172,7 @@ for n in range(2):
                     x=pixel[0]
                     y=pixel[1]
 
-                    out_psffits = outdir+rrh+ddh+'_'+filt[ii]+'_psf.fits'
+                    out_psffits = outdir1+rrh+ddh+'_'+filt[ii]+'_psf.fits'
 
                     genpsfimage(input_image, (x, y), out_psffits)
 

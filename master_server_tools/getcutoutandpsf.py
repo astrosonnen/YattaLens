@@ -42,63 +42,47 @@ def deg2hms(rr,dd):
 
 ###########
 
-def extract_posflag(input_images):
+def genpsfimage(input_image, xy, output):
+
     flag_pos=0
-    for filename in (input_images):
-        if os.path.isfile(filename):
-            exposure = ExposureF(filename)
-            psf = exposure.getPsf()
+
+    x, y = xy
+    if os.path.isfile(input_image):
+        exposure = ExposureF(input_image)
+        psf = exposure.getPsf()
+        pos = (int(float(x)+0.5), int(float(y)+0.5))
+
+        try:
+            psfImageKer = psf.computeKernelImage(pos)
+        except LsstCppException:
+            print "Cannot compute CoaddPsf for ", filename, " at the location of the target"
+            print "Computing PSF at the center of the patch"
             pos = psf.getAveragePosition()
-            pos[0] = int(float(x)+0.5)
-            pos[1] = int(float(y)+0.5)
-            try:
-                psfImageKer = psf.computeKernelImage(pos)
-            except LsstCppException:
-                print "Cannot compute CoaddPsf for ", filename, " at the location of the target"
-                flag_pos=1
-                break
-        else:
-            continue
-    return flag_pos
+            psfImageKer = psf.computeKernelImage(pos)
+            break
 
-###########
-def genpsfimage(input_image, flagp, output):
-            if os.path.exists(input_images[ii]):
-                exposure = ExposureF(input_images[ii])
-                psf = exposure.getPsf()
-                pos = psf.getAveragePosition()
-                if(flagp==0):
-                    pos[0] = int(float(x)+0.5)
-                    pos[1] = int(float(y)+0.5)
-                    if(ii==0):
-                        print "Computing PSF at the location of the target"
-                else:
-                    if(ii==0):
-                        print "Computing PSF at the center of the patch"
+        image_psf = psfImageKer.getArray()
 
-                psfImageKer = psf.computeKernelImage(pos)
-                image_psf = psfImageKer.getArray()
+        nx1 = psfImageKer.getDimensions()[0]
+        ny1 = psfImageKer.getDimensions()[1]
+        n_psf = min(nx1,ny1)
 
-                nx1 = psfImageKer.getDimensions()[0]
-                ny1 = psfImageKer.getDimensions()[1]
-                n_psf = min(nx1,ny1)
+        nx = n_psf
+        ny = n_psf
 
-                nx = n_psf
-                ny = n_psf
+        lx = (nx1-nx)/2
+        ly = (ny1-ny)/2
 
-                lx = (nx1-nx)/2
-                ly = (ny1-ny)/2
+        rx=lx+nx
+        ry=ly+ny
 
-                rx=lx+nx
-                ry=ly+ny
+        hdu = pyfits.open(input_images[ii])
+        fitshdu = hdu[1]
+        fitshdu.data = image_psf[ly:ry,lx:rx]
+        fitshdu.writeto(output)
 
-                hdu = pyfits.open(input_images[ii])
-                fitshdu = hdu[1]
-                fitshdu.data = image_psf[ly:ry,lx:rx]
-                fitshdu.writeto(output[ii])
-
-            else:
-                continue
+    else:
+        continue
 
 ################
 filename=sys.argv[1]
@@ -181,7 +165,7 @@ for n in range(2):
                     outfits2=rrh+ddh+'_'+filt[ii]+'_var.fits'
                     call("imcopy %s[3] %s/%s"%(outfits,outdir1,outfits2),shell=1)
 
-		    boxshape = bbox.getDimensions()
+                    boxshape = bbox.getDimensions()
 
                     catalog[jj][filt[ii]] = '%s-%d-%d'%(dr, boxshape[0], boxshape[1])
 
@@ -190,10 +174,7 @@ for n in range(2):
 
                     out_psffits = rrh+ddh+'_'+filt[ii]+'_psf.fits'
 
-                    flagp=extract_posflag([input_image])
-
-		    print catalog[jj]['name'], dr, filt[ii], flagp
-                    genpsfimage([input_image],flagp,[out_psffits])
+                    genpsfimage(input_image, (x, y), out_psffits)
 
                     # removes huge fits file
                     os.system('rm %s'%outfits)

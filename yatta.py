@@ -5,7 +5,7 @@ import yattaobjects as yo
 from pylens import plotting_tools
 import object_finder_tools as oft
 import pickle
-import fitters as fitters
+import yattafitters as fitters
 import time
 import os
 

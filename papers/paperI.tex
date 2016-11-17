@@ -27,6 +27,7 @@
 % installations will be fine) or prefer the old Computer Modern fonts, comment
 % out the following line
 \usepackage{newtxtext,newtxmath}
+
 % Depending on your LaTeX fonts installation, you might get better results with one of these:
 %\usepackage{mathptmx}
 %\usepackage{txfonts}
@@ -44,6 +45,8 @@
 \usepackage{amsmath}	% Advanced maths commands
 \usepackage{amssymb}	% Extra maths symbols
 
+\usepackage{xspace}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%% AUTHORS - PLACE YOUR OWN COMMANDS HERE %%%%%
@@ -54,7 +57,16 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\def\ngradeA{20}
+\def\ngradeA{10}
+
+\def\Sref#1{Section~\ref{#1}\xspace}
+\def\Fref#1{Figure~\ref{#1}\xspace}
+\def\Tref#1{Table~\ref{#1}\xspace}
+\def\Eref#1{Equation~\ref{#1}\xspace}
+
+\def\pr{{\rm Pr}}
+\def\plens{\pr_{\mathrm{lens}}}
+
 %%%%%%%%%%%%%%%%%%% TITLE PAGE %%%%%%%%%%%%%%%%%%%
 
 % Title of the paper, and the short title which is used in the headers.
@@ -95,7 +107,7 @@ $^{5}$Department of Physics, National Taiwan University, 10617 Taipei, Taiwan
 
 % Abstract of the paper
 \begin{abstract}
-We developed a method to look for galaxy-scale strong gravitational lenses in photometric data. We applied it to the first internal data release of the HSC SSP survey. We found X definite lenses, Y probable lenses and Z possible lenses.
+We developed a method to look for galaxy-scale strong gravitational lenses in photometric data. We applied it to the first internal data release of the HSC SSP survey. We found $\ngradeA$ definite lenses, Y probable lenses and Z possible lenses.
 \end{abstract}
 
 % Select between one and six entries from the list of approved keywords.
@@ -114,7 +126,11 @@ Lenses are great.
 
 \section{The Data}
 
+\subsection{HSC photometry}
 The HSC survey is great.
+
+\subsection{BOSS spectroscopy}
+BOSS is great.
 
 \section{The Method}
 
@@ -132,11 +148,28 @@ Method overview.
 
 \subsection{Tests on the SL2S sample}
 
-\section{Candidate classification}
-We graded lens candidates output by YattaLens according to their likelihood of being strong lenses, $\pr
+\section{The photometrically selected sample}
 
-\Resultssection{Results}
+\subsection{Candidate grading}
+We graded lens candidates output by YattaLens according to their likelihood of being strong lenses, $\plens$, using the following scheme:
+\begin{itemize}
+\item Grade A: definite lenses ($\plens > 0.997$), 
+\item Grade B: probable lenses ($0.5 < \plens < 0.997$)
+\item Grade C: possible lenses ($0.003 < \plens < 0.5$)
+\item Grade 0: non lenses ($plens < 0.003$)
+\end{itemize}
 
+\section{The spectroscopically selected sample}
+
+\section{Results}
+In \Fref{fig:gradeA} we show the grade A lenses.
+%
+\begin{figure*}
+ \includegraphics[width=\textwidth]{gradeA_collage.eps}
+ \caption{Grade A lenses.}
+ \label{fig:gradeA}
+\end{figure*}
+%
 \section{Discussion}
 
 \subsection{Lenses missed by YattaLens}

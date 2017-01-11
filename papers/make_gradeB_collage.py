@@ -12,25 +12,25 @@ smallfont = ImageFont.truetype("/usr/local/texlive/2015/texmf-dist/fonts/truetyp
 font = ImageFont.truetype("/usr/local/texlive/2015/texmf-dist/fonts/truetype/public/dejavu/DejaVuSans-Bold.ttf", 7)
 
 npix = 101
-ncol = 5
+ncol = 8
 
 lowz_list = paper1_catalogs.get_success_list(subsample='LOWZ')
 cmass_list = paper1_catalogs.get_success_list(subsample='CMASS')
 
-gradeA = []
+gradeB = []
 names = []
 for name in lowz_list + cmass_list:
     cand = paper1_catalogs.boss_candidate(name)
     cand.get_grade()
-    if cand.grade >= 2.5 and not cand.name in known:
-	gradeA.append(cand)
+    if cand.grade >= 1.5 and cand.grade < 2.5 and not cand.name in known:
+	gradeB.append(cand)
 	names.append(name)
 
-zipped = zip(names, gradeA)
+zipped = zip(names, gradeB)
 zipped.sort()
-snames, sgradeA = zip(*zipped)
+snames, sgradeB = zip(*zipped)
 
-nlens = len(gradeA)
+nlens = len(gradeB)
 print nlens
 
 nrow = nlens/ncol + min(1, nlens%ncol)
@@ -41,13 +41,12 @@ for i in range(nlens):
     rowno = i/ncol
     colno = i%ncol
 
-    im = sgradeA[i].make_postage_stamp()
+    im = sgradeB[i].make_postage_stamp()
 
     if showname:
         draw = ImageDraw.Draw(im)
-
-        draw.text((3, 80), 'HSCJ'+sgradeA[i].name, font=smallfont, fill='white')        
-        draw.text((10, 5), sgradeA[i].subsample.upper(), font=font, fill='white')        
+        draw.text((3, 80), 'HSCJ'+sgradeB[i].name, font=smallfont, fill='white')        
+        draw.text((10, 5), sgradeB[i].subsample.upper(), font=font, fill='white')        
     fullcomp.paste(im, (colno*npix, rowno*npix))
 
 lens1 = paper1_catalogs.boss_candidate(name='090709+005648')
@@ -62,5 +61,5 @@ print lens1.name, lens1.votes
 print lens2.name, lens2.votes
 print lens3.name, lens3.votes
 
-fullcomp.save('gradeA_collage.png')
+fullcomp.save('gradeB_collage.png')
 

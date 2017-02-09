@@ -221,6 +221,9 @@ def fit_ring(candidate, ring_model, light_model, foreground_model, image_set, rm
         for arc in foreground_model.bad_arcs:
             foregrounds[band].append(arc['scalefreemodel'][band])
 
+        for obj in foreground_model.new_foregrounds:
+            foregrounds[band].append(obj['scalefreemodel'][band])
+
     mask = np.ones(candidate.imshape)
     mask[candidate.R > rmax] = 0
 
@@ -525,6 +528,9 @@ def fit_sersic(candidate, sersic_model, light_model, foreground_model, image_set
 
         for arc in foreground_model.bad_arcs:
             foregrounds[band].append(arc['scalefreemodel'][band])
+
+        for obj in foreground_model.new_foregrounds:
+            foregrounds[band].append(obj['scalefreemodel'][band])
 
     mask = np.ones(candidate.imshape)
     mask[candidate.R > rmax] = 0
@@ -936,7 +942,8 @@ def fit_bad_arcs(candidate, foreground_model, light_model, rmax=30., nsamp=200):
             if comp['dofit'] == True:
                 scalefreemodels[band].append(comp['scalefreemodel'][band])
 
-    count = 1
+    count = len(scalefreemodels[band])
+
     for arc in foreground_model.bad_arcs:
 
         tmp_mask = np.ones(candidate.imshape, dtype=int)
@@ -1059,6 +1066,168 @@ def fit_bad_arcs(candidate, foreground_model, light_model, rmax=30., nsamp=200):
                 mag = arc['model'][band].Mag(candidate.zp[band]) - 2.5*np.log10(amps[1]/amps[0])
 
             arc['scalefreemags'][band] = mag
+
+    # removes the best-fit i-band model from all bands and saves the residuals
+    for band in candidate.bands:
+
+        lmodel = 0.*candidate.sci[band]
+        for i in range(count):
+            lmodel += scalefreemodels[band][i]
+
+        fitmodel = np.atleast_2d((lmodel/candidate.err[band]).ravel()[mask_r]).T
+
+        amps, chi = nnls(fitmodel, (candidate.sci[band]/candidate.err[band]).ravel()[mask_r])
+
+        logp = -0.5*chi
+
+        resid = candidate.sci[band].copy()
+        resid -= lmodel*amps[0]
+
+        candidate.foreground_model[band] = []
+        for i in range(count):
+            candidate.foreground_model[band].append(amps[0]*scalefreemodels[band][i])
+
+
+def fit_new_foregrounds(candidate, foreground_model, light_model, rmax=30., nsamp=200):
+
+    scalefreemodels = {}
+
+    for band in candidate.bands:
+        #foreground_model.amps[band] = []
+        light_model.model[band].setPars()
+        light_model.model[band].amp = 1.
+        lmodel = convolve.convolve(light_model.model[band].pixeval(candidate.X, candidate.Y), \
+                                            light_model.model[band].convolve, False)[0]
+        scalefreemodels[band] = [lmodel]
+
+        for comp in foreground_model.components:
+            if comp['dofit'] == True:
+                scalefreemodels[band].append(comp['scalefreemodel'][band])
+
+    count = len(scalefreemodels[band])
+
+    for obj in foreground_model.new_foregrounds:
+
+        tmp_mask = np.ones(candidate.imshape, dtype=int)
+        tmp_mask[candidate.R > rmax] = 0
+        mask_r = (tmp_mask > 0).ravel()
+
+        pars = obj['pars']
+
+        obj['scalefreemodel'] = {}
+        obj['scalefreemags'] = {}
+        obj['unitampmodel'] = {}
+
+        npars = len(pars)
+
+        bounds = []
+
+        for par in pars:
+            bounds.append((par.parents['lower'], par.parents['upper']))
+
+        npars = len(pars)
+        nwalkers = 6*npars
+
+        def logprior(allpars):
+            for i in range(0, npars):
+                if allpars[i] < bounds[i][0] or allpars[i] > bounds[i][1]:
+                    return -np.inf
+            return 0.
+
+        def logpfunc(allpars):
+            lp = logprior(allpars)
+            if not np.isfinite(lp):
+                return -np.inf
+
+            for j in range(0, npars):
+                pars[j].value = allpars[j]
+            sumlogp = 0.
+            i = 0
+
+            for band in fitband:
+
+                modlist = []
+                fixedcomps = 0.*candidate.sci[band]
+                for l in scalefreemodels[band]:
+                    fixedcomps += l
+
+                modlist.append((fixedcomps/candidate.err[band]).ravel()[mask_r])
+
+                obj['model'][band].amp = 1.
+                obj['model'][band].setPars()
+                lmodel = convolve.convolve(obj['model'][band].pixeval(candidate.X, candidate.Y), \
+                                            obj['model'][band].convolve, False)[0]
+
+                modlist.append((lmodel/candidate.err[band]).ravel()[mask_r])
+
+                modarr = np.array(modlist).T
+
+                amps, chi = nnls(modarr, (candidate.sci[band]/candidate.err[band]).ravel()[mask_r])
+
+                logp = -0.5*chi
+
+                if logp != logp:
+                    return -np.inf
+                sumlogp += logp
+                i += 1
+
+            return sumlogp
+
+        sampler = emcee.EnsembleSampler(nwalkers, npars, logpfunc)
+
+        start = []
+        for i in range(nwalkers):
+            tmp = np.zeros(npars)
+            urand = np.random.rand(npars)
+            for j in range(0, npars):
+                p0 = urand[j]*(bounds[j][1] - bounds[j][0]) + bounds[j][0]
+                tmp[j] = p0
+
+            start.append(tmp)
+
+        print "fitting arc-like foreground no. %d at x: %2.1f y: %2.1f"%(count, pars[0].value, pars[1].value)
+
+        count += 1
+        sampler.run_mcmc(start, nsamp)
+
+        ML = sampler.flatlnprobability.argmax()
+
+        for j in range(0, npars):
+            pars[j].value = sampler.flatchain[ML, j]
+
+        # fixes the amplitude to the best fit value, in each band
+        for band in candidate.bands:
+
+            modlist = []
+            fixedcomps = 0.*candidate.sci[band]
+            for l in scalefreemodels[band]:
+                fixedcomps += l
+
+            modlist.append((fixedcomps/candidate.err[band]).ravel()[mask_r])
+
+            obj['model'][band].amp = 1.
+            obj['model'][band].setPars()
+            lmodel = convolve.convolve(obj['model'][band].pixeval(candidate.X, candidate.Y), \
+                                        obj['model'][band].convolve, False)[0]
+            obj['unitampmodel'][band] = lmodel
+
+            modlist.append((lmodel/candidate.err[band]).ravel()[mask_r])
+
+            modarr = np.array(modlist).T
+
+            amps, chi = nnls(modarr, (candidate.sci[band]/candidate.err[band]).ravel()[mask_r])
+
+            if amps[0] == 0.:
+                amps[0] = 1.
+            obj['scalefreemodel'][band] = amps[1]/amps[0]*lmodel
+            scalefreemodels[band].append(amps[1]/amps[0]*lmodel)
+
+            if amps[1] <= 0.:
+                mag = 99.
+            else:
+                mag = obj['model'][band].Mag(candidate.zp[band]) - 2.5*np.log10(amps[1]/amps[0])
+
+            obj['scalefreemags'][band] = mag
 
     # removes the best-fit i-band model from all bands and saves the residuals
     for band in candidate.bands:
@@ -1360,6 +1529,12 @@ def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rm
         for arc in foreground_model.bad_arcs:
             foregrounds[band].append(arc['scalefreemodel'][band])
             scalefreemags[band].append(arc['scalefreemags'][band])
+
+        for obj in foreground_model.new_foregrounds:
+            foregrounds[band].append(obj['scalefreemodel'][band])
+            scalefreemags[band].append(obj['scalefreemags'][band])
+
+    print 'fitting %d foregrounds, including 1 lens and %d arc-like objects'%(len(foregrounds[band]), len(foreground_model.bad_arcs))
 
     start = []
     for j in range(npars):

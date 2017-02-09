@@ -202,14 +202,14 @@ class foreground_model:
                 x = pymc.Uniform('x', lower=xobj - 3., upper=xobj + 3., value=xobj)
                 y = pymc.Uniform('y', lower=yobj - 3., upper=yobj + 3., value=yobj)
 
-                pa = pymc.Uniform('pa', lower=-100., upper=100., value=0.)
-                q = pymc.Uniform('q', lower=0.1, upper=2., value=0.7)
+                pa = pymc.Uniform('pa', lower=obj['pa']-100., upper=obj['pa']+100., value=obj['pa'])
+                q = pymc.Uniform('q', lower=0.1, upper=2., value=max(0.1, 1./obj['ab']))
                 re = pymc.Uniform('re', lower=1., upper=remax, value=min(5., remax))
 
                 model = {}
 
                 for band in candidate.bands:
-                    light = SBModels.Sersic('LensLight', {'x': x, 'y': y, 're': re, 'q': q, 'pa': pa, \
+                    light = SBModels.Sersic('foreground', {'x': x, 'y': y, 're': re, 'q': q, 'pa': pa, \
                                                       'n': 4.})
 
                     light.convolve = convolve.convolve(candidate.sci[band], candidate.psf[band])[1]
@@ -237,16 +237,16 @@ class foreground_model:
             ycomp = self.components[i]['pars'][1].value
 
             dofit = True
-	    if int(round(ycomp)) >= 0 and int(round(ycomp)) < candidate.imshape[0] and int(round(xcomp)) > 0 and int(round(xcomp)) < candidate.imshape[1]:
+            if int(round(ycomp)) >= 0 and int(round(ycomp)) < candidate.imshape[0] and int(round(xcomp)) > 0 and int(round(xcomp)) < candidate.imshape[1]:
+                for image in image_set['images']:
+                    if image['footprint'][int(round(ycomp)), int(round(xcomp))] > 0:
+                        dofit = False
 
-		for image in image_set['images']:
-
-		    if image['footprint'][int(round(ycomp)), int(round(xcomp))] > 0:
-			dofit = False
-
-		for arc in image_set['arcs']:
-		    if arc['footprint'][int(round(ycomp)), int(round(xcomp))] > 0:
-			dofit = False
+                for arc in image_set['arcs']:
+                    if arc['footprint'][int(round(ycomp)), int(round(xcomp))] > 0:
+                        dofit = False
+            else:
+                dofit = False
 
             if dofit:
                 print 'foreground %d at x: %2.1f y: %2.1f is modeled'%(i+1, xcomp, ycomp)
@@ -297,6 +297,56 @@ class foreground_model:
             bad_arcs.append(component)
 
         self.bad_arcs = bad_arcs
+
+        # adds any foreground detected in the g band that wasn't detected in i, if any,
+        # or objects that were thought to be arcs but are not.
+
+        new_foregrounds = []
+
+        for obj in image_set['foregrounds']:
+
+            already_there = False
+
+            for i in range(ncomp):
+                xcomp = self.components[i]['pars'][0].value
+                ycomp = self.components[i]['pars'][1].value
+
+                if obj['footprint'][int(round(ycomp)), int(round(xcomp))] > 0:
+                    already_there = True
+
+            if not already_there:
+                component = {}
+
+                xobj = obj['x']
+                yobj = obj['y']
+
+                print 'adding foreground at %2.1f %2.1f'%(xobj, yobj)
+
+                remax = (obj['npix']/np.pi)**0.5
+
+                x = pymc.Uniform('x', lower=xobj - 3., upper=xobj + 3., value=xobj)
+                y = pymc.Uniform('y', lower=yobj - 3., upper=yobj + 3., value=yobj)
+
+                pa = pymc.Uniform('pa', lower=obj['pa']-100., upper=obj['pa']+100., value=obj['pa'])
+                q = pymc.Uniform('q', lower=0.1, upper=2., value=max(0.1, 1./obj['ab']))
+                re = pymc.Uniform('re', lower=1., upper=remax, value=min(5., remax))
+
+                model = {}
+
+                for band in candidate.bands:
+                    light = SBModels.Sersic('LensLight', {'x': x, 'y': y, 're': re, 'q': q, 'pa': pa, \
+                                                      'n': 4.})
+
+                    light.convolve = convolve.convolve(candidate.sci[band], candidate.psf[band])[1]
+
+                    model[band] = light
+
+                component['pars'] = [x, y, pa, q, re]
+                component['model'] = model
+
+                new_foregrounds.append(component)
+
+        self.new_foregrounds = new_foregrounds
 
 
 class Candidate:

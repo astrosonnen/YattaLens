@@ -112,6 +112,7 @@ def find_objects(candidate, detect_band='g', detect_thresh=3.):
         obj['x'] = x
         obj['y'] = y
         obj['r'] = ((x - candidate.x0) ** 2 + (y - candidate.y0) ** 2) ** 0.5
+        obj['pa'] = cat[i, 5]
         theta = np.rad2deg(np.arctan(-(x - candidate.x0) / (y - candidate.y0)))
         obj['ang_diff'] = min(abs(theta - cat[i, 5]), abs(abs(theta - cat[i, 5]) - 180.))
         obj['ab'] = cat[i, 4]
@@ -259,12 +260,14 @@ def color_compatibility(objects, band1='g', band2='i', nsigma=color_nsigma):
     return color_matrix
 
 
-def determine_image_sets(objects, arcs, band1='g', band2='i'):
+def determine_image_sets(objects, arcs, iobjects, band1='g', band2='i'):
 
     color_matrix = color_compatibility(objects + arcs, band1=band1, band2=band2)
 
     narcs = len(arcs)
     nobj = len(objects)
+
+    niobj = len(iobjects)
 
     image_sets = []
     done_combinations = []
@@ -304,7 +307,8 @@ def determine_image_sets(objects, arcs, band1='g', band2='i'):
 
         for bad_arc in tmp_bad_arcs:
             if bad_arc['r'] < modeluntil*furthest:
-                image_set['bad_arcs'].append(bad_arc)
+                #image_set['bad_arcs'].append(bad_arc)
+                image_set['foregrounds'].append(bad_arc)
             else:
                 image_set['junk'].append(bad_arc)
 
@@ -317,6 +321,24 @@ def determine_image_sets(objects, arcs, band1='g', band2='i'):
                 image_set['images'].append(objects[j])
             else:
                 image_set['foregrounds'].append(objects[j])
+
+        for j in range(niobj):
+
+            xiobj = iobjects[j]['x']
+            yiobj = iobjects[j]['y']
+            already_there = False
+            for n in range(nobj):
+                if objects[n]['footprint'][int(round(yiobj)), int(round(xiobj))] > 0:
+                    already_there = True
+            for n in range(narcs):
+                if arcs[n]['footprint'][int(round(yiobj)), int(round(xiobj))] > 0:
+                    already_there = True
+            if not already_there:
+                print 'adding footprint of object at %2.1f %2.1f. dist: %2.1f. arc dist: %2.1f'%(xiobj, yiobj, iobjects[j]['r'], furthest)
+                if iobjects[j]['r'] <= junkstart*furthest:
+                    image_set['foregrounds'].append(iobjects[j])
+                else:
+                    image_set['junk'].append(iobjects[j])
 
         image_set['furthest_arc'] = furthest
         image_set['mean_arc_dist'] = meandist

@@ -93,7 +93,7 @@ for name in cand_names:
 
                 nobjs = len(objects)
 
-                cand.image_sets = oft.determine_image_sets(objects, arcs, band1=fitband, band2=lightband)
+                cand.image_sets = oft.determine_image_sets(objects, arcs, iobjs + iarcs, band1=fitband, band2=lightband)
 
                 nsets = len(cand.image_sets)
 
@@ -126,8 +126,11 @@ for name in cand_names:
 
                         foreground_model.update(cand, cand.image_sets[i])
 
-                        if len(foreground_model.bad_arcs) > 0:
-                            fitters.fit_bad_arcs(cand, foreground_model, light_model)
+                        #if len(foreground_model.bad_arcs) > 0:
+                        #    fitters.fit_bad_arcs(cand, foreground_model, light_model)
+
+                        if len(foreground_model.new_foregrounds) > 0:
+                            fitters.fit_new_foregrounds(cand, foreground_model, light_model)
 
                         fitters.fit_lens(cand, lens_model, light_model, foreground_model, cand.image_sets[i])
 

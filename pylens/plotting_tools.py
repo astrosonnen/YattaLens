@@ -229,15 +229,22 @@ def make_full_rgb(candidate, image_set=None, maskedge=None, outname='full_model.
 
                 maskimg = 0.*candidate.sci[band]
 
-                for image in image_set['images'] + image_set['foregrounds'] + image_set['bad_arcs']:
-                    maskimg[image['footprint'] > 0] = cuts[i]
+                #for image in image_set['images']:
+                #    maskimg[image['footprint'] > 0] = cuts[i]
+                for obj in image_set['foregrounds'] + image_set['bad_arcs']:
+                    maskimg[obj['footprint'] > 0] = cuts[i]
 
                 if i==0:
                     for junk in image_set['junk']:
                         maskimg[junk['footprint'] > 0] = cuts[i]
                 elif i==1:
-                    for arc in image_set['arcs']:
+                    for arc in image_set['arcs']: #+ image_set['foregrounds'] + image_set['bad_arcs']:
                         maskimg[arc['footprint'] > 0] = cuts[i]
+                    for image in image_set['images']:
+                        maskimg[image['footprint'] > 0] = 0.4 * cuts[i]
+                #elif i==2:
+                #    for image in image_set['foregrounds'] + image_set['bad_arcs']:
+                #        maskimg[image['footprint'] > 0] = cuts[i]
 
                 mask.append(maskimg)
                 i += 1
@@ -252,7 +259,7 @@ def make_full_rgb(candidate, image_set=None, maskedge=None, outname='full_model.
                 maskdraw = ImageDraw.Draw(maskim)
                 maskdraw.ellipse((x0 - maskedge, y0 - maskedge, x0 + maskedge, y0 + maskedge), fill=None, outline='yellow')
 
-            if candidate.lensfit_model is not None:
+            if len(candidate.lensfit_model) > 0:
                 ncol += 3
                 i = 0
                 for band in rgbbands:
@@ -396,6 +403,261 @@ def make_model_rgb(sci, light_model, source_model, cuts=(99., 99., 99.), outname
     im.paste(lmim, (1*s[1], 0))
     im.paste(sim, (2*s[1], 0))
     im.paste(lrim, (3*s[1], 0))
+
+    im.save(outname)
+
+
+def make_foregroundonly_rgb(candidate, image_set=None, enhance_residuals=False, maskedge=None, \
+                            outname='foreground_model.png', nsig_cut=5.):
+
+    font = ImageFont.truetype("/usr/local/texlive/2015/texmf-dist/fonts/truetype/public/dejavu/DejaVuSans-Bold.ttf", 12)
+
+    cuts = []
+    rescuts = []
+    data = []
+    lenssub = []
+    lensresid = []
+    fgmodel = []
+    fgresid = []
+
+    mask = []
+    i = 0
+
+    ncol = 1
+
+    for band in rgbbands:
+        img = candidate.sci[band]
+        data.append(img)
+        cut = np.percentile(img[candidate.R < 30.], 99.)
+        cuts.append(cut)
+        rescuts.append(np.percentile(img[candidate.R < 30.], 90.))
+
+    s = (data[0].shape[1], data[0].shape[0])
+
+    dlist = make_crazy_pil_format(data, cuts)
+    dim = Image.new('RGB', s, 'black')
+    dim.putdata(dlist)
+
+    if len(candidate.lenssub_model) > 0:
+        ncol += 1
+        for band in rgbbands:
+            lenssub.append(candidate.lenssub_resid[band])
+
+        if enhance_residuals:
+            lsublist = make_crazy_pil_format(lenssub, rescuts)
+        else:
+            lsublist = make_crazy_pil_format(lenssub, cuts)
+
+        lsubim = Image.new('RGB', s, 'black')
+        lsubim.putdata(lsublist)
+
+        if image_set is not None:
+            ncol += 1
+            i = 0
+            for band in rgbbands:
+
+                maskimg = 0.*candidate.sci[band]
+
+                for image in image_set['images']:
+                    maskimg[image['footprint'] > 0] = cuts[i]
+
+                if i==0:
+                    for junk in image_set['junk']:
+                        maskimg[junk['footprint'] > 0] = cuts[i]
+                elif i==1:
+                    for arc in image_set['arcs'] + image_set['foregrounds'] + image_set['bad_arcs']:
+                        maskimg[arc['footprint'] > 0] = cuts[i]
+                elif i==2:
+                    for image in image_set['foregrounds'] + image_set['bad_arcs']:
+                        maskimg[image['footprint'] > 0] = cuts[i]
+
+                mask.append(maskimg)
+                i += 1
+
+            masklist = make_crazy_pil_format(mask, cuts)
+            maskim = Image.new('RGB', s, 'black')
+            maskim.putdata(masklist)
+
+            x0 = s[1]/2
+            y0 = s[0]/2
+            if maskedge is not None:
+                maskdraw = ImageDraw.Draw(maskim)
+                maskdraw.ellipse((x0 - maskedge, y0 - maskedge, x0 + maskedge, y0 + maskedge), fill=None, outline='yellow')
+
+            if candidate.foreground_model is not None:
+                ncol += 2
+                i = 0
+                for band in rgbbands:
+                    lmodel = 0.*candidate.sci[band]
+                    for mimg in candidate.foreground_model[band]:
+                        lmodel += mimg
+                    fgmodel.append(lmodel)
+
+                    fgresid.append(candidate.sci[band] - lmodel)
+
+                fmlist = make_crazy_pil_format(fgmodel, cuts)
+                frlist = make_crazy_pil_format(fgresid, cuts)
+
+                fmim = Image.new('RGB', s, 'black')
+                frim = Image.new('RGB', s, 'black')
+
+                fmim.putdata(fmlist)
+                frim.putdata(frlist)
+
+    im = Image.new('RGB', (ncol*data[0].shape[0], data[0].shape[1]), 'black')
+
+    im.paste(dim, (0, 0,))
+    if ncol > 1:
+        im.paste(lsubim, (s[1], 0))
+        if ncol > 2:
+            im.paste(maskim, (2*s[1], 0))
+            if ncol > 4:
+                im.paste(fmim, (3*s[1], 0))
+                im.paste(frim, (4*s[1], 0))
+
+    draw = ImageDraw.Draw(im)
+    draw.text((10, s[0] - 20), 'HSCJ'+candidate.name, font=font, fill='white')
+
+    im.save(outname)
+
+
+def make_failure_rgb(candidate, image_set=None, maskedge=None, fail_mode='ring', outname='failed.png', nsig_cut=5., \
+                     success=None):
+
+    font = ImageFont.truetype("/usr/local/texlive/2015/texmf-dist/fonts/truetype/public/dejavu/DejaVuSans-Bold.ttf", 12)
+
+    cuts = []
+    rescuts = []
+    data = []
+    lenssub = []
+    lensmodel = []
+    source = []
+    lensresid = []
+
+    altmodel = []
+    altonly = []
+    altresid = []
+
+    mask = []
+    i = 0
+
+    ncol = 3
+    nrow = 3
+
+    for band in rgbbands:
+        img = candidate.sci[band]
+        data.append(img)
+        cut = np.percentile(img[candidate.R < 30.], 99.)
+        cuts.append(cut)
+        rescuts.append(np.percentile(img[candidate.R < 30.], 90.))
+
+        lenssub.append(candidate.lenssub_resid[band])
+
+        maskimg = 0.*candidate.sci[band]
+
+        for obj in image_set['foregrounds'] + image_set['bad_arcs']:
+            maskimg[obj['footprint'] > 0] = cuts[i]
+
+        if i==0:
+            for junk in image_set['junk']:
+                maskimg[junk['footprint'] > 0] = cuts[i]
+        elif i==1:
+            for arc in image_set['arcs']:
+                maskimg[arc['footprint'] > 0] = cuts[i]
+            for image in image_set['images']:
+                maskimg[image['footprint'] > 0] = 0.4 * cuts[i]
+
+        mask.append(maskimg)
+
+        lmodel = 0.*candidate.sci[band]
+        for mimg in candidate.lensfit_model[band]:
+            lmodel += mimg
+        lensmodel.append(lmodel)
+
+        source.append(candidate.lensfit_model[band][-1])
+
+        lensresid.append(candidate.sci[band] - lmodel)
+
+        rmodel = 0.*img
+
+        if fail_mode == 'ring':
+            for mimg in candidate.ringfit_model[band]:
+                rmodel += mimg
+            altmodel.append(rmodel)
+            altonly.append(candidate.ringfit_model[band][-1])
+            altresid.append(candidate.sci[band] - rmodel)
+        elif fail_mode == 'sersic':
+            for mimg in candidate.sersicfit_model[band]:
+                rmodel += mimg
+            altmodel.append(rmodel)
+            altonly.append(candidate.sersicfit_model[band][-1])
+            altresid.append(candidate.sci[band] - rmodel)
+
+        i += 1
+
+    slist = make_crazy_pil_format(source, rescuts)
+    lmlist = make_crazy_pil_format(lensmodel, cuts)
+    lrlist = make_crazy_pil_format(lensresid, rescuts)
+
+    s = (data[0].shape[1], data[0].shape[0])
+
+    lsublist = make_crazy_pil_format(lenssub, rescuts)
+    lsubim = Image.new('RGB', s, 'black')
+    lsubim.putdata(lsublist)
+
+    dlist = make_crazy_pil_format(data, cuts)
+    dim = Image.new('RGB', s, 'black')
+    dim.putdata(dlist)
+
+    masklist = make_crazy_pil_format(mask, cuts)
+    maskim = Image.new('RGB', s, 'black')
+    maskim.putdata(masklist)
+
+    sim = Image.new('RGB', s, 'black')
+    lmim = Image.new('RGB', s, 'black')
+    lrim = Image.new('RGB', s, 'black')
+
+    sim.putdata(slist)
+    lmim.putdata(lmlist)
+    lrim.putdata(lrlist)
+
+    amlist = make_crazy_pil_format(altmodel, cuts)
+    arlist = make_crazy_pil_format(altresid, rescuts)
+    aolist = make_crazy_pil_format(altonly, rescuts)
+
+    amim = Image.new('RGB', s, 'black')
+    arim = Image.new('RGB', s, 'black')
+    aoim = Image.new('RGB', s, 'black')
+
+    amim.putdata(amlist)
+    arim.putdata(arlist)
+    aoim.putdata(aolist)
+
+    im = Image.new('RGB', (ncol*data[0].shape[0], nrow*data[0].shape[1]), 'black')
+
+    im.paste(dim, (0, 0,))
+    im.paste(lsubim, (s[1], 0))
+    im.paste(maskim, (2*s[1], 0))
+
+    im.paste(lmim, (0, s[0]))
+    im.paste(sim, (s[1], s[0]))
+    im.paste(lrim, (2*s[1], s[0]))
+
+    im.paste(amim, (0, 2*s[0]))
+    im.paste(aoim, (s[1], 2*s[0]))
+    im.paste(arim, (2*s[1], 2*s[0]))
+
+    draw = ImageDraw.Draw(im)
+    draw.text((10, s[0] - 20), 'HSCJ'+candidate.name, font=font, fill='white')
+    draw.text((10 + 2*s[1], 2*s[0] - 20), '%2.1f'%candidate.lensfit_chi2, font=font, fill='white')
+
+    if fail_mode == 'ring':
+        draw.text((10 + 2*s[1], 3*s[0] - 20), '%2.1f'%candidate.ringfit_chi2, font=font, fill='white')
+    elif fail_mode == 'sersic':
+        draw.text((10 + 2*s[1], 3*s[0] - 20), '%2.1f'%candidate.sersicfit_chi2, font=font, fill='white')
+
+    draw.line((10, 10, 30, 30), fill=(255, 0, 0), width=2)
+    draw.line((30, 10, 10, 30), fill=(255, 0, 0), width=2)
 
     im.save(outname)
 

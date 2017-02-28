@@ -221,7 +221,9 @@ for name in cand_names:
             else:
                 if makeallfigs:
                     figname = figdir+'/%s_noarcs.png'%cand.name
-                    plotting_tools.make_full_rgb(cand, image_set=None, outname=figname, success=None)
+                    image_set = {'junk': [obj for obj in objects], 'foregrounds': [], 'arcs': [], 'images': [], \
+                                 'bad_arcs': []}
+                    plotting_tools.make_full_rgb(cand, image_set=image_set, outname=figname, success=None)
 
                 reason = 'NO_ARCS_FOUND'
 

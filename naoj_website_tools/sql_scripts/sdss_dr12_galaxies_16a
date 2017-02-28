@@ -7,8 +7,10 @@ SELECT
     specz.redshift,
     object.object_id,
     object.gcmodel_dev_mag,
+    object.rcmodel_dev_mag,
     object.icmodel_dev_mag,
-    object.zcmodel_dev_mag
+    object.zcmodel_dev_mag,
+    object.ycmodel_dev_mag
 FROM
     s16a_wide.forced AS object
     JOIN

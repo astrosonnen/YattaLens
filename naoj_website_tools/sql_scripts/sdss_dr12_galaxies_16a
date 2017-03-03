@@ -10,7 +10,9 @@ SELECT
     object.rcmodel_dev_mag,
     object.icmodel_dev_mag,
     object.zcmodel_dev_mag,
-    object.ycmodel_dev_mag
+    object.ycmodel_dev_mag,
+    object.tract,
+    object.patch
 FROM
     s16a_wide.forced AS object
     JOIN

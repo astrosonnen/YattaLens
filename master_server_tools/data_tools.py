@@ -34,7 +34,7 @@ def getcutout_and_psf(ra, dec, band, name, hsize=50, outdir='/', dr='16a'):
     tract1=tract.getId()
     patch1="%d,%d"%(patch[0].getIndex())
 
-    filtname = 'HSC-%s'%band.upper
+    filtname = 'HSC-%s'%band.upper()
     input_image = parent_dir+coadd_dir+filtname+'/'+str(tract1)+'/'+str(patch1)+'/calexp-'+filtname+'-'+str(tract1)+'-'+str(patch1)+'.fits'
 
     sciname = name+'_%s_sci.fits'%band
@@ -49,18 +49,20 @@ def getcutout_and_psf(ra, dec, band, name, hsize=50, outdir='/', dr='16a'):
         bbox = lsst.afw.geom.Box2I(pixel, pixel)   # 1-pixel box
         bbox.grow(hsize)
         bbox.clip(coadd.getBBox(lsst.afw.image.PARENT))  # clip to overlap region
-        if bbox.isEmpty():
-            continue
-        subImage = lsst.afw.image.ExposureF(coadd, bbox, lsst.afw.image.PARENT)
-        outfits = name+'_'+filtname+'.fits'
-        subImage.writeFits(outfits) # makes giant fits file
+        if not bbox.isEmpty():
+            subImage = lsst.afw.image.ExposureF(coadd, bbox, lsst.afw.image.PARENT)
+            outfits = name+'_'+filtname+'.fits'
+            subImage.writeFits(outfits) # makes giant fits file
 
-        call("imcopy %s[1] %s/%s"%(outfits, outdir, sciname),shell=1)
-        ## if you want to extract the variance image
-        call("imcopy %s[3] %s/%s"%(outfits, outdir, varname),shell=1)
-        # removes huge fits file
-        os.system('rm %s'%outfits)
-        return True
+            call("imcopy %s[1] %s/%s"%(outfits, outdir, sciname),shell=1)
+            ## if you want to extract the variance image
+            call("imcopy %s[3] %s/%s"%(outfits, outdir, varname),shell=1)
+            # removes huge fits file
+            os.system('rm %s'%outfits)
+            return True
+        else:
+            print 'bbox is empty'
+            return False
     else:
         print ra, dec, input_image, "not found"
         return False

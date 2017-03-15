@@ -2,7 +2,7 @@ from yattaconfig import *
 import numpy as np
 import sys
 import yattaobjects as yo
-from pylens import plotting_tools
+#from pylens import plotting_tools
 import object_finder_tools as oft
 import pickle
 import yattafitters as fitters

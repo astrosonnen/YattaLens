@@ -1,4 +1,3 @@
-import pylab
 import numpy as np
 import Image, ImageDraw, ImageFont
 from yattaconfig import *
@@ -21,39 +20,6 @@ def make_rgbarray(images, cuts):
     rgbarray = np.array(scaled).T
     return rgbarray
 
-
-def visual_comparison(data, models, sources=None):
-
-    cuts = []
-    resids = []
-    i = 0
-    for img in data:
-        cut = np.percentile(img, 99.)
-        cuts.append(cut)
-        resids.append(img - models[i])
-        i += 1
-
-    #pylab.subplots_adjust(left=0., right=1., bottom=0., top=1., hspace=0., wspace=0.)
-    pylab.subplot(2, 2, 1)
-    pylab.imshow(make_rgbarray(data, cuts))
-    pylab.xticks(())
-    pylab.yticks(())
-
-    pylab.subplot(2, 2, 2)
-    pylab.imshow(make_rgbarray(models, cuts))
-    pylab.xticks(())
-    pylab.yticks(())
-
-    pylab.subplot(2, 2, 3)
-    pylab.imshow(make_rgbarray(resids, cuts))
-    pylab.xticks(())
-    pylab.yticks(())
-
-    if sources is not None:
-        pylab.subplot(2, 2, 4)
-        pylab.imshow(make_rgbarray(sources, cuts))
-        pylab.xticks(())
-        pylab.yticks(())
 
 def make_crazy_pil_format(data, cuts):
 

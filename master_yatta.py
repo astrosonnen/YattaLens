@@ -17,7 +17,9 @@ write_config_file()
 
 catname = sys.argv[1]
 
-sumname = catname.split('.')[0] + '.summary'
+sumname = catname.split('.')[-1] + '.summary'
+
+print 'writing results in file %s'%sumname
 
 f = open(catname, 'r')
 cand_names = np.loadtxt(f, usecols=(0, ), dtype=str)

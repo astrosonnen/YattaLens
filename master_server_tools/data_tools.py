@@ -66,7 +66,7 @@ def genpsfimage(input_image, flagp, x, y, output):
             hdu = pyfits.open(input_image)
             fitshdu = hdu[1]
             fitshdu.data = image_psf[ly:ry,lx:rx]
-            fitshdu.writeto(output)
+            fitshdu.writeto(output, clobber=True)
 
 
 def getcutout_and_psf(ra, dec, band, name, hsize=50, outdir='/', dr='16a'):
@@ -125,7 +125,7 @@ def getcutout_and_psf(ra, dec, band, name, hsize=50, outdir='/', dr='16a'):
             y=pixel[1]
 
             flagp=extract_posflag(input_image, x, y)
-            genpsfimage(input_image, flagp, x, y, psfname)
+            genpsfimage(input_image, flagp, x, y, outdir+psfname)
 
             return True
 

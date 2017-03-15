@@ -83,8 +83,6 @@ def getcutout_and_psf(ra, dec, band, name, hsize=50, outdir='/', dr='16a'):
 
     coord = lsst.afw.coord.IcrsCoord(lsst.afw.geom.Point2D(ra, dec))
 
-    tract, patch = skyMap.findClosestTractPatchList([coord])[0]
-
     if dr=='16a':
         parent_dir = parent_dir_16a
         butler = butler_16a
@@ -95,6 +93,8 @@ def getcutout_and_psf(ra, dec, band, name, hsize=50, outdir='/', dr='16a'):
         skyMap = skyMap_15b
     else:
         antani
+
+    tract, patch = skyMap.findClosestTractPatchList([coord])[0]
 
     tract1=tract.getId()
     patch1="%d,%d"%(patch[0].getIndex())

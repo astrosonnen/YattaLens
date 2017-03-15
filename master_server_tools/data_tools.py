@@ -14,6 +14,16 @@ from lsst.afw.image import ExposureF
 from lsst.pex.exceptions.exceptionsLib import LsstCppException
 
 
+parent_dir_15b = "/lustre2/HSC_DR/dr1/s15b/data/s15b_wide/" # use this for 15b
+butler_15b = lsst.daf.persistence.Butler(parent_dir_15b)
+skyMap_15b = butler_15b.get("deepCoadd_skyMap", immediate=True)
+
+parent_dir_16a="/lustre2/HSC_DR/dr1/s16a/data/s16a_wide/"
+butler_16a = lsst.daf.persistence.Butler(parent_dir_16a)
+skyMap_16a = butler_16a.get("deepCoadd_skyMap", immediate=True)
+
+coadd_dir = 'deepCoadd/'
+
 def extract_posflag(input_image, x, y):
     flag_pos=0
     if os.path.isfile(input_image):
@@ -71,23 +81,18 @@ def genpsfimage(input_image, flagp, x, y, output):
 
 def getcutout_and_psf(ra, dec, band, name, hsize=50, outdir='/', dr='16a'):
 
-    if dr=='16a':
-        parent_dir="/lustre2/HSC_DR/dr1/s16a/data/s16a_wide/"
-
-    elif dr=='15b':
-        parent_dir="/lustre2/HSC_DR/dr1/s15b/data/s15b_wide/" # use this for 15b
-
-    else:
-        antani
-
-    coadd_dir = 'deepCoadd/'
-
-    butler = lsst.daf.persistence.Butler(parent_dir)
-    skyMap = butler.get("deepCoadd_skyMap", immediate=True)
-
     coord = lsst.afw.coord.IcrsCoord(lsst.afw.geom.Point2D(ra, dec))
 
     tract, patch = skyMap.findClosestTractPatchList([coord])[0]
+
+    if dr=='16a':
+        parent_dir = parent_dir_16a
+        butler = butler_16a
+    elif dr=='15b':
+        parent_dir = parent_dir_15b
+        butler = butler_15b
+    else:
+        antani
 
     tract1=tract.getId()
     patch1="%d,%d"%(patch[0].getIndex())

@@ -3,7 +3,6 @@ import numpy as np
 import pyfits
 import os
 from photofit import indexTricks as iT, convolve
-import pymc
 from pylens import pylens, SBModels
 from pylens import MassModels
 
@@ -23,16 +22,26 @@ class Object:
         self.
 """
 
+class YattaPar:
+
+    def __init__(self, name, lower=0., upper=1., value=0.):
+
+        self.name = name
+        self.lower = lower
+        self.upper = upper
+        self.value = value
+
+
 class light_model:
 
     def __init__(self, candidate):
 
-        self.x = pymc.Uniform('x', lower=candidate.x0 - 2., upper=candidate.x0 + 2., value=candidate.x0)
-        self.y = pymc.Uniform('y', lower=candidate.y0 - 2., upper=candidate.y0 + 2., value=candidate.y0)
-        self.pa = pymc.Uniform('pa', lower=-100., upper=100., value=0.)
-        self.q = pymc.Uniform('q', lower=0.3, upper=2., value=0.7)
-        self.re = pymc.Uniform('re', lower=3., upper=30., value=10.)
-        self.n = pymc.Uniform('ns', lower=0.5, upper=8., value=4.)
+        self.x = YattaPar('x', lower=candidate.x0 - 2., upper=candidate.x0 + 2., value=candidate.x0)
+        self.y = YattaPar('y', lower=candidate.y0 - 2., upper=candidate.y0 + 2., value=candidate.y0)
+        self.pa = YattaPar('pa', lower=-100., upper=100., value=0.)
+        self.q = YattaPar('q', lower=0.3, upper=2., value=0.7)
+        self.re = YattaPar('re', lower=3., upper=30., value=10.)
+        self.n = YattaPar('ns', lower=0.5, upper=8., value=4.)
 
         self.model = {}
 
@@ -53,11 +62,11 @@ class ring_model:
 
     def __init__(self, candidate):
 
-        self.pa = pymc.Uniform('pa', lower=-100., upper=100., value=0.)
-        self.q = pymc.Uniform('q', lower=0.2, upper=2., value=0.6)
-        self.rr = pymc.Uniform('rr', lower=0., upper=30., value=10.)
-        self.hi = pymc.Uniform('hi', lower=1., upper=30., value=5.)
-        self.ho = pymc.Uniform('ho', lower=1., upper=30., value=5.)
+        self.pa = YattaPar('pa', lower=-100., upper=100., value=0.)
+        self.q = YattaPar('q', lower=0.2, upper=2., value=0.6)
+        self.rr = YattaPar('rr', lower=0., upper=30., value=10.)
+        self.hi = YattaPar('hi', lower=1., upper=30., value=5.)
+        self.ho = YattaPar('ho', lower=1., upper=30., value=5.)
 
         self.model = {}
 
@@ -79,11 +88,11 @@ class new_ring_model:
 
     def __init__(self, candidate):
 
-        self.pa = pymc.Uniform('pa', lower=-100., upper=100., value=0.)
-        self.q = pymc.Uniform('q', lower=0.2, upper=2., value=0.6)
-        self.rr = pymc.Uniform('rr', lower=0., upper=30., value=10.)
-        self.width = pymc.Uniform('width', lower=0., upper=5., value=3.)
-        self.smooth = pymc.Uniform('smooth', lower=0., upper=10., value=1.)
+        self.pa = YattaPar('pa', lower=-100., upper=100., value=0.)
+        self.q = YattaPar('q', lower=0.2, upper=2., value=0.6)
+        self.rr = YattaPar('rr', lower=0., upper=30., value=10.)
+        self.width = YattaPar('width', lower=0., upper=5., value=3.)
+        self.smooth = YattaPar('smooth', lower=0., upper=10., value=1.)
 
         self.model = {}
 
@@ -105,14 +114,14 @@ class lens_model:
 
     def __init__(self, candidate):
 
-        self.pa = pymc.Uniform('pa', lower=-100., upper=100., value=0.)
-        self.q = pymc.Uniform('q', lower=0.2, upper=1., value=0.6)
-        self.rein = pymc.Uniform('rein', lower=3., upper=30., value=10.)
-        self.source_x = pymc.Uniform('hi', lower=candidate.x0 - source_range, upper=candidate.x0 + source_range, value=candidate.x0)
-        self.source_y = pymc.Uniform('hi', lower=candidate.y0 - source_range, upper=candidate.y0 + source_range, value=candidate.y0)
-        self.source_pa = pymc.Uniform('pa', lower=-100., upper=100., value=0.)
-        self.source_q = pymc.Uniform('q', lower=0.2, upper=2., value=1.)
-        self.source_re = pymc.Uniform('q', lower=0., upper=2., value=2.)
+        self.pa = YattaPar('pa', lower=-100., upper=100., value=0.)
+        self.q = YattaPar('q', lower=0.2, upper=1., value=0.6)
+        self.rein = YattaPar('rein', lower=3., upper=30., value=10.)
+        self.source_x = YattaPar('hi', lower=candidate.x0 - source_range, upper=candidate.x0 + source_range, value=candidate.x0)
+        self.source_y = YattaPar('hi', lower=candidate.y0 - source_range, upper=candidate.y0 + source_range, value=candidate.y0)
+        self.source_pa = YattaPar('pa', lower=-100., upper=100., value=0.)
+        self.source_q = YattaPar('q', lower=0.2, upper=2., value=1.)
+        self.source_re = YattaPar('q', lower=0., upper=2., value=2.)
 
         self.lens = MassModels.PowerLaw('lens', {'x': candidate.x, 'y': candidate.y, 'b': self.rein, \
                                                        'pa': self.pa, 'q': self.q, 'eta': 1.})
@@ -132,12 +141,12 @@ class sersic_model:
 
     def __init__(self, candidate):
 
-        self.x = pymc.Uniform('x', lower=candidate.x0 - 2., upper=candidate.x0 + 2., value=candidate.x0)
-        self.y = pymc.Uniform('y', lower=candidate.y0 - 2., upper=candidate.y0 + 2., value=candidate.y0)
-        self.pa = pymc.Uniform('pa', lower=-100., upper=100., value=0.)
-        self.q = pymc.Uniform('q', lower=0.1, upper=1., value=0.5)
-        self.re = pymc.Uniform('re', lower=1., upper=20., value=5.)
-        self.b4 = pymc.Uniform('b4', lower=-0.1, upper=0.1, value=0.)
+        self.x = YattaPar('x', lower=candidate.x0 - 2., upper=candidate.x0 + 2., value=candidate.x0)
+        self.y = YattaPar('y', lower=candidate.y0 - 2., upper=candidate.y0 + 2., value=candidate.y0)
+        self.pa = YattaPar('pa', lower=-100., upper=100., value=0.)
+        self.q = YattaPar('q', lower=0.1, upper=1., value=0.5)
+        self.re = YattaPar('re', lower=1., upper=20., value=5.)
+        self.b4 = YattaPar('b4', lower=-0.1, upper=0.1, value=0.)
 
         self.model = {}
 
@@ -199,12 +208,12 @@ class foreground_model:
 
                 remax = (obj['npix']/np.pi)**0.5
 
-                x = pymc.Uniform('x', lower=xobj - 3., upper=xobj + 3., value=xobj)
-                y = pymc.Uniform('y', lower=yobj - 3., upper=yobj + 3., value=yobj)
+                x = YattaPar('x', lower=xobj - 3., upper=xobj + 3., value=xobj)
+                y = YattaPar('y', lower=yobj - 3., upper=yobj + 3., value=yobj)
 
-                pa = pymc.Uniform('pa', lower=obj['pa']-100., upper=obj['pa']+100., value=obj['pa'])
-                q = pymc.Uniform('q', lower=0.1, upper=2., value=max(0.1, 1./obj['ab']))
-                re = pymc.Uniform('re', lower=1., upper=remax, value=min(5., remax))
+                pa = YattaPar('pa', lower=obj['pa']-100., upper=obj['pa']+100., value=obj['pa'])
+                q = YattaPar('q', lower=0.1, upper=2., value=max(0.1, 1./obj['ab']))
+                re = YattaPar('re', lower=1., upper=remax, value=min(5., remax))
 
                 model = {}
 
@@ -273,13 +282,13 @@ class foreground_model:
 
             remax = (arc['npix']/np.pi*arc['ab'])**0.5
 
-            x = pymc.Uniform('x', lower=xarc - 3., upper=xarc + 3., value=xarc)
-            y = pymc.Uniform('y', lower=yarc - 3., upper=yarc + 3., value=yarc)
+            x = YattaPar('x', lower=xarc - 3., upper=xarc + 3., value=xarc)
+            y = YattaPar('y', lower=yarc - 3., upper=yarc + 3., value=yarc)
 
-            invrc = pymc.Uniform('invrc', lower=-0.2, upper=0.2, value=0.0001)
-            pa = pymc.Uniform('pa', lower=ang - 30., upper=ang + 30., value=ang)
-            length = pymc.Uniform('length', lower=0., upper=remax, value=0.5*remax)
-            h = pymc.Uniform('h', lower=0., upper=5., value=2.)
+            invrc = YattaPar('invrc', lower=-0.2, upper=0.2, value=0.0001)
+            pa = YattaPar('pa', lower=ang - 30., upper=ang + 30., value=ang)
+            length = YattaPar('length', lower=0., upper=remax, value=0.5*remax)
+            h = YattaPar('h', lower=0., upper=5., value=2.)
 
             model = {}
 
@@ -324,12 +333,12 @@ class foreground_model:
 
                 remax = (obj['npix']/np.pi)**0.5
 
-                x = pymc.Uniform('x', lower=xobj - 3., upper=xobj + 3., value=xobj)
-                y = pymc.Uniform('y', lower=yobj - 3., upper=yobj + 3., value=yobj)
+                x = YattaPar('x', lower=xobj - 3., upper=xobj + 3., value=xobj)
+                y = YattaPar('y', lower=yobj - 3., upper=yobj + 3., value=yobj)
 
-                pa = pymc.Uniform('pa', lower=obj['pa']-100., upper=obj['pa']+100., value=obj['pa'])
-                q = pymc.Uniform('q', lower=0.1, upper=2., value=max(0.1, 1./obj['ab']))
-                re = pymc.Uniform('re', lower=1., upper=remax, value=min(5., remax))
+                pa = YattaPar('pa', lower=obj['pa']-100., upper=obj['pa']+100., value=obj['pa'])
+                q = YattaPar('q', lower=0.1, upper=2., value=max(0.1, 1./obj['ab']))
+                re = YattaPar('re', lower=1., upper=remax, value=min(5., remax))
 
                 model = {}
 

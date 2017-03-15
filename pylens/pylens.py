@@ -2,7 +2,7 @@ import numpy as np
 from scipy import optimize
 from scipy.optimize import fmin_slsqp
 from photofit import convolve
-import pymc, emcee
+import emcee
 from scipy.stats import truncnorm
 
 class LensModel:

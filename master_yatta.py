@@ -189,12 +189,12 @@ for n in range(ncand):
                                 print 'failed'
                                 cpdir = 'failure'
 
-                            plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=success)
+                            #plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=success)
 
-                            os.system('cp %s %s/'%(figname, cpdir))
+                            #os.system('cp %s %s/'%(figname, cpdir))
 
                         else:
-                            plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=False)
+                            #plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=False)
 
                             if not isalens:
                                 if len(reason) > 0:
@@ -204,9 +204,6 @@ for n in range(ncand):
                     else:
                         cand.lensfit_model = None
                         cand.lensfit_chi2 = None
-
-                        if makeallfigs:
-                            plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=None)
 
                         if not isalens:
                             if len(reason) > 0:
@@ -223,18 +220,10 @@ for n in range(ncand):
                 loglines.append('PHASE_2_TIME %f\n'%(tphase2_end - tphase1_end))
 
             else:
-                if makeallfigs:
-                    figname = figdir+'/%s_noarcs.png'%cand.name
-                    image_set = {'junk': [obj for obj in objects], 'foregrounds': [], 'arcs': [], 'images': [], \
-                                 'bad_arcs': []}
-                    plotting_tools.make_full_rgb(cand, image_set=image_set, outname=figname, success=None)
 
                 reason = 'NO_ARCS_FOUND'
 
         else:
-            if makeallfigs:
-                figname = figdir+'/%s_nolens.png'%cand.name
-                plotting_tools.make_full_rgb(cand, image_set=None, outname=figname, success=None)
 
             reason = 'NO_GALAXY_FOUND'
 

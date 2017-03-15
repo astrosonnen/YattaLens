@@ -9,6 +9,64 @@ from subprocess import call
 import os
 import sys
 from master_server_tools import labeling
+import pyfits
+from lsst.afw.image import ExposureF
+from lsst.pex.exceptions.exceptionsLib import LsstCppException
+
+
+def extract_posflag(input_image, x, y):
+    flag_pos=0
+    if os.path.isfile(input_image):
+        exposure = ExposureF(input_image)
+        psf = exposure.getPsf()
+        pos = psf.getAveragePosition()
+        pos[0] = int(float(x)+0.5)
+        pos[1] = int(float(y)+0.5)
+        try:
+            psfImageKer = psf.computeKernelImage(pos)
+        except LsstCppException:
+            print "Cannot compute CoaddPsf for ", input_image, " at the location of the target"
+            flag_pos=1
+
+    return flag_pos
+
+###########
+def genpsfimage(input_image, flagp, x, y, output):
+
+    if os.path.exists(output):
+       print output,"exists already, skipping creation of this image"
+    else:
+        if os.path.exists(input_image):
+            exposure = ExposureF(input_image)
+            psf = exposure.getPsf()
+            pos = psf.getAveragePosition()
+            if(flagp==0):
+                pos[0] = int(float(x)+0.5)
+                pos[1] = int(float(y)+0.5)
+                print "Computing PSF at the location of the target"
+            else:
+                print "Computing PSF at the center of the patch"
+
+            psfImageKer = psf.computeKernelImage(pos)
+            image_psf = psfImageKer.getArray()
+
+            nx1 = psfImageKer.getDimensions()[0]
+            ny1 = psfImageKer.getDimensions()[1]
+            n_psf = min(nx1, ny1)
+
+            nx = n_psf
+            ny = n_psf
+
+            lx = (nx1-nx)/2
+            ly = (ny1-ny)/2
+
+            rx=lx+nx
+            ry=ly+ny
+
+            hdu = pyfits.open(input_image)
+            fitshdu = hdu[1]
+            fitshdu.data = image_psf[ly:ry,lx:rx]
+            fitshdu.writeto(output)
 
 
 def getcutout_and_psf(ra, dec, band, name, hsize=50, outdir='/', dr='16a'):
@@ -39,8 +97,9 @@ def getcutout_and_psf(ra, dec, band, name, hsize=50, outdir='/', dr='16a'):
 
     sciname = name+'_%s_sci.fits'%band
     varname = name+'_%s_var.fits'%band
+    psfname = name+'_%s_psf.fits'%band
 
-    if os.path.isfile(input_image) and not os.path.isfile(sciname):
+    if os.path.isfile(input_image):# and not os.path.isfile(sciname):
         coadd = butler.get("deepCoadd_calexp", tract=tract.getId(), patch="%d,%d" % patch[0].getIndex(), \
                            filter=filtname)
 
@@ -59,7 +118,17 @@ def getcutout_and_psf(ra, dec, band, name, hsize=50, outdir='/', dr='16a'):
             call("imcopy %s[3] %s/%s"%(outfits, outdir, varname),shell=1)
             # removes huge fits file
             os.system('rm %s'%outfits)
+
+            input_dir = parent_dir+coadd_dir+filtname+'/'+str(tract1)+'/'+str(patch1)
+
+            x=pixel[0]
+            y=pixel[1]
+
+            flagp=extract_posflag(input_image, x, y)
+            genpsfimage(input_image, flagp, x, y, psfname)
+
             return True
+
         else:
             print 'bbox is empty'
             return False

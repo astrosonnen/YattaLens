@@ -6,13 +6,18 @@ SELECT
     match.d_mag, rank() OVER (PARTITION BY match.specz_id ORDER BY abs(match.d_mag)),
     specz.redshift,
     object.object_id,
-    object.gcmodel_dev_mag,
-    object.rcmodel_dev_mag,
-    object.icmodel_dev_mag,
-    object.zcmodel_dev_mag,
-    object.ycmodel_dev_mag,
+    object.gmag_aperture10,
+    object.rmag_aperture10,
+    object.imag_aperture10,
+    object.zmag_aperture10,
+    object.ymag_aperture10,
     object.tract,
-    object.patch
+    object.patch,
+    object.gcountinputs,
+    object.rcountinputs,
+    object.icountinputs,
+    object.zcountinputs,
+    object.ycountinputs
 FROM
     s16a_wide.forced AS object
     JOIN

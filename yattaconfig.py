@@ -23,7 +23,7 @@ if modeldir is None:
 if figdir is None:
     figdir = 'figs/'
 
-makeallfigs = True
+makeallfigs = False
 maxarcdist = 30.
 minarcdist = 3.
 minobjdist = 3.
@@ -31,7 +31,7 @@ minarcsize = 20.
 maxarcsize = 500.
 maxarcdang = 30.
 junkstart = 1.3 #1.3
-modeluntil = 1.4 #1.4
+modeluntil = 1.3 #1.4
 abmin = 1.4
 min_aperture = 35.
 tooclose = 0.03

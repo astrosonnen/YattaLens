@@ -1,0 +1,37 @@
+SELECT
+    object.ra2000 AS hsc_ra,
+    object.decl2000 AS hsc_dec,
+            object.imag_sinc AS hsc_mag,         specz.mag_i     AS specz_mag,
+    match.d_pos, rank() OVER (PARTITION BY match.specz_id ORDER BY     match.d_pos ),
+    match.d_mag, rank() OVER (PARTITION BY match.specz_id ORDER BY abs(match.d_mag)),
+    specz.redshift,
+    object.id,
+    object.gmag_aperture00,
+    object.rmag_aperture00,
+    object.imag_aperture00,
+    object.zmag_aperture00,
+    object.ymag_aperture00,
+    object.tract,
+    object.patch_num,
+    g_flag.countinputs,
+    r_flag.countinputs,
+    i_flag.countinputs,
+    z_flag.countinputs,
+    y_flag.countinputs
+FROM
+    s15b_wide.photoobj_mosaic__deepcoadd__merged  AS object
+    JOIN
+    s15b_wide.match_specz_and_photoobj_mosaic     AS match
+        ON (object.id = match.object_id)
+    JOIN
+    external_catalog.specz_201602                  AS specz
+        ON (match.specz_id = specz.id)
+    LEFT JOIN s15b_wide.mosaic_forceflag_g__deepcoadd__merged AS g_flag ON object.id = g_flag.id
+    LEFT JOIN s15b_wide.mosaic_forceflag_r__deepcoadd__merged AS r_flag ON object.id = r_flag.id
+    LEFT JOIN s15b_wide.mosaic_forceflag_i__deepcoadd__merged AS i_flag ON object.id = i_flag.id
+    LEFT JOIN s15b_wide.mosaic_forceflag_z__deepcoadd__merged AS z_flag ON object.id = z_flag.id
+    LEFT JOIN s15b_wide.mosaic_forceflag_y__deepcoadd__merged AS y_flag ON object.id = y_flag.id
+
+WHERE
+    specz.redshift > 0.1 AND specz.redshift < 1.0 AND specz.flag_sdss_dr12 is true 
+;

@@ -18,14 +18,14 @@ def fit_light(candidate, light_model, lfitband=('i'), guess=None, step=None, nsa
         if len(guess) == npars:
             for i in range(npars):
                 pars[i].value = guess[i]
-                if pars[i].parents['lower'] > guess[i]:
-                    pars[i].parents['lower'] = guess[i]
-                if pars[i].parents['upper'] < guess[i]:
-                    pars[i].parents['upper'] = guess[i]
-                print guess[i], (pars[i].parents['lower'], pars[i].parents['upper'])
+                if pars[i].lower > guess[i]:
+                    pars[i].lower = guess[i]
+                if pars[i].upper < guess[i]:
+                    pars[i].upper = guess[i]
+                print guess[i], (pars[i].lower, pars[i].upper)
 
-    pars[2].parents['lower'] = pars[2].value - 100.
-    pars[2].parents['upper'] = pars[2].value + 100.
+    pars[2].lower = pars[2].value - 100.
+    pars[2].upper = pars[2].value + 100.
 
     if step is None:
         step = [0.5, 0.5, 20., 0.1, 3., 0.3]
@@ -40,7 +40,7 @@ def fit_light(candidate, light_model, lfitband=('i'), guess=None, step=None, nsa
     bounds = []
 
     for par in pars:
-        bounds.append((par.parents['lower'], par.parents['upper']))
+        bounds.append((par.lower, par.upper))
 
     npars = len(pars)
     nwalkers = 6*npars
@@ -129,18 +129,18 @@ def quick_lens_subtraction(candidate, light_model, lfitband=('i'), mask=None, gu
         if len(guess) == npars:
             for i in range(npars):
                 pars[i].value = guess[i]
-                if pars[i].parents['lower'] > guess[i]:
-                    pars[i].parents['lower'] = guess[i]
-                if pars[i].parents['upper'] < guess[i]:
-                    pars[i].parents['upper'] = guess[i]
-                print guess[i], (pars[i].parents['lower'], pars[i].parents['upper'])
+                if pars[i].lower > guess[i]:
+                    pars[i].lower = guess[i]
+                if pars[i].upper < guess[i]:
+                    pars[i].upper = guess[i]
+                print guess[i], (pars[i].lower, pars[i].upper)
 
-    pars[2].parents['lower'] = pars[2].value - 100.
-    pars[2].parents['upper'] = pars[2].value + 100.
+    pars[2].lower = pars[2].value - 100.
+    pars[2].upper = pars[2].value + 100.
 
     start = []
     for par in pars:
-        bounds.append((par.parents['lower'], par.parents['upper']))
+        bounds.append((par.lower, par.upper))
         start.append(par.value)
 
     barr = np.array(bounds)
@@ -199,8 +199,8 @@ def quick_lens_subtraction(candidate, light_model, lfitband=('i'), mask=None, gu
 
 def fit_ring(candidate, ring_model, light_model, foreground_model, image_set, rmax=30., nsamp=200):
 
-    ring_model.rr.parents['lower'] = 0.7*image_set['mean_arc_dist']
-    ring_model.rr.parents['upper'] = min(30., 1.3*image_set['furthest_arc'])
+    ring_model.rr.lower = 0.7*image_set['mean_arc_dist']
+    ring_model.rr.upper = min(30., 1.3*image_set['furthest_arc'])
     ring_model.rr.value = image_set['mean_arc_dist']
 
     ring_model.pa.value = candidate.light_pa
@@ -238,7 +238,7 @@ def fit_ring(candidate, ring_model, light_model, foreground_model, image_set, rm
     bounds = []
 
     for par in pars:
-        bounds.append((par.parents['lower'], par.parents['upper']))
+        bounds.append((par.lower, par.upper))
 
     npars = len(pars)
     nwalkers = 6*npars
@@ -360,8 +360,8 @@ def fit_ring(candidate, ring_model, light_model, foreground_model, image_set, rm
 
 def fit_new_ring(candidate, ring_model, light_model, foreground_model, image_set, rmax=30., nsamp=200):
 
-    ring_model.rr.parents['lower'] = 0.7*image_set['mean_arc_dist']
-    ring_model.rr.parents['upper'] = min(30., 1.3*image_set['furthest_arc'])
+    ring_model.rr.lower = 0.7*image_set['mean_arc_dist']
+    ring_model.rr.upper = min(30., 1.3*image_set['furthest_arc'])
     ring_model.rr.value = image_set['mean_arc_dist']
 
     ring_model.pa.value = candidate.light_pa
@@ -393,7 +393,7 @@ def fit_new_ring(candidate, ring_model, light_model, foreground_model, image_set
     guess = []
 
     for par in pars:
-        bounds.append((par.parents['lower'], par.parents['upper']))
+        bounds.append((par.lower, par.upper))
 
     npars = len(pars)
     nwalkers = 6*npars
@@ -501,17 +501,17 @@ def fit_sersic(candidate, sersic_model, light_model, foreground_model, image_set
 
     sersic_model.x.value = x_brightest
     sersic_model.y.value = y_brightest
-    sersic_model.x.parents['lower'] = x_brightest - 3.
-    sersic_model.x.parents['upper'] = x_brightest + 3.
+    sersic_model.x.lower = x_brightest - 3.
+    sersic_model.x.upper = x_brightest + 3.
 
-    sersic_model.y.parents['lower'] = y_brightest - 3.
-    sersic_model.y.parents['upper'] = y_brightest + 3.
+    sersic_model.y.lower = y_brightest - 3.
+    sersic_model.y.upper = y_brightest + 3.
 
     sersic_model.pa.value = theta + 90.
-    sersic_model.pa.parents['lower'] = theta + 60.
-    sersic_model.pa.parents['upper'] = theta + 120.
+    sersic_model.pa.lower = theta + 60.
+    sersic_model.pa.upper = theta + 120.
 
-    sersic_model.re.parents['upper'] = re_brightest
+    sersic_model.re.upper = re_brightest
     sersic_model.re.value = re_brightest
 
     foregrounds = {}
@@ -547,7 +547,7 @@ def fit_sersic(candidate, sersic_model, light_model, foreground_model, image_set
     bounds = []
 
     for par in pars:
-        bounds.append((par.parents['lower'], par.parents['upper']))
+        bounds.append((par.lower, par.upper))
 
     npars = len(pars)
     nwalkers = 6*npars
@@ -693,7 +693,7 @@ def fit_foregrounds(candidate, foreground_model, light_model, lfitband=(lightban
         bounds = []
 
         for par in pars:
-            bounds.append((par.parents['lower'], par.parents['upper']))
+            bounds.append((par.lower, par.upper))
 
         npars = len(pars)
         nwalkers = 6*npars
@@ -795,7 +795,7 @@ def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband
         bounds = []
 
         for par in pars:
-            bounds.append((par.parents['lower'], par.parents['upper']))
+            bounds.append((par.lower, par.upper))
 
         npars = len(pars)
         nwalkers = 6*npars
@@ -961,7 +961,7 @@ def fit_bad_arcs(candidate, foreground_model, light_model, rmax=30., nsamp=200):
         bounds = []
 
         for par in pars:
-            bounds.append((par.parents['lower'], par.parents['upper']))
+            bounds.append((par.lower, par.upper))
 
         npars = len(pars)
         nwalkers = 6*npars
@@ -1123,7 +1123,7 @@ def fit_new_foregrounds(candidate, foreground_model, light_model, rmax=30., nsam
         bounds = []
 
         for par in pars:
-            bounds.append((par.parents['lower'], par.parents['upper']))
+            bounds.append((par.lower, par.upper))
 
         npars = len(pars)
         nwalkers = 6*npars
@@ -1278,20 +1278,20 @@ def fit_lens_freeamps(candidate, lens_model, light_model, foreground_model, imag
         lens_model.q.value = candidate.light_q
         lens_model.pa.value = candidate.light_pa
         if candidate.light_q < 0.7:
-            lens_model.pa.parents['lower'] = lens_model.pa.value - 30.
-            lens_model.pa.parents['upper'] = lens_model.pa.value + 30.
+            lens_model.pa.lower = lens_model.pa.value - 30.
+            lens_model.pa.upper = lens_model.pa.value + 30.
         else:
-            lens_model.q.parents['lower'] = 0.5
+            lens_model.q.lower = 0.5
     else:
         lens_model.q.value = 1./candidate.light_q
         lens_model.pa.value = candidate.light_pa + 90.
         if candidate.light_q > 1./0.7:
-            lens_model.pa.parents['lower'] = lens_model.pa.value - 30.
-            lens_model.pa.parents['upper'] = lens_model.pa.value + 30.
+            lens_model.pa.lower = lens_model.pa.value - 30.
+            lens_model.pa.upper = lens_model.pa.value + 30.
         else:
-            lens_model.q.parents['lower'] = 0.5
+            lens_model.q.lower = 0.5
 
-    lens_model.rein.parents['upper'] = image_set['furthest_arc']
+    lens_model.rein.upper = image_set['furthest_arc']
 
     lens_model.lens.setPars()
 
@@ -1309,7 +1309,7 @@ def fit_lens_freeamps(candidate, lens_model, light_model, foreground_model, imag
 
     bounds = []
     for par in pars:
-        bounds.append((par.parents['lower'], par.parents['upper']))
+        bounds.append((par.lower, par.upper))
 
     nwalkers = 50
 
@@ -1474,21 +1474,21 @@ def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rm
         lens_model.q.value = candidate.light_q
         lens_model.pa.value = candidate.light_pa
         if candidate.light_q < 0.7:
-            lens_model.pa.parents['lower'] = lens_model.pa.value - 30.
-            lens_model.pa.parents['upper'] = lens_model.pa.value + 30.
+            lens_model.pa.lower = lens_model.pa.value - 30.
+            lens_model.pa.upper = lens_model.pa.value + 30.
         else:
-            lens_model.q.parents['lower'] = 0.5
+            lens_model.q.lower = 0.5
     else:
         lens_model.q.value = 1./candidate.light_q
         lens_model.pa.value = candidate.light_pa + 90.
         if candidate.light_q > 1./0.7:
-            lens_model.pa.parents['lower'] = lens_model.pa.value - 30.
-            lens_model.pa.parents['upper'] = lens_model.pa.value + 30.
+            lens_model.pa.lower = lens_model.pa.value - 30.
+            lens_model.pa.upper = lens_model.pa.value + 30.
         else:
-            lens_model.q.parents['lower'] = 0.5
+            lens_model.q.lower = 0.5
 
-    lens_model.rein.parents['upper'] = 1.5*image_set['furthest_arc']
-    lens_model.rein.parents['lower'] = 0.3*image_set['mean_arc_dist']
+    lens_model.rein.upper = 1.5*image_set['furthest_arc']
+    lens_model.rein.lower = 0.3*image_set['mean_arc_dist']
 
     lens_model.lens.setPars()
 
@@ -1506,7 +1506,7 @@ def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rm
 
     bounds = []
     for par in pars:
-        bounds.append((par.parents['lower'], par.parents['upper']))
+        bounds.append((par.lower, par.upper))
 
     nwalkers = 50
 

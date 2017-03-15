@@ -360,7 +360,7 @@ class foreground_model:
 
 class Candidate:
 
-    def __init__(self, name, bands=('i', 'r', 'g'), zp=(27., 27., 27.)):
+    def __init__(self, name, bands=('i', 'r', 'g'), zp=(27., 27., 27.), ra=None, dec=None):
         self.name = name
         self.bands = bands
 
@@ -380,6 +380,9 @@ class Candidate:
         self.psf = {}
         self.imshape = None
         self.dataok = None
+
+        self.ra = ra
+        self.dec = dec
 
         self.x = None
         self.y = None

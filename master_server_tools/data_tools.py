@@ -88,9 +88,11 @@ def getcutout_and_psf(ra, dec, band, name, hsize=50, outdir='/', dr='16a'):
     if dr=='16a':
         parent_dir = parent_dir_16a
         butler = butler_16a
+        skyMap = skyMap_16a
     elif dr=='15b':
         parent_dir = parent_dir_15b
         butler = butler_15b
+        skyMap = skyMap_15b
     else:
         antani
 

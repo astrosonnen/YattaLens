@@ -39,7 +39,7 @@ for n in range(ncand):
 
     data_tools.fetch_data((cand_ra[n], cand_dec[n]), outname=cand_names[n], bands=('g', 'r', 'i'), outdir=datadir)
 
-    cand = yo.Candidate(name=name, bands=allbands, ra=cand_ra[n], dec=cand_dec[n])
+    cand = yo.Candidate(name=cand_names[n], bands=allbands, ra=cand_ra[n], dec=cand_dec[n])
 
     loglines = []
 
@@ -238,10 +238,10 @@ for n in range(ncand):
 
         bset = slenssets[-1]
 
-        summary_line = '%s %f %f YES YATTA %d %d\n'%(name, cand.ra, cand.dec, bset+1, data_flag)
+        summary_line = '%s %f %f YES YATTA %d %d\n'%(cand.name, cand.ra, cand.dec, bset+1, data_flag)
 
     else:
-        summary_line = '%s %f %f NO %s 0 %d\n'%(name, cand.ra, cand.dec, reason, data_flag)
+        summary_line = '%s %f %f NO %s 0 %d\n'%(cand.name, cand.ra, cand.dec, reason, data_flag)
 
     f = open(sumname, 'a')
     f.writelines([summary_line])
@@ -249,7 +249,7 @@ for n in range(ncand):
 
     tend = time.clock()
     loglines.append('TOTAL_TIME %f\n'%(tend - tstart))
-    logfile = open(logdir+name+'.txt', 'w')
+    logfile = open(logdir+cand.name+'.txt', 'w')
     logfile.writelines(loglines)
     logfile.close()
 

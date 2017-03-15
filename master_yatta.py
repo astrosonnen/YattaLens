@@ -17,7 +17,7 @@ write_config_file()
 
 catname = sys.argv[1]
 
-sumname = catname.split('.')[-1] + '.summary'
+sumname = catname.split('/')[-1].split('.')[0] + '.summary'
 
 print 'writing results in file %s'%sumname
 

@@ -1,4 +1,4 @@
-from yattaconfig import *
+from yattaconfig import def_config
 import numpy as np
 from pylens import pylens
 from pylens import SBModels, MassModels
@@ -259,7 +259,7 @@ def fit_ring(candidate, ring_model, light_model, foreground_model, image_set, rm
         sumlogp = 0.
         i = 0
 
-        for band in fitband:
+        for band in candidate.fitband:
 
             modlist = []
             fixedcomps = 0.*candidate.sci[band]
@@ -348,7 +348,7 @@ def fit_ring(candidate, ring_model, light_model, foreground_model, image_set, rm
 
         candidate.ringfit_model[band].append(amps[1]*rmodel)
 
-        if band in fitband:
+        if band in candidate.fitband:
             resid = candidate.sci[band].copy()
             for mimg in candidate.ringfit_model[band]:
                 resid -= mimg
@@ -414,7 +414,7 @@ def fit_new_ring(candidate, ring_model, light_model, foreground_model, image_set
         sumlogp = 0.
         i = 0
 
-        for band in fitband:
+        for band in candidate.fitband:
             logp, mags = pylens.getModel([], allforegrounds[band], [], candidate.sci[band], candidate.err[band], \
                                          candidate.X, candidate.Y, zp=candidate.zp[band], mask=mask_r)
 
@@ -464,7 +464,7 @@ def fit_new_ring(candidate, ring_model, light_model, foreground_model, image_set
 
         candidate.ringfit_model[band] = mimgs
 
-        if band in fitband:
+        if band in candidate.fitband:
             resid = candidate.sci[band].copy()
             for mimg in mimgs:
                 resid -= mimg
@@ -482,15 +482,15 @@ def fit_sersic(candidate, sersic_model, light_model, foreground_model, image_set
     brightest = -np.inf
 
     for arc in image_set['arcs']:
-        if arc['%s_flux'%fitband] > brightest:
-            brightest = arc['%s_flux'%fitband]
+        if arc['%s_flux'%candidate.fitband] > brightest:
+            brightest = arc['%s_flux'%candidate.fitband]
             x_brightest = arc['x']
             y_brightest = arc['y']
             size_brightest = arc['npix']
 
     for image in image_set['images']:
-        if image['%s_flux'%fitband] > brightest:
-            brightest = image['%s_flux'%fitband]
+        if image['%s_flux'%candidate.fitband] > brightest:
+            brightest = image['%s_flux'%candidate.fitband]
             x_brightest = image['x']
             y_brightest = image['y']
             size_brightest = image['npix']
@@ -567,7 +567,7 @@ def fit_sersic(candidate, sersic_model, light_model, foreground_model, image_set
             pars[j].value = allpars[j]
         sumlogp = 0.
 
-        for band in fitband:
+        for band in candidate.fitband:
 
             modlist = []
             fixedcomps = 0.*candidate.sci[band]
@@ -656,7 +656,7 @@ def fit_sersic(candidate, sersic_model, light_model, foreground_model, image_set
 
         candidate.sersicfit_model[band].append(amps[1]*smodel)
 
-        if band in fitband:
+        if band in candidate.fitband:
             resid = candidate.sci[band].copy()
             for mimg in candidate.sersicfit_model[band]:
                 resid -= mimg
@@ -666,7 +666,9 @@ def fit_sersic(candidate, sersic_model, light_model, foreground_model, image_set
     candidate.sersicfit_mask = mask
 
 
-def fit_foregrounds(candidate, foreground_model, light_model, lfitband=(lightband), rmax=30., nsamp=100):
+def fit_foregrounds(candidate, foreground_model, light_model, rmax=30., nsamp=100):
+
+    lfitband = candidate.lightband
 
     allmodels = {}
     for band in candidate.bands:
@@ -761,7 +763,9 @@ def fit_foregrounds(candidate, foreground_model, light_model, lfitband=(lightban
         candidate.foreground_model[band] = mimgs
 
 
-def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, lfitband=(lightband), rmax=30., nsamp=100):
+def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, rmax=30., nsamp=100):
+
+    lfitband = candidate.lightband
 
     scalefreemodels = {}
 
@@ -982,7 +986,7 @@ def fit_bad_arcs(candidate, foreground_model, light_model, rmax=30., nsamp=200):
             sumlogp = 0.
             i = 0
 
-            for band in fitband:
+            for band in candidate.fitband:
 
                 modlist = []
                 fixedcomps = 0.*candidate.sci[band]
@@ -1144,7 +1148,7 @@ def fit_new_foregrounds(candidate, foreground_model, light_model, rmax=30., nsam
             sumlogp = 0.
             i = 0
 
-            for band in fitband:
+            for band in candidate.fitband:
 
                 modlist = []
                 fixedcomps = 0.*candidate.sci[band]
@@ -1359,7 +1363,7 @@ def fit_lens_freeamps(candidate, lens_model, light_model, foreground_model, imag
         lens_model.lens.setPars()
         xl, yl = pylens.getDeflections(lens_model.lens, [candidate.X, candidate.Y])
 
-        for band in fitband:
+        for band in candidate.fitband:
 
             modlist = []
             for l in foregrounds[band]:
@@ -1435,7 +1439,7 @@ def fit_lens_freeamps(candidate, lens_model, light_model, foreground_model, imag
 
         candidate.lensfit_model[band].append(amps[-1]*smodel)
 
-        if band in fitband:
+        if band in candidate.fitband:
             resid = candidate.sci[band].copy()
             for mimg in candidate.lensfit_model[band]:
                 resid -= mimg
@@ -1567,7 +1571,7 @@ def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rm
         lens_model.lens.setPars()
         xl, yl = pylens.getDeflections(lens_model.lens, [candidate.X, candidate.Y])
 
-        for band in fitband:
+        for band in candidate.fitband:
 
             modlist = []
             fixedcomps = 0.*candidate.sci[band]
@@ -1661,7 +1665,7 @@ def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rm
 
         candidate.lensfit_mags[band].append(smag - 2.5*np.log10(amps[1]))
 
-        if band in fitband:
+        if band in candidate.fitband:
             resid = candidate.sci[band].copy()
             for mimg in candidate.lensfit_model[band]:
                 resid -= mimg

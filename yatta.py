@@ -1,4 +1,4 @@
-from yattaconfig import *
+import yattaconfig
 import numpy as np
 import sys
 import yattaobjects as yo
@@ -12,30 +12,38 @@ import os
 
 tstart = time.clock()
 
-write_config_file()
+yattaconfig.write_config_file()
+if len(sys.argv) > 1:
+    configname = sys.argv[1]
+else:
+    configname = 'default.yatta'
 
-catname = sys.argv[1]
+config = yattaconfig.read_config_file(configname)
+for par in config:
+    print par, config[par]
 
-sumname = catname.split('.')[0] + '.summary'
+allbands = list(config['rgbbands'])
+if not config['fitband'] in allbands:
+    allbands.append(config['fitband'])
+if not config['lightband'] in allbands:
+    allbands.append(config['lightband'])
 
-cand_names = []
-if os.path.isfile(catname):
-    f = open(catname, 'r')
-    lines = f.readlines()
+if os.path.isfile(config['catalog_file']):
+    f = open(config['catalog_file'], 'r')
+    input_lines = f.readlines()
     f.close()
 
-    for line in lines:
-        line = line.split()
-        cand_names.append(line[0])
-
 else:
-    cand_names.append(catname)
+    input_lines = [config['catalog_file']]
 
 summary_lines = []
-summary_lines.append('# Target_name\tSuccess\tReason\tbestmodel_no\tdata_flag\n')
-for name in cand_names:
+#summary_lines.append('# Target_name\tSuccess\tReason\tbestmodel_no\tdata_flag\n')
+for input_line in input_lines:
 
-    cand = yo.Candidate(name=name, bands=allbands)
+    name = input_line.split()[0]
+    summary_line = input_line[:-1]
+
+    cand = yo.Candidate(name=name, bands=allbands, config=config)
 
     loglines = []
 
@@ -47,33 +55,38 @@ for name in cand_names:
 
     if cand.read_data():
 
-        if cand.imshape[0] == ny_expected and cand.imshape[1] == nx_expected:
-            data_flag = 0
+        if config['expected_size'] is not None:
+            if cand.imshape[0] == config['expected_size'] and cand.imshape[1] == config['expected_size']:
+                data_flag = 0
+            else:
+                data_flag = 2
         else:
-            data_flag = 2
+            data_flag = 0
 
         light_model = yo.light_model(cand)
 
-        lenspars, junkmask = oft.find_lens(cand, detect_band=lightband, detect_thresh=3.)
+        lenspars, junkmask = oft.find_lens(cand, detect_band=config['lightband'], detect_thresh=3., config=config)
 
-        if lenspars is not None and junkmask[cand.R < lightfitrmax].sum() > 0:
+        if lenspars is not None and junkmask[cand.R < config['lightfitrmax']].sum() > 0:
 
             tlenssub_start = time.clock()
 
             guess = [lenspars['x'], lenspars['y'], lenspars['pa'], 1./lenspars['ab'], lenspars['npix']**0.5/np.pi, 4.]
-            fitters.fit_light(cand, light_model, rmax=lightfitrmax, lfitband=(lightband), mask=junkmask, guess=guess, \
+            fitters.fit_light(cand, light_model, rmax=config['lightfitrmax'], lfitband=config['lightband'], mask=junkmask, guess=guess, \
                               nsamp=50)
 
             tlenssub_end = time.clock()
             loglines.append('QUICK_SUBTRACTION_TIME %f\n'%(tlenssub_end - tlenssub_start))
 
-            objects, arcs, segmap, foundarcs = oft.find_objects(cand, detect_band=fitband, detect_thresh=3.)
+            objects, arcs, segmap, foundarcs = oft.find_objects(cand, detect_band=config['fitband'], detect_thresh=3., \
+                                                                config=config)
             tphase1_end = time.clock()
             loglines.append('PHASE_1_TIME %f\n'%(tphase1_end - tstart))
             loglines.append('ARC_CANDIDATES %d\n'%(len(arcs)))
 
             if foundarcs:
-                iobjs, iarcs, junkmask, ifoundarcs = oft.find_objects(cand, detect_band=lightband, detect_thresh=3.)
+                iobjs, iarcs, junkmask, ifoundarcs = oft.find_objects(cand, detect_band=config['lightband'], detect_thresh=3., \
+                                                                      config=config)
                 junkmask[junkmask > 0] = 1
                 junkmask = 1 - junkmask
                 junkmask[cand.R < 5.] = 1
@@ -81,19 +94,22 @@ for name in cand_names:
                 print 'arcs found: %d'%(len(arcs))
 
                 guess = [cand.x, cand.y, cand.light_pa, cand.light_q, cand.light_re, cand.light_n]
-                fitters.fit_light(cand, light_model, lfitband=(lightband), mask=junkmask, guess=guess, nsamp=200, \
-                                  rmax=lightfitrmax)
+                fitters.fit_light(cand, light_model, lfitband=config['lightband'], mask=junkmask, guess=guess, nsamp=200, \
+                                  rmax=config['lightfitrmax'])
 
                 foreground_model = yo.foreground_model(cand, iobjs + iarcs, arcs)
 
                 fitters.fit_foregrounds_fixedamps(cand, foreground_model, light_model)
 
-                objects = oft.measure_fluxes(objects, cand, foreground_model, meas_bands=(fitband, lightband))
-                arcs = oft.measure_fluxes(arcs, cand, foreground_model, meas_bands=(fitband, lightband))
+                objects = oft.measure_fluxes(objects, cand, foreground_model, \
+                                             meas_bands=(config['fitband'], config['lightband']))
+
+                arcs = oft.measure_fluxes(arcs, cand, foreground_model, \
+                                          meas_bands=(config['fitband'], config['lightband']))
 
                 nobjs = len(objects)
 
-                cand.image_sets = oft.determine_image_sets(objects, arcs, iobjs + iarcs, band1=fitband, band2=lightband)
+                cand.image_sets = oft.determine_image_sets(objects, arcs, iobjs + iarcs, config=config)
 
                 nsets = len(cand.image_sets)
 
@@ -105,16 +121,16 @@ for name in cand_names:
 
                 for i in range(nsets):
 
-                    figname = figdir+'/%s_imset%d.png'%(cand.name, i+1)
+                    figname = config['figdir']+'/%s_imset%d.png'%(cand.name, i+1)
 
                     bluest = np.inf
                     for arc in cand.image_sets[i]['arcs']:
-                        ratio = (arc['%s_flux'%lightband] - 3.*arc['%s_err'%lightband])/\
-                                (arc['%s_flux'%fitband] + 3.*arc['%s_err'%fitband])
-                    if ratio < bluest:
-                        bluest = ratio
+                        ratio = (arc['%s_flux'%config['lightband']] - 3.*arc['%s_err'%config['lightband']])/\
+                                (arc['%s_flux'%config['fitband']] + 3.*arc['%s_err'%config['fitband']])
+                        if ratio < bluest:
+                            bluest = ratio
 
-                    if bluest < 10.**(gmi_max/2.5):
+                    if bluest < 10.**(config['color_maxdiff']/2.5):
 
                         print 'set %d: %d arcs, %d images'%(i+1, len(cand.image_sets[i]['arcs']), \
                                                             len(cand.image_sets[i]['images']))
@@ -147,7 +163,7 @@ for name in cand_names:
 
                         loglines.append('LENS_MODEL_AVG_CHI2 %2.1f'%rchi2)
 
-                        if cand.model_angular_aperture > min_aperture:# and rchi2 < chi2_thresh:
+                        if cand.model_angular_aperture > config['min_aperture']:# and rchi2 < chi2_thresh:
 
                             success = False
 
@@ -175,6 +191,10 @@ for name in cand_names:
                                 lensness.append((secondbest - cand.lensfit_chi2)/cand.lensfit_chi2)
                                 lenssets.append(i)
 
+                                f = open(config['modeldir']+'/%s_model_set%d.dat'%(cand.name, i+1), 'w')
+                                pickle.dump(cand, f)
+                                f.close()
+
                             else:
                                 if not isalens:
                                     if len(reason) > 0:
@@ -187,7 +207,7 @@ for name in cand_names:
 
                             plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=success)
 
-                            os.system('cp %s %s/'%(figname, cpdir))
+                            #os.system('cp %s %s/'%(figname, cpdir))
 
                         else:
                             plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=False)
@@ -201,7 +221,7 @@ for name in cand_names:
                         cand.lensfit_model = None
                         cand.lensfit_chi2 = None
 
-                        if makeallfigs:
+                        if config['makeallfigs']:
                             plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=None)
 
                         if not isalens:
@@ -210,17 +230,17 @@ for name in cand_names:
                             else:
                                 reason = 'ARC_TOO_RED'
 
-
-                    f = open(modeldir+'/%s_model_set%d.dat'%(cand.name, i+1), 'w')
-                    pickle.dump(cand, f)
-                    f.close()
+                    if config['saveallmodels']:
+                        f = open(config['modeldir']+'/%s_model_set%d.dat'%(cand.name, i+1), 'w')
+                        pickle.dump(cand, f)
+                        f.close()
 
                 tphase2_end = time.clock()
                 loglines.append('PHASE_2_TIME %f\n'%(tphase2_end - tphase1_end))
 
             else:
-                if makeallfigs:
-                    figname = figdir+'/%s_noarcs.png'%cand.name
+                if config['makeallfigs']:
+                    figname = config['figdir']+'/%s_noarcs.png'%cand.name
                     image_set = {'junk': [obj for obj in objects], 'foregrounds': [], 'arcs': [], 'images': [], \
                                  'bad_arcs': []}
                     plotting_tools.make_full_rgb(cand, image_set=image_set, outname=figname, success=None)
@@ -228,8 +248,8 @@ for name in cand_names:
                 reason = 'NO_ARCS_FOUND'
 
         else:
-            if makeallfigs:
-                figname = figdir+'/%s_nolens.png'%cand.name
+            if config['makeallfigs']:
+                figname = config['figdir']+'/%s_nolens.png'%cand.name
                 plotting_tools.make_full_rgb(cand, image_set=None, outname=figname, success=None)
 
             reason = 'NO_GALAXY_FOUND'
@@ -245,12 +265,14 @@ for name in cand_names:
 
         bset = slenssets[-1]
 
-        summary_line = '%s YES YATTA %d %d\n'%(name, bset+1, data_flag)
+        summary_line += ' YATTA %d %d\n'%(bset+1, data_flag)
 
     else:
-        summary_line = '%s NO %s 0 %d\n'%(name, reason, data_flag)
+        summary_line += ' %s 0 %d\n'%(reason, data_flag)
 
-    f = open(sumname, 'a')
+    print 'writing output in file %s'%config['summary_file']
+
+    f = open(config['summary_file'], 'a')
     f.writelines([summary_line])
     f.close()
 

@@ -1,17 +1,17 @@
-from yattaconfig import *
+from yattaconfig import def_config
 import pyfits
 import numpy as np
 from scipy.optimize import minimize
 import os
 
 
-def find_lens(candidate, detect_band='i', detect_thresh=3.):
+def find_lens(candidate, detect_band='i', detect_thresh=3., config=def_config):
 
-    sciname = datadir+'/%s_%s_sci.fits'%(candidate.name, detect_band)
-    varname = datadir+'/%s_%s_var.fits'%(candidate.name, detect_band)
+    sciname = config['datadir']+'/%s_%s_sci.fits'%(candidate.name, detect_band)
+    varname = config['datadir']+'/%s_%s_var.fits'%(candidate.name, detect_band)
 
-    segname = modeldir+'/%s_%s_segmap.fits'%(candidate.name, detect_band)
-    catname = modeldir+'/%s_%s_secat.cat'%(candidate.name, detect_band)
+    segname = config['modeldir']+'/%s_%s_segmap.fits'%(candidate.name, detect_band)
+    catname = config['modeldir']+'/%s_%s_secat.cat'%(candidate.name, detect_band)
 
     os.system('sex %s -c $YATTADIR/sedir/seconfig.sex -WEIGHT_IMAGE %s -CATALOG_NAME %s -CHECKIMAGE_NAME %s -DETECT_THRESH %f'%\
               (sciname, varname, catname, segname, detect_thresh))
@@ -71,13 +71,13 @@ def find_lens(candidate, detect_band='i', detect_thresh=3.):
     return lens, junkmask
 
 
-def find_objects(candidate, detect_band='g', detect_thresh=3.):
+def find_objects(candidate, detect_band='g', detect_thresh=3., config=def_config):
 
-    lsubname = modeldir+'/%s_%s_lenssub.fits'%(candidate.name, detect_band)
-    varname = datadir+'/%s_%s_var.fits'%(candidate.name, detect_band)
+    lsubname = config['modeldir']+'/%s_%s_lenssub.fits'%(candidate.name, detect_band)
+    varname = config['datadir']+'/%s_%s_var.fits'%(candidate.name, detect_band)
 
-    segname = modeldir+'/%s_%s_segmap.fits'%(candidate.name, detect_band)
-    catname = modeldir+'/%s_%s_secat.cat'%(candidate.name, detect_band)
+    segname = config['modeldir']+'/%s_%s_segmap.fits'%(candidate.name, detect_band)
+    catname = config['modeldir']+'/%s_%s_secat.cat'%(candidate.name, detect_band)
 
     pyfits.PrimaryHDU(candidate.lenssub_resid[detect_band]).writeto(lsubname, clobber=True)
 
@@ -143,11 +143,11 @@ def find_objects(candidate, detect_band='g', detect_thresh=3.):
 
         obj['angap'] = max_aperture
 
-        if obj['r'] > minarcdist and obj['r'] < maxarcdist and obj['npix'] < maxarcsize and obj['npix'] > minarcsize \
-                and obj['ang_diff'] < maxarcdang and obj['ab'] > abmin and obj['angap'] > se_minap:
+        if obj['r'] > config['minarcdist'] and obj['r'] < config['maxarcdist'] and obj['npix'] < config['maxarcsize'] and obj['npix'] > config['minarcsize'] \
+                and obj['ang_diff'] < config['maxarcdang'] and obj['ab'] > config['abmin'] and obj['angap'] > config['se_minap']:
             foundarcs = True
             arcs.append(obj)
-        elif obj['r'] > minobjdist:
+        elif obj['r'] > config['minobjdist']:
             objects.append(obj)
 
     return objects, arcs, segmap, foundarcs
@@ -178,7 +178,7 @@ def measure_fluxes(objects, candidate, foreground_model, meas_bands=('g', 'i'), 
     return objects
 
 
-def compare_colors(f1a, f1b, f2a, f2b, e1a, e1b, e2a, e2b, nsigma=color_nsigma):
+def compare_colors(f1a, f1b, f2a, f2b, e1a, e1b, e2a, e2b, nsigma=2.):
     """
     Compares fluxes of two objects, 1 and 2, in two bands, a and b, and determines whether they have the same color
     :param f1a: band a flux of object 1
@@ -237,7 +237,7 @@ def compare_colors(f1a, f1b, f2a, f2b, e1a, e1b, e2a, e2b, nsigma=color_nsigma):
     return samecolor
 
 
-def color_compatibility(objects, band1='g', band2='i', nsigma=color_nsigma):
+def color_compatibility(objects, band1='g', band2='i', nsigma=2.):
 
     nobj = len(objects)
     # checks color compatibility
@@ -249,9 +249,9 @@ def color_compatibility(objects, band1='g', band2='i', nsigma=color_nsigma):
             obj2 = objects[j]
 
             samecolor = compare_colors(obj1['%s_flux'%band1], obj1['%s_flux'%band2], \
-                                                   obj2['%s_flux'%band1], obj2['%s_flux'%band2], \
-                                                   obj1['%s_err'%band1], obj1['%s_err'%band2], \
-                                                   obj2['%s_err'%band1], obj2['%s_err'%band2], nsigma=nsigma)
+                                       obj2['%s_flux'%band1], obj2['%s_flux'%band2], \
+                                       obj1['%s_err'%band1], obj1['%s_err'%band2], \
+                                       obj2['%s_err'%band1], obj2['%s_err'%band2], nsigma=nsigma)
 
             if not samecolor:
                 color_matrix[i, j] = 0
@@ -260,9 +260,10 @@ def color_compatibility(objects, band1='g', band2='i', nsigma=color_nsigma):
     return color_matrix
 
 
-def determine_image_sets(objects, arcs, iobjects, band1='g', band2='i'):
+def determine_image_sets(objects, arcs, iobjects, config=def_config):
 
-    color_matrix = color_compatibility(objects + arcs, band1=band1, band2=band2)
+    color_matrix = color_compatibility(objects + arcs, band1=config['fitband'], band2=config['lightband'], \
+                                       config=config, nsigma=config['color_nsigma'])
 
     narcs = len(arcs)
     nobj = len(objects)
@@ -284,7 +285,7 @@ def determine_image_sets(objects, arcs, iobjects, band1='g', band2='i'):
 
         furthest = arc['r']
         meandist = arc['r']
-        brightest = arc['%s_flux'%band1]
+        brightest = arc['%s_flux'%config['fitband']]
 
         colorcheck = color_matrix[nobj + i]
 
@@ -297,8 +298,8 @@ def determine_image_sets(objects, arcs, iobjects, band1='g', band2='i'):
                     colorcheck *= color_matrix[nobj + j]
                     if arcs[j]['r'] > furthest:
                         furthest = arcs[j]['r']
-                    if arcs[j]['%s_flux'%band1] > brightest:
-                        brightest = arcs[j]['%s_flux'%band1]
+                    if arcs[j]['%s_flux'%config['fitband']] > brightest:
+                        brightest = arcs[j]['%s_flux'%config['fitband']]
                     meandist += arcs[j]['r']
 
                 else:
@@ -306,7 +307,7 @@ def determine_image_sets(objects, arcs, iobjects, band1='g', band2='i'):
                     #image_set['bad_arcs'].append(arcs[j])
 
         for bad_arc in tmp_bad_arcs:
-            if bad_arc['r'] < modeluntil*furthest:
+            if bad_arc['r'] < config['modeluntil']*furthest:
                 #image_set['bad_arcs'].append(bad_arc)
                 image_set['foregrounds'].append(bad_arc)
             else:
@@ -315,9 +316,9 @@ def determine_image_sets(objects, arcs, iobjects, band1='g', band2='i'):
         meandist /= float(len(image_set['arcs']))
 
         for j in range(nobj):
-            if objects[j]['r'] > junkstart*furthest:
+            if objects[j]['r'] > config['junkstart']*furthest:
                 image_set['junk'].append(objects[j])
-            elif colorcheck[j] == 1 and objects[j]['%s_flux'%band1] < 2.*brightest:
+            elif colorcheck[j] == 1 and objects[j]['%s_flux'%config['fitband']] < 2.*brightest:
                 image_set['images'].append(objects[j])
             else:
                 image_set['foregrounds'].append(objects[j])
@@ -335,7 +336,7 @@ def determine_image_sets(objects, arcs, iobjects, band1='g', band2='i'):
                     already_there = True
             if not already_there:
                 print 'adding footprint of object at %2.1f %2.1f. dist: %2.1f. arc dist: %2.1f'%(xiobj, yiobj, iobjects[j]['r'], furthest)
-                if iobjects[j]['r'] <= junkstart*furthest:
+                if iobjects[j]['r'] <= config['junkstart']*furthest:
                     image_set['foregrounds'].append(iobjects[j])
                 else:
                     image_set['junk'].append(iobjects[j])

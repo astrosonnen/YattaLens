@@ -1,4 +1,4 @@
-from yattaconfig import *
+from yattaconfig import def_config
 import numpy as np
 import pyfits
 import os
@@ -112,13 +112,13 @@ class new_ring_model:
 
 class lens_model:
 
-    def __init__(self, candidate):
+    def __init__(self, candidate, config=def_config):
 
         self.pa = YattaPar('pa', lower=-100., upper=100., value=0.)
         self.q = YattaPar('q', lower=0.2, upper=1., value=0.6)
         self.rein = YattaPar('rein', lower=3., upper=30., value=10.)
-        self.source_x = YattaPar('hi', lower=candidate.x0 - source_range, upper=candidate.x0 + source_range, value=candidate.x0)
-        self.source_y = YattaPar('hi', lower=candidate.y0 - source_range, upper=candidate.y0 + source_range, value=candidate.y0)
+        self.source_x = YattaPar('hi', lower=candidate.x0 - config['source_range'], upper=candidate.x0 + config['source_range'], value=candidate.x0)
+        self.source_y = YattaPar('hi', lower=candidate.y0 - config['source_range'], upper=candidate.y0 + config['source_range'], value=candidate.y0)
         self.source_pa = YattaPar('pa', lower=-100., upper=100., value=0.)
         self.source_q = YattaPar('q', lower=0.2, upper=2., value=1.)
         self.source_re = YattaPar('q', lower=0., upper=2., value=2.)
@@ -161,7 +161,7 @@ class sersic_model:
 
 class foreground_model:
 
-    def __init__(self, candidate, objects, arcs):
+    def __init__(self, candidate, objects, arcs, config=def_config):
 
         self.bad_arcs = None
         self.components = []
@@ -183,8 +183,9 @@ class foreground_model:
         print 'foreground objects:'
         for obj in objects:
             mask_all[obj['footprint'] > 0] = 0
-            if obj['r'] < modeluntil*furthest and obj['r'] > minarcdist and arc_mask[obj['y'] - 1, obj['x'] - 1] == 0:
-                fluxes.append(candidate.sci[lightband][obj['footprint'] > 0].sum())
+            if obj['r'] < config['modelmaxdist']*furthest and obj['r'] > config['minarcdist'] and \
+                            arc_mask[obj['y'] - 1, obj['x'] - 1] == 0:
+                fluxes.append(candidate.sci[self.lightband][obj['footprint'] > 0].sum())
                 inner_objects.append(obj)
 
         foregrounds = []
@@ -360,7 +361,7 @@ class foreground_model:
 
 class Candidate:
 
-    def __init__(self, name, bands=('i', 'r', 'g'), zp=(27., 27., 27.), ra=None, dec=None):
+    def __init__(self, name, bands=('i', 'r', 'g'), zp=(27., 27., 27.), ra=None, dec=None, config=def_config):
         self.name = name
         self.bands = bands
 
@@ -368,6 +369,11 @@ class Candidate:
         i=0
         for band in self.bands:
             self.zp[band] = zp[i]
+
+        self.fitband = config['fitband']
+        self.lightband = config['lightband']
+
+        self.config = config.copy()
 
         self.x0 = None
         self.y0 = None
@@ -460,9 +466,9 @@ class Candidate:
         shapeok = True
 
         for band in self.bands:
-            sciname = datadir+'/%s_%s_sci.fits' % (self.name, band)
-            psfname = datadir+'/%s_%s_psf.fits' % (self.name, band)
-            varname = datadir+'/%s_%s_var.fits' % (self.name, band)
+            sciname = self.config['datadir']+'/%s_%s_sci.fits' % (self.name, band)
+            psfname = self.config['datadir']+'/%s_%s_psf.fits' % (self.name, band)
+            varname = self.config['datadir']+'/%s_%s_var.fits' % (self.name, band)
 
             if os.path.isfile(sciname) and os.path.isfile(psfname) and os.path.isfile(varname):
                 sci = pyfits.open(sciname)[0].data.copy()
@@ -508,7 +514,7 @@ class Candidate:
 
         footprint = np.zeros(self.imshape, dtype=int)
 
-        for band in fitband:
+        for band in self.fitband:
             sdet = self.lensfit_model[band][-1] > nsig*self.err[band]
 
             footprint[sdet] = 1
@@ -526,9 +532,9 @@ class Candidate:
         for junk in image_set['junk']:
             mask[junk['footprint'] > 0] = 0
 
-        mask[self.R > maxarcdist] = 0
+        mask[self.R > self.config['maxarcdist']] = 0
 
-        for band in fitband:
+        for band in self.fitband:
             lchi2 += (((self.sci[band] - self.lensfit_model[band][0] - self.lensfit_model[band][1])/self.err[band])**2)[mask > 0].sum()
             #rchi2 += (((self.sci[band] - self.ringfit_model[band][0] - self.ringfit_model[band][1])/self.err[band])**2)[mask > 0].sum()
             #rchi2 += (((self.sci[band] - self.sersicfit_model[band][0] - self.sersicfit_model[band][1])/self.err[band])**2)[mask > 0].sum()
@@ -546,9 +552,9 @@ class Candidate:
         for junk in image_set['junk']:
             mask[junk['footprint'] > 0] = 0
 
-        mask[self.R > maxarcdist] = 0
+        mask[self.R > self.config['maxarcdist']] = 0
 
-        for band in fitband:
+        for band in self.fitband:
             medflux = np.median(self.sci[band][mask > 0])
 
             modflux = 0.*self.sci[band]
@@ -568,7 +574,7 @@ class Candidate:
         for arc in image_set['arcs']:
             mask[arc['footprint'] > 0] = 1
 
-        for band in fitband:
+        for band in self.fitband:
             medflux = np.median(self.sci[band][mask > 0])
 
             modflux = 0.*self.sci[band]
@@ -597,3 +603,4 @@ class Candidate:
                 max_aperture = aperture
 
         self.model_angular_aperture = max_aperture
+

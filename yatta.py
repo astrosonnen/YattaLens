@@ -278,7 +278,7 @@ for input_line in input_lines:
 
     tend = time.clock()
     loglines.append('TOTAL_TIME %f\n'%(tend - tstart))
-    logfile = open(logdir+name+'.txt', 'w')
+    logfile = open(config['logdir']+name+'.txt', 'w')
     logfile.writelines(loglines)
     logfile.close()
 

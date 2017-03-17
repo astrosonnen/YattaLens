@@ -263,7 +263,7 @@ def color_compatibility(objects, band1='g', band2='i', nsigma=2.):
 def determine_image_sets(objects, arcs, iobjects, config=def_config):
 
     color_matrix = color_compatibility(objects + arcs, band1=config['fitband'], band2=config['lightband'], \
-                                       config=config, nsigma=config['color_nsigma'])
+                                       nsigma=config['color_nsigma'])
 
     narcs = len(arcs)
     nobj = len(objects)

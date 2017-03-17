@@ -351,66 +351,6 @@ def getModel_fixedamps(lenses, light_profiles, source_profiles, amps, image, sig
         return logp, lmags
 
 
-
-def do_fit(pars, cov, bands, lens, lights, sources, images, sigmas, X, Y, mask_r, zps, do_convol=True, Nsamp=11000, \
-           burnin=1000):
-
-    @pymc.deterministic(trace=False)
-    def logpAndMags(p=pars):
-        sumlogp = 0.
-        magslist = []
-        i = 0
-        for band in bands:
-            logp, mags = getModel(lens, lights[band], sources[band], images[band], sigmas[band], \
-                                         X, Y, zp=zps[band], mask=mask_r, do_convol=do_convol)
-            if logp != logp:
-                return -1e300, []
-            sumlogp += logp
-            magslist.append(mags)
-            i += 1
-
-        return sumlogp, magslist
-
-    @pymc.deterministic
-    def lp(lpAM=logpAndMags):
-        return lpAM[0]
-
-    @pymc.deterministic(name='Mags')
-    def Mags(lpAM=logpAndMags):
-        return lpAM[1]
-
-    @pymc.stochastic(observed=True, name='logp')
-    def logpCost(value=0., p=pars):
-        return lp
-
-    print "Sampling"
-
-    M = pymc.MCMC(pars+[lp, Mags])
-    M.use_step_method(pymc.AdaptiveMetropolis, pars, cov=np.diag(cov))
-    M.sample(Nsamp, burnin)
-
-    trace = {}
-
-    for par in pars:
-        trace[str(par)] = M.trace(par)[:]
-
-    trace['logp'] = M.trace('lp')[:]
-    magss = np.array(M.trace('Mags')[:])
-    i = 0
-    for band in bands:
-        trace['lens_%s'%band] = magss[:, i, 0]
-        trace['source_%s'%band] = magss[:, i, 1]
-        i += 1
-
-    ML = trace['logp'].argmax()
-    for par in pars:
-        mlval = trace[str(par)][ML]
-        par.value = mlval
-
-    return trace
-
-
-
 def do_fit_emcee(pars, bands, lens, lights, sources, images, sigmas, X, Y, mask_r, zps, shear=None, nwalkers=50, nsamp=100,\
                  gaussprior=None, stepsize=None, do_convol=True):
 

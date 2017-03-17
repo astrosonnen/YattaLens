@@ -164,6 +164,10 @@ for name in cand_names:
                                     if cand.lensfit_chi2 < cand.ringfit_chi2:
                                         success = True
 
+                            f = open(modeldir+'/%s_model_set%d.dat'%(cand.name, i+1), 'w')
+                            pickle.dump(cand, f)
+                            f.close()
+
                             if success:
                                 isalens = True
                                 cpdir = 'success'
@@ -201,9 +205,6 @@ for name in cand_names:
                                 reason = 'ARC_TOO_RED'
 
 
-                    f = open(modeldir+'/%s_model_set%d.dat'%(cand.name, i+1), 'w')
-                    pickle.dump(cand, f)
-                    f.close()
 
                 tphase2_end = time.clock()
                 loglines.append('PHASE_2_TIME %f\n'%(tphase2_end - tphase1_end))

@@ -52,7 +52,7 @@ for input_line in input_lines:
         cand_ra = float(input_line.split()[1])
         cand_dec = float(input_line.split()[2])
 
-        data_tools.fetch_data((cand_ra, cand_dec), outname=name, bands=('g', 'r', 'i'), outdir=datadir)
+        data_tools.fetch_data((cand_ra, cand_dec), outname=name, bands=('g', 'r', 'i'), outdir=config['datadir'])
 
         cand = yo.Candidate(name=name, bands=allbands, config=config)
 

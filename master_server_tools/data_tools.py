@@ -24,6 +24,30 @@ skyMap_16a = butler_16a.get("deepCoadd_skyMap", immediate=True)
 
 coadd_dir = 'deepCoadd/'
 
+def have_data(ra, dec, bands=('g', 'r', 'i', 'z', 'y')):
+    coord = lsst.afw.coord.IcrsCoord(lsst.afw.geom.Point2D(ra, dec))
+    tract, patch = skyMap_16a.findClosestTractPatchList([coord])[0]
+
+    tract1=tract.getId()
+    patch1="%d,%d"%(patch[0].getIndex())
+
+    dataok = True
+    nbands = len(bands)
+    n = 0
+    while n < nbands and dataok:
+        filtname = 'HSC-%s'%bands[n].upper()
+        input_image = parent_dir_16a+coadd_dir+filtname+'/'+str(tract1)+'/'+str(patch1)+'/calexp-'+filtname+'-'+str(tract1)+'-'+str(patch1)+'.fits'
+        if os.path.isfile(input_image):
+            n += 1
+        else:
+            input_image = parent_dir_15b+coadd_dir+filtname+'/'+str(tract1)+'/'+str(patch1)+'/calexp-'+filtname+'-'+str(tract1)+'-'+str(patch1)+'.fits'
+            if os.path.isfile(input_image):
+                n += 1
+            else:
+                dataok = False
+
+    return dataok
+
 def extract_posflag(input_image, x, y):
     flag_pos=0
     if os.path.isfile(input_image):

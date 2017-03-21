@@ -1,4 +1,5 @@
 import numpy as np
+from yattaconfig import def_config
 
 
 def make_rgbarray(images, cuts):
@@ -37,7 +38,7 @@ def make_crazy_pil_format(data, cuts):
     return l
 
 
-def make_rgb_arrays(candidate, image_set=None, nsig_cut=5.):
+def make_rgb_arrays(candidate, image_set=None, nsig_cut=5., config=def_config):
 
     output = []
 
@@ -58,7 +59,7 @@ def make_rgb_arrays(candidate, image_set=None, nsig_cut=5.):
 
     ncol = 1
 
-    for band in rgbbands:
+    for band in config['rgbbands']:
         img = candidate.sci[band]
         data.append(img)
         cut = np.percentile(img[candidate.R < 30.], 99.)
@@ -72,7 +73,7 @@ def make_rgb_arrays(candidate, image_set=None, nsig_cut=5.):
 
     if len(candidate.lenssub_model) > 0:
         ncol += 1
-        for band in rgbbands:
+        for band in config['rgbbands']:
             lenssub.append(candidate.lenssub_resid[band])
 
         lsublist = make_crazy_pil_format(lenssub, rescuts)
@@ -81,7 +82,7 @@ def make_rgb_arrays(candidate, image_set=None, nsig_cut=5.):
         if image_set is not None:
             ncol += 1
             i = 0
-            for band in rgbbands:
+            for band in config['rgbbands']:
 
                 maskimg = 0.*candidate.sci[band]
 
@@ -114,7 +115,7 @@ def make_rgb_arrays(candidate, image_set=None, nsig_cut=5.):
             if len(candidate.lensfit_model) > 0:
                 ncol += 3
                 i = 0
-                for band in rgbbands:
+                for band in config['rgbbands']:
                     lmodel = 0.*candidate.sci[band]
                     for mimg in candidate.lensfit_model[band]:
                         lmodel += mimg
@@ -135,7 +136,7 @@ def make_rgb_arrays(candidate, image_set=None, nsig_cut=5.):
                 if len(candidate.ringfit_model) > 0:
                     rcol = ncol
                     ncol += 2
-                    for band in rgbbands:
+                    for band in config['rgbbands']:
                         rmodel = 0.*img
                         for mimg in candidate.ringfit_model[band]:
                             rmodel += mimg
@@ -151,7 +152,7 @@ def make_rgb_arrays(candidate, image_set=None, nsig_cut=5.):
                 if len(candidate.sersicfit_model) > 0:
                     scol = ncol
                     ncol += 2
-                    for band in rgbbands:
+                    for band in config['rgbbands']:
                         smodel = 0.*img
                         for mimg in candidate.sersicfit_model[band]:
                             smodel += mimg

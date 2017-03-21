@@ -307,7 +307,7 @@ def determine_image_sets(objects, arcs, iobjects, config=def_config):
                     #image_set['bad_arcs'].append(arcs[j])
 
         for bad_arc in tmp_bad_arcs:
-            if bad_arc['r'] < config['modeluntil']*furthest:
+            if bad_arc['r'] < config['modelmaxdist']*furthest:
                 #image_set['bad_arcs'].append(bad_arc)
                 image_set['foregrounds'].append(bad_arc)
             else:

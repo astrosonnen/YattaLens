@@ -3,11 +3,9 @@ import lsst.daf.persistence
 import lsst.afw.coord
 import lsst.afw.image
 import lsst.afw.geom
-from math import *
 import numpy as np
 from subprocess import call
 import os
-import sys
 from master_server_tools import labeling
 import pyfits
 from lsst.afw.image import ExposureF
@@ -183,5 +181,5 @@ def fetch_data(radec, outname=None, bands=None, hsize=50, outdir='/'):
         found = getcutout_and_psf(radec[0], radec[1], band, outname, hsize=hsize, dr='16a', outdir=outdir)
 
         if not found:
-            found = getcutout_and_psf(radec[0], radec[1], band, outname, hsize=hsize, dr='16a', outdir=outdir)
+            found = getcutout_and_psf(radec[0], radec[1], band, outname, hsize=hsize, dr='15b', outdir=outdir)
 

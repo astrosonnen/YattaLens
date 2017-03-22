@@ -206,6 +206,11 @@ for input_line in input_lines:
                                     pickle.dump(cand, f)
                                     f.close()
 
+                                    rgb_arrays = nopil_plotting_tools.make_rgb_arrays(cand, cand.image_sets[i])
+                                    f = open(config['figdir']+'/%s_rgbarray_set%d.dat'%(cand.name, i+1), 'w')
+                                    pickle.dump(rgb_arrays, f)
+                                    f.close()
+
                                 else:
                                     if not isalens:
                                         if len(reason) > 0:
@@ -216,18 +221,20 @@ for input_line in input_lines:
                                     print 'failed'
                                     cpdir = 'failure'
 
-                                rgb_arrays = nopil_plotting_tools.make_rgb_arrays(cand, cand.image_sets[i])
-                                f = open(config['figdir']+'/%s_rgbarray_set%d.dat'%(cand.name, i+1), 'w')
-                                pickle.dump(rgb_arrays, f)
-                                f.close()
+                                    if config['makeallfigs']:
+                                        rgb_arrays = nopil_plotting_tools.make_rgb_arrays(cand, cand.image_sets[i])
+                                        f = open(config['figdir']+'/%s_rgbarray_set%d.dat'%(cand.name, i+1), 'w')
+                                        pickle.dump(rgb_arrays, f)
+                                        f.close()
 
                                 #os.system('cp %s %s/'%(figname, cpdir))
 
                             else:
-                                rgb_arrays = nopil_plotting_tools.make_rgb_arrays(cand, cand.image_sets[i])
-                                f = open(config['figdir']+'/%s_rgbarray_set%d.dat'%(cand.name, i+1), 'w')
-                                pickle.dump(rgb_arrays, f)
-                                f.close()
+                                if config['makeallfigs']:
+                                    rgb_arrays = nopil_plotting_tools.make_rgb_arrays(cand, cand.image_sets[i])
+                                    f = open(config['figdir']+'/%s_rgbarray_set%d.dat'%(cand.name, i+1), 'w')
+                                    pickle.dump(rgb_arrays, f)
+                                    f.close()
 
                                 if not isalens:
                                     if len(reason) > 0:

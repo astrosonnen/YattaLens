@@ -292,7 +292,7 @@ for input_line in input_lines:
         print 'writing output in file %s'%config['summary_file']
 
         # cleaning up directory
-        if config['cleandir']:
+        if config['cleanupdir']:
             os.system('rm %s/%s_%s_segmap.fits'%(config['modeldir'], cand.name, config['fitband']))
             os.system('rm %s/%s_%s_segmap.fits'%(config['modeldir'], cand.name, config['lightband']))
             os.system('rm %s/%s_%s_secat.cat'%(config['modeldir'], cand.name, config['fitband']))

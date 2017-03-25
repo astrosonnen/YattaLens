@@ -425,6 +425,7 @@ class Candidate:
 
         self.light_pars_sample = None
         self.lens_pars_sample = None
+        self.lens_mags_sample = None
         self.ring_pars_sample = None
         self.sersic_pars_sample = None
 

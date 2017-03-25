@@ -1562,7 +1562,7 @@ def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rm
     def logpfunc(allpars):
         lp = logprior(allpars)
         if not np.isfinite(lp):
-            return -np.inf
+            return -np.inf, (np.inf, np.inf)
 
         for j in range(0, npars):
             pars[j].value = allpars[j]
@@ -1571,6 +1571,8 @@ def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rm
         lens_model.lens.setPars()
         xl, yl = pylens.getDeflections(lens_model.lens, [candidate.X, candidate.Y])
 
+        lensmag = []
+        sourcemag = []
         for band in candidate.fitband:
 
             modlist = []
@@ -1590,17 +1592,20 @@ def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rm
             modarr = np.array(modlist).T
 
             if np.isnan(modarr).any():
-                return -1e300
+                return -1e300, (np.inf, np.inf)
 
             amps, chi = nnls(modarr, (candidate.sci[band]/candidate.err[band]).ravel()[mask_r])
 
             logp = -0.5*chi
 
             if logp != logp:
-                return -np.inf
+                return -np.inf, (np.inf, np.inf)
             sumlogp += logp
 
-        return sumlogp
+            lensmag.append(scalefreemags[band][0] - 2.5*np.log10(amps[0]))
+            sourcemag.append(lens_model.source[band].Mag(candidate.zp[band]) - 2.5*np.log10(amps[1]))
+
+        return sumlogp, (lensmag, sourcemag)
 
     sampler = emcee.EnsembleSampler(nwalkers, npars, logpfunc)
 
@@ -1608,7 +1613,24 @@ def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rm
 
     sampler.run_mcmc(start, nsamp)
 
-    candidate.lens_pars_sample = sampler.chain
+    pars_sample = {}
+    pars_sample['lens_rein'] = sampler.chain[:, :, 0]
+    pars_sample['lens_q'] = sampler.chain[:, :, 1]
+    pars_sample['lens_pa'] = sampler.chain[:, :, 2]
+    pars_sample['source_x'] = sampler.chain[:, :, 3]
+    pars_sample['source_y'] = sampler.chain[:, :, 4]
+    pars_sample['source_re'] = sampler.chain[:, :, 5]
+
+    nband = 0
+    blobarr = np.array(sampler.blobs)
+    print blobarr.shape
+
+    for band in candidate.fitband:
+        pars_sample['lens_%s_mag'%band] = blobarr[:, :, 0, nband].T
+        pars_sample['source_%s_mag'%band] = blobarr[:, :, 1, nband].T
+        nband += 1
+
+    candidate.lens_pars_sample = pars_sample
 
     ML = sampler.flatlnprobability.argmax()
 

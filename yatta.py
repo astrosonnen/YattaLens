@@ -41,7 +41,7 @@ summary_lines = []
 for input_line in input_lines:
 
     name = input_line.split()[0]
-    summary_line = input_line[:-1]
+    summary_line = input_line.rstrip()
 
     cand = yo.Candidate(name=name, bands=allbands, config=config)
 

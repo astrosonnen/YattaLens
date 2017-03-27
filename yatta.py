@@ -278,7 +278,7 @@ for input_line in input_lines:
         os.system('rm %s/%s_%s_segmap.fits'%(config['modeldir'], cand.name, config['lightband']))
         os.system('rm %s/%s_%s_secat.cat'%(config['modeldir'], cand.name, config['fitband']))
         os.system('rm %s/%s_%s_secat.cat'%(config['modeldir'], cand.name, config['lightband']))
-         os.system('rm %s/%s_%s_lenssub.fits'%(config['modeldir'], cand.name, config['fitband']))
+        os.system('rm %s/%s_%s_lenssub.fits'%(config['modeldir'], cand.name, config['fitband']))
         os.system('rm %s/%s_%s_lenssub.fits'%(config['modeldir'], cand.name, config['lightband']))
 
     f = open(config['summary_file'], 'a')

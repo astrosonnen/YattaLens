@@ -1,7 +1,6 @@
 import numpy as np
 import Image, ImageDraw, ImageFont
-from yattaconfig import *
-
+from yattaconfig import def_config
 
 
 def make_rgbarray(images, cuts):
@@ -145,7 +144,8 @@ def make_fail_curv_rgb(data, lenssub, arcimg, arccoords, arcmask, crapmask=None,
     im.save(outname)
 
 
-def make_full_rgb(candidate, image_set=None, maskedge=None, outname='full_model.png', nsig_cut=5., success=None):
+def make_full_rgb(candidate, image_set=None, maskedge=None, outname='full_model.png', nsig_cut=5., success=None, \
+                  config=def_config):
 
     font = ImageFont.truetype("/usr/local/texlive/2015/texmf-dist/fonts/truetype/public/dejavu/DejaVuSans-Bold.ttf", 12)
 
@@ -166,7 +166,7 @@ def make_full_rgb(candidate, image_set=None, maskedge=None, outname='full_model.
 
     ncol = 1
 
-    for band in rgbbands:
+    for band in config['rgbbands']:
         img = candidate.sci[band]
         data.append(img)
         cut = np.percentile(img[candidate.R < 30.], 99.)
@@ -181,7 +181,7 @@ def make_full_rgb(candidate, image_set=None, maskedge=None, outname='full_model.
 
     if len(candidate.lenssub_model) > 0:
         ncol += 1
-        for band in rgbbands:
+        for band in config['rgbbands']:
             lenssub.append(candidate.lenssub_resid[band])
 
         lsublist = make_crazy_pil_format(lenssub, rescuts)
@@ -191,7 +191,7 @@ def make_full_rgb(candidate, image_set=None, maskedge=None, outname='full_model.
         if image_set is not None:
             ncol += 1
             i = 0
-            for band in rgbbands:
+            for band in config['rgbbands']:
 
                 maskimg = 0.*candidate.sci[band]
 
@@ -228,7 +228,7 @@ def make_full_rgb(candidate, image_set=None, maskedge=None, outname='full_model.
             if len(candidate.lensfit_model) > 0:
                 ncol += 3
                 i = 0
-                for band in rgbbands:
+                for band in config['rgbbands']:
                     lmodel = 0.*candidate.sci[band]
                     for mimg in candidate.lensfit_model[band]:
                         lmodel += mimg
@@ -253,7 +253,7 @@ def make_full_rgb(candidate, image_set=None, maskedge=None, outname='full_model.
                 if len(candidate.ringfit_model) > 0:
                     rcol = ncol
                     ncol += 2
-                    for band in rgbbands:
+                    for band in config['rgbbands']:
                         rmodel = 0.*img
                         for mimg in candidate.ringfit_model[band]:
                             rmodel += mimg
@@ -272,7 +272,7 @@ def make_full_rgb(candidate, image_set=None, maskedge=None, outname='full_model.
                 if len(candidate.sersicfit_model) > 0:
                     scol = ncol
                     ncol += 2
-                    for band in rgbbands:
+                    for band in config['rgbbands']:
                         smodel = 0.*img
                         for mimg in candidate.sersicfit_model[band]:
                             smodel += mimg
@@ -391,7 +391,7 @@ def make_foregroundonly_rgb(candidate, image_set=None, enhance_residuals=False, 
 
     ncol = 1
 
-    for band in rgbbands:
+    for band in config['rgbbands']:
         img = candidate.sci[band]
         data.append(img)
         cut = np.percentile(img[candidate.R < 30.], 99.)
@@ -406,7 +406,7 @@ def make_foregroundonly_rgb(candidate, image_set=None, enhance_residuals=False, 
 
     if len(candidate.lenssub_model) > 0:
         ncol += 1
-        for band in rgbbands:
+        for band in config['rgbbands']:
             lenssub.append(candidate.lenssub_resid[band])
 
         if enhance_residuals:
@@ -420,7 +420,7 @@ def make_foregroundonly_rgb(candidate, image_set=None, enhance_residuals=False, 
         if image_set is not None:
             ncol += 1
             i = 0
-            for band in rgbbands:
+            for band in config['rgbbands']:
 
                 maskimg = 0.*candidate.sci[band]
 
@@ -453,7 +453,7 @@ def make_foregroundonly_rgb(candidate, image_set=None, enhance_residuals=False, 
             if candidate.foreground_model is not None:
                 ncol += 2
                 i = 0
-                for band in rgbbands:
+                for band in config['rgbbands']:
                     lmodel = 0.*candidate.sci[band]
                     for mimg in candidate.foreground_model[band]:
                         lmodel += mimg
@@ -510,7 +510,7 @@ def make_failure_rgb(candidate, image_set=None, maskedge=None, fail_mode='ring',
     ncol = 3
     nrow = 3
 
-    for band in rgbbands:
+    for band in config['rgbbands']:
         img = candidate.sci[band]
         data.append(img)
         cut = np.percentile(img[candidate.R < 30.], 99.)

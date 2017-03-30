@@ -127,7 +127,7 @@ def write_config_file():
     lines.append('MINARCDIST %2.1f\t# minimum search distance from image center\n'%def_config['minarcdist'])
     lines.append('MAXARCSIZE %d\t# maximum area of arc footprint\n'%def_config['maxarcsize'])
     lines.append('MINARCSIZE %d\t# minimum area of arc footprint\n'%def_config['minarcsize'])
-    lines.append('MAXARCDANG %d\t# maximum angle between arc and tangential curve\n'%def_config['maxarcsize'])
+    lines.append('MAXARCDANG %d\t# maximum angle between arc and tangential curve\n'%def_config['maxarcdang'])
     lines.append('ABMIN %2.1f\t# minimum axis ratio\n'%def_config['abmin'])
     lines.append('SE_MINAP %d\t# minimum angle subtended by arc candidate\n'%def_config['se_minap'])
     lines.append('COLOR_MAXDIFF %2.1f\t# maximum FITBAND-LIGHTBAND color of arc candidate\n'%def_config['color_maxdiff'])
@@ -186,6 +186,16 @@ def read_config_file(filename='default.yatta'):
                         config[parname] = True
                     else:
                         config[parname] = False
+
+    allbands = []
+    for band in config['rgbbands']:
+        allbands.append(band)
+    if not config['fitband'] in allbands:
+        allbands.append(config['fitband'])
+    if not config['lightband'] in allbands:
+        allbands.append(config['lightband'])
+
+    config['allbands'] = allbands
 
     return config
 

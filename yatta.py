@@ -195,6 +195,8 @@ for input_line in input_lines:
                                 pickle.dump(cand, f)
                                 f.close()
 
+                                plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=success, config=config)
+
                             else:
                                 if not isalens:
                                     if len(reason) > 0:
@@ -205,12 +207,12 @@ for input_line in input_lines:
                                 print 'failed'
                                 cpdir = 'failure'
 
-                            plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=success)
-
-                            #os.system('cp %s %s/'%(figname, cpdir))
+                                if config['makeallfigs']:
+                                    plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=success, config=config)
 
                         else:
-                            plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=False)
+                            if config['makeallfigs']:
+                                plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=False, config=config)
 
                             if not isalens:
                                 if len(reason) > 0:
@@ -222,7 +224,7 @@ for input_line in input_lines:
                         cand.lensfit_chi2 = None
 
                         if config['makeallfigs']:
-                            plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=None)
+                            plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=None, config=config)
 
                         if not isalens:
                             if len(reason) > 0:
@@ -243,14 +245,19 @@ for input_line in input_lines:
                     figname = config['figdir']+'/%s_noarcs.png'%cand.name
                     image_set = {'junk': [obj for obj in objects], 'foregrounds': [], 'arcs': [], 'images': [], \
                                  'bad_arcs': []}
-                    plotting_tools.make_full_rgb(cand, image_set=image_set, outname=figname, success=None)
+                    plotting_tools.make_full_rgb(cand, image_set=image_set, outname=figname, success=None, config=config)
+
+                if config['saveallmodels']:
+                    f = open(config['modeldir']+'/%s_model_set0.dat'%cand.name, 'w')
+                    pickle.dump(cand, f)
+                    f.close()
 
                 reason = 'NO_ARCS_FOUND'
 
         else:
             if config['makeallfigs']:
                 figname = config['figdir']+'/%s_nolens.png'%cand.name
-                plotting_tools.make_full_rgb(cand, image_set=None, outname=figname, success=None)
+                plotting_tools.make_full_rgb(cand, image_set=None, outname=figname, success=None, config=config)
 
             reason = 'NO_GALAXY_FOUND'
 

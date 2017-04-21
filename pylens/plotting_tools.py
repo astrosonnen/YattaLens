@@ -1,5 +1,5 @@
 import numpy as np
-import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont
 from yattaconfig import def_config
 
 
@@ -147,7 +147,7 @@ def make_fail_curv_rgb(data, lenssub, arcimg, arccoords, arcmask, crapmask=None,
 def make_full_rgb(candidate, image_set=None, maskedge=None, outname='full_model.png', nsig_cut=5., success=None, \
                   config=def_config):
 
-    font = ImageFont.truetype("/usr/local/texlive/2015/texmf-dist/fonts/truetype/public/dejavu/DejaVuSans-Bold.ttf", 12)
+    font = ImageFont.truetype("/usr/local/texlive/2016/texmf-dist/fonts/truetype/public/dejavu/DejaVuSans-Bold.ttf", 12)
 
     cuts = []
     rescuts = []
@@ -376,7 +376,7 @@ def make_model_rgb(sci, light_model, source_model, cuts=(99., 99., 99.), outname
 def make_foregroundonly_rgb(candidate, image_set=None, enhance_residuals=False, maskedge=None, \
                             outname='foreground_model.png', nsig_cut=5.):
 
-    font = ImageFont.truetype("/usr/local/texlive/2015/texmf-dist/fonts/truetype/public/dejavu/DejaVuSans-Bold.ttf", 12)
+    font = ImageFont.truetype("/usr/local/texlive/2016/texmf-dist/fonts/truetype/public/dejavu/DejaVuSans-Bold.ttf", 12)
 
     cuts = []
     rescuts = []
@@ -490,7 +490,7 @@ def make_foregroundonly_rgb(candidate, image_set=None, enhance_residuals=False, 
 def make_failure_rgb(candidate, image_set=None, maskedge=None, fail_mode='ring', outname='failed.png', nsig_cut=5., \
                      success=None):
 
-    font = ImageFont.truetype("/usr/local/texlive/2015/texmf-dist/fonts/truetype/public/dejavu/DejaVuSans-Bold.ttf", 12)
+    font = ImageFont.truetype("/usr/local/texlive/2016/texmf-dist/fonts/truetype/public/dejavu/DejaVuSans-Bold.ttf", 12)
 
     cuts = []
     rescuts = []

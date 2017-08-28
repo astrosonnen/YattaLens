@@ -150,14 +150,12 @@ for input_line in input_lines:
 
                         fitters.fit_lens(cand, lens_model, light_model, foreground_model, cand.image_sets[i])
 
-                        print cand.lens_rein
+                        cand.get_source_footprint()
+                        cand.get_footprint_chi2(cand.image_sets[i])
 
                         cand.get_model_angular_aperture()
 
                         loglines.append('LENS_MODEL_ANGULAR_APERTURE %2.1f\n'%cand.model_angular_aperture)
-
-                        cand.get_source_footprint()
-                        cand.get_footprint_chi2(cand.image_sets[i])
 
                         rchi2 = cand.lensfit_footprint_chi2/(cand.source_footprint.sum())
 

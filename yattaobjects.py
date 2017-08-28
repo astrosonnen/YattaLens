@@ -596,6 +596,8 @@ class Candidate:
 
         npix = len(xpix)
 
+        print npix, self.x, self.y
+
         max_aperture = 0.
         for j in range(npix):
             cosdiff = cospix[j]*cospix + sinpix[j]*sinpix

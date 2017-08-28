@@ -184,7 +184,7 @@ class foreground_model:
         for obj in objects:
             mask_all[obj['footprint'] > 0] = 0
             if obj['r'] < config['modelmaxdist']*furthest and obj['r'] > config['minarcdist'] and \
-                            arc_mask[obj['y'] - 1, obj['x'] - 1] == 0:
+                            arc_mask[int(round(obj['y'])) - 1, int(round(obj['x'])) - 1] == 0:
                 fluxes.append(candidate.sci[config['lightband']][obj['footprint'] > 0].sum())
                 inner_objects.append(obj)
 

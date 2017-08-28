@@ -147,7 +147,7 @@ def make_fail_curv_rgb(data, lenssub, arcimg, arccoords, arcmask, crapmask=None,
 def make_full_rgb(candidate, image_set=None, maskedge=None, outname='full_model.png', nsig_cut=5., success=None, \
                   config=def_config):
 
-    font = ImageFont.truetype("/usr/local/texlive/2016/texmf-dist/fonts/truetype/public/dejavu/DejaVuSans-Bold.ttf", 12)
+    font = ImageFont.truetype("/usr/local/texlive/2017/texmf-dist/fonts/truetype/public/dejavu/DejaVuSans-Bold.ttf", 12)
 
     cuts = []
     rescuts = []

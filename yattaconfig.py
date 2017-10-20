@@ -43,6 +43,7 @@ tooclose = 0.03
 se_minap = 25.
 color_maxdiff = 2.
 lightfitrmax = 20.
+lightfit_method = 'MCMC'
 
 color_nsigma = 2.
 
@@ -69,6 +70,7 @@ def_config = {'catalog_file': catalog_file, \
               'modeldir': modeldir, \
               'figdir': figdir, \
               'lightfitrmax': lightfitrmax, \
+              'lightfit_method': lightfit_method, \
               'maxarcdist': maxarcdist, \
               'minarcdist': minarcdist, \
               'maxarcsize': maxarcsize, \
@@ -98,7 +100,7 @@ floatpars = ['maxarcdist', 'minarcdist', 'maxarcsize', 'minarcsize', 'maxarcdang
              'modelmaxdist', 'abmin', 'min_aperture', 'se_minap', 'color_maxdiff', 'color_nsisgma', 'source_range', \
              'lightfitrmax']
 
-stringpars = ['datadir', 'logdir', 'modeldir', 'figdir', 'fitband', 'lightband', 'rgbbands', 'catalog_file', 'summary_file', 'expected_size']
+stringpars = ['datadir', 'logdir', 'modeldir', 'figdir', 'fitband', 'lightband', 'rgbbands', 'catalog_file', 'summary_file', 'expected_size', 'lightfit_method']
 
 boolpars = ['makeallfigs', 'saveallmodels', 'cleanupdir']
 
@@ -122,6 +124,7 @@ def write_config_file():
     lines.append('\n')
     lines.append('# LENS LIGHT FITTING PARAMETERS\n')
     lines.append('LIGHTFITRMAX %2.1f\t# radius of region used for fitting of the lens light'%def_config['lightfitrmax'])
+    lines.append('LIGHTFIT_METHOD %s\t# method used for fitting of the lens light (MCMC or minimize)'%def_config['lightfit_method'])
     lines.append('# ARC SEARCH PARAMETERS\n')
     lines.append('MAXARCDIST %2.1f\t# maximum search distance from image center\n'%def_config['maxarcdist'])
     lines.append('MINARCDIST %2.1f\t# minimum search distance from image center\n'%def_config['minarcdist'])

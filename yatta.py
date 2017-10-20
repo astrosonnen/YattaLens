@@ -73,7 +73,7 @@ for input_line in input_lines:
 
             guess = [lenspars['x'], lenspars['y'], lenspars['pa'], 1./lenspars['ab'], lenspars['npix']**0.5/np.pi, 4.]
             fitters.fit_light(cand, light_model, rmax=config['lightfitrmax'], lfitband=config['lightband'], mask=junkmask, guess=guess, \
-                              nsamp=50)
+                              nsamp=50, fit_method=config['lightfit_method'])
 
             tlenssub_end = time.clock()
             loglines.append('QUICK_SUBTRACTION_TIME %f\n'%(tlenssub_end - tlenssub_start))

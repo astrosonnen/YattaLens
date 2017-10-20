@@ -1,0 +1,22 @@
+SELECT
+    object.ra,
+    object.dec,
+    object.object_id,
+    object.gmag_aperture10,
+    object.rmag_aperture10,
+    object.imag_aperture10,
+    object.zmag_aperture10,
+    object.ymag_aperture10,
+    object.tract,
+    object.patch,
+    photoz.photoz_median,
+    photoz.stellar_mass,
+    photoz.sfr
+FROM
+    s16a_wide2.forced AS object
+    JOIN
+    s16a_wide2.photoz_mizuki AS photoz 
+        ON (object.object_id = photoz.object_id)
+WHERE
+    photoz.photoz_median > 0.5 AND photoz.stellar_mass > 1e11 AND object.gcountinputs > 0 AND object.rcountinputs > 0 and object.icountinputs > 0 AND object.zcountinputs > 0 AND object.ycountinputs > 0
+;

@@ -1,0 +1,28 @@
+SELECT
+    object.ra AS hsc_ra,
+    object.dec AS hsc_dec,
+            object.imag_sinc AS hsc_mag,
+    match.d_pos, rank() OVER (PARTITION BY match.specz_id ORDER BY     match.d_pos ),
+    match.d_mag, rank() OVER (PARTITION BY match.specz_id ORDER BY abs(match.d_mag)),
+    match.specz_redshift,
+    object.object_id,
+    object.gmag_aperture10,
+    object.rmag_aperture10,
+    object.imag_aperture10,
+    object.zmag_aperture10,
+    object.ymag_aperture10,
+    object.tract,
+    object.patch,
+    object.gcountinputs,
+    object.rcountinputs,
+    object.icountinputs,
+    object.zcountinputs,
+    object.ycountinputs
+FROM
+    pdr1_wide.forced AS object
+    JOIN
+    pdr1_wide.specz AS match
+        ON (object.object_id = match.object_id)
+WHERE
+    match.specz_redshift > 0.1 AND match.specz_redshift < 1.0 AND match.specz_flag_sdss_dr12 is true 
+;

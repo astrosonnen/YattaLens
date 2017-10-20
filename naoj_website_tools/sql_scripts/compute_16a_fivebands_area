@@ -1,0 +1,9 @@
+SELECT COUNT(*)/3600.0
+FROM s16a_wide_random.random
+WHERE iadjust_density < 0.01 AND
+iflags_pixel_edge is not True AND
+gcountinputs > 0 AND
+rcountinputs > 0 AND
+icountinputs > 0 AND
+zcountinputs > 0 AND
+ycountinputs > 0

@@ -42,8 +42,6 @@ def fit_light(candidate, light_model, lfitband=('i'), guess=None, step=None, nsa
     for par in pars:
         bounds.append((par.lower, par.upper))
 
-    npars = len(pars)
-
     if fit_method == 'MCMC':
 
         nwalkers = 6*npars
@@ -98,7 +96,6 @@ def fit_light(candidate, light_model, lfitband=('i'), guess=None, step=None, nsa
 
         start = []
         for j in range(npars):
-            bounds.append((pars[j].lower, pars[j].upper))
             start.append(pars[j].value)
 
         barr = np.array(bounds)
@@ -129,7 +126,7 @@ def fit_light(candidate, light_model, lfitband=('i'), guess=None, step=None, nsa
             return -sumlogp
     
         print 'finding optimal lens light model...'
-        res = basinhopping(nlogpfunc, scale_free_guess, stepsize=0.1, niter=niter, minimizer_kwargs=minimizer_kwargs, \
+        res = basinhopping(nlogpfunc, scale_free_guess, stepsize=0.1, niter=nsamp, minimizer_kwargs=minimizer_kwargs, \
                            interval=30, T=3.)
 
         MLpars = res.x*(barr[:,1] - barr[:,0]) + barr[:,0]

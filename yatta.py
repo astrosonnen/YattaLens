@@ -95,7 +95,7 @@ for input_line in input_lines:
 
                 guess = [cand.x, cand.y, cand.light_pa, cand.light_q, cand.light_re, cand.light_n]
                 fitters.fit_light(cand, light_model, lfitband=config['lightband'], mask=junkmask, guess=guess, nsamp=200, \
-                                  rmax=config['lightfitrmax'])
+                                  rmax=config['lightfitrmax'], fit_method=config['lightfit_method'])
 
                 foreground_model = yo.foreground_model(cand, iobjs + iarcs, arcs)
 

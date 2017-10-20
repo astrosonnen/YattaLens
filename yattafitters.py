@@ -8,7 +8,7 @@ from scipy.stats import truncnorm
 from photofit import convolve
 
 
-def fit_light(candidate, light_model, lfitband=('i'), guess=None, step=None, nsamp=200, mask=None, rmax=20.):
+def fit_light(candidate, light_model, lfitband=('i'), guess=None, step=None, nsamp=200, mask=None, rmax=20., fit_method='minimize'):
 
     pars = [light_model.x, light_model.y, light_model.pa, light_model.q, light_model.re, light_model.n]
     npars = len(pars)
@@ -43,53 +43,100 @@ def fit_light(candidate, light_model, lfitband=('i'), guess=None, step=None, nsa
         bounds.append((par.lower, par.upper))
 
     npars = len(pars)
-    nwalkers = 6*npars
 
-    def logprior(allpars):
-        for i in range(0, npars):
-            if allpars[i] < bounds[i][0] or allpars[i] > bounds[i][1]:
+    if fit_method == 'MCMC':
+
+        nwalkers = 6*npars
+    
+        def logprior(allpars):
+            for i in range(0, npars):
+                if allpars[i] < bounds[i][0] or allpars[i] > bounds[i][1]:
+                    return -np.inf
+            return 0.
+    
+        def logpfunc(allpars):
+            lp = logprior(allpars)
+            if not np.isfinite(lp):
                 return -np.inf
-        return 0.
+    
+            for j in range(0, npars):
+                pars[j].value = allpars[j]
+            sumlogp = 0.
+            i = 0
+    
+            for band in lfitband:
+                logp, mags = pylens.getModel([], light_model.model[band], [], candidate.sci[band], candidate.err[band], \
+                                             candidate.X, candidate.Y, zp=candidate.zp[band], mask=mask_r)
+    
+                if logp != logp:
+                    return -np.inf
+                sumlogp += logp
+                i += 1
+    
+            return sumlogp
 
-    def logpfunc(allpars):
-        lp = logprior(allpars)
-        if not np.isfinite(lp):
-            return -np.inf
+        sampler = emcee.EnsembleSampler(nwalkers, npars, logpfunc)
 
-        for j in range(0, npars):
-            pars[j].value = allpars[j]
-        sumlogp = 0.
-        i = 0
+        start = []
+        for j in range(npars):
+            a, b = (bounds[j][0] - pars[j].value)/step[j], (bounds[j][1] - pars[j].value)/step[j]
+            tmp = truncnorm.rvs(a, b, size=nwalkers)*step[j] + pars[j].value
+            start.append(tmp)
+    
+        print "sampling light profile parameters..."
+    
+        sampler.run_mcmc(np.array(start).T, nsamp)
+    
+        candidate.light_pars_sample = sampler.chain
+    
+        ML = sampler.flatlnprobability.argmax()
+    
+        for j in range(npars):
+            pars[j].value = sampler.flatchain[ML, j]
 
-        for band in lfitband:
-            logp, mags = pylens.getModel([], light_model.model[band], [], candidate.sci[band], candidate.err[band], \
-                                         candidate.X, candidate.Y, zp=candidate.zp[band], mask=mask_r)
+    elif fit_method == 'minimize':
 
-            if logp != logp:
-                return -np.inf
-            sumlogp += logp
-            i += 1
+        start = []
+        for j in range(npars):
+            bounds.append((pars[j].lower, pars[j].upper))
+            start.append(pars[j].value)
 
-        return sumlogp
+        barr = np.array(bounds)
+        start = np.array(start)
+        scale_free_bounds = 0.*barr
+        scale_free_bounds[:,1] = 1.
+    
+        scale_free_guess = (start - barr[:,0])/(barr[:,1] - barr[:,0])
+    
+        minimizer_kwargs = dict(method="L-BFGS-B", bounds=scale_free_bounds, tol=1.)
+    
+        def nlogpfunc(scaledp):
+    
+            p = scaledp*(barr[:,1] - barr[:,0]) + barr[:,0]
+            for j in range(0, npars):
+                pars[j].value = p[j]
+            sumlogp = 0.
+    
+            for band in lfitband:
+                logp, mags = pylens.getModel([], light_model.model[band], [], candidate.sci[band], candidate.err[band], \
+                                             candidate.X, candidate.Y, zp=candidate.zp[band], mask=mask_r)
+     
+                if logp != logp:
+                    return -np.inf
+    
+                sumlogp += logp
+    
+            return -sumlogp
+    
+        print 'finding optimal lens light model...'
+        res = basinhopping(nlogpfunc, scale_free_guess, stepsize=0.1, niter=niter, minimizer_kwargs=minimizer_kwargs, \
+                           interval=30, T=3.)
 
-    sampler = emcee.EnsembleSampler(nwalkers, npars, logpfunc)
-
-    start = []
-    for j in range(npars):
-        a, b = (bounds[j][0] - pars[j].value)/step[j], (bounds[j][1] - pars[j].value)/step[j]
-        tmp = truncnorm.rvs(a, b, size=nwalkers)*step[j] + pars[j].value
-        start.append(tmp)
-
-    print "sampling light profile parameters..."
-
-    sampler.run_mcmc(np.array(start).T, nsamp)
-
-    candidate.light_pars_sample = sampler.chain
-
-    ML = sampler.flatlnprobability.argmax()
-
-    for j in range(0, npars):
-        pars[j].value = sampler.flatchain[ML, j]
+        MLpars = res.x*(barr[:,1] - barr[:,0]) + barr[:,0]
+    
+        # updates values of the light parameters
+        for j in range(npars):
+            pars[j].value = MLpars[j]
 
     candidate.x = light_model.x.value
     candidate.y = light_model.y.value
@@ -110,92 +157,6 @@ def fit_light(candidate, light_model, lfitband=('i'), guess=None, step=None, nsa
         candidate.lenssub_model[band] = mimgs
         candidate.lenssub_resid[band] = resid
 
-
-def quick_lens_subtraction(candidate, light_model, lfitband=('i'), mask=None, guess=None, niter=200, rmax=20.):
-
-    pars = [light_model.x, light_model.y, light_model.pa, light_model.q, light_model.re]
-    npars = len(pars)
-
-    if mask is None:
-        mask = np.ones(candidate.imshape, dtype=int)
-
-    mask[candidate.R > rmax] = 0
-    mask_r = (mask > 0).ravel()
-
-    bounds = []
-
-    if guess is not None:
-        print 'model starting point'
-        if len(guess) == npars:
-            for i in range(npars):
-                pars[i].value = guess[i]
-                if pars[i].lower > guess[i]:
-                    pars[i].lower = guess[i]
-                if pars[i].upper < guess[i]:
-                    pars[i].upper = guess[i]
-                print guess[i], (pars[i].lower, pars[i].upper)
-
-    pars[2].lower = pars[2].value - 100.
-    pars[2].upper = pars[2].value + 100.
-
-    start = []
-    for par in pars:
-        bounds.append((par.lower, par.upper))
-        start.append(par.value)
-
-    barr = np.array(bounds)
-    start = np.array(start)
-    scale_free_bounds = 0.*barr
-    scale_free_bounds[:,1] = 1.
-
-    scale_free_guess = (start - barr[:,0])/(barr[:,1] - barr[:,0])
-
-    minimizer_kwargs = dict(method="L-BFGS-B", bounds=scale_free_bounds, tol=1.)
-
-    def logpfunc(scaledp):
-
-        p = scaledp*(barr[:,1] - barr[:,0]) + barr[:,0]
-        for j in range(0, npars):
-            pars[j].value = p[j]
-        sumlogp = 0.
-
-        for band in lfitband:
-            logp, mag = pylens.getModel([], light_model.model[band], [], candidate.sci[band], candidate.err[band], candidate.X, \
-                                                  candidate.Y, zp=candidate.zp[band], mask=mask_r)
-
-            if logp != logp:
-                return -np.inf
-
-            sumlogp += logp
-
-        return -sumlogp
-
-    print 'finding optimal lens light model...'
-    res = basinhopping(logpfunc, scale_free_guess, stepsize=0.1, niter=niter, minimizer_kwargs=minimizer_kwargs, \
-                       interval=30, T=3.)
-
-    MLpars = res.x*(barr[:,1] - barr[:,0]) + barr[:,0]
-
-    # updates values of the light parameters
-    for j in range(npars):
-        pars[j].value = MLpars[j]
-        print start[j], bounds[j], MLpars[j]
-
-    candidate.x = light_model.x.value
-    candidate.y = light_model.y.value
-    candidate.light_pa = light_model.pa.value
-    candidate.light_q = light_model.q.value
-    candidate.light_re = light_model.re.value
-
-    # removes the best-fit i-band model from all bands and saves the residuals
-    for band in candidate.bands:
-
-        logp, lmag, mimg = pylens.getModel([], light_model.model[band], [], candidate.sci[band], candidate.err[band], \
-                                                     candidate.X, candidate.Y, zp=candidate.zp[band], returnImg=True, mask=mask_r)
-        resid = candidate.sci[band] - mimg[0]
-
-        candidate.lenssub_model[band] = mimg
-        candidate.lenssub_resid[band] = resid
 
 def fit_ring(candidate, ring_model, light_model, foreground_model, image_set, rmax=30., nsamp=200):
 

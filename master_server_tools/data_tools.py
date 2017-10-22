@@ -20,9 +20,9 @@ parent_dir_16a="/lustre2/HSC_DR/dr1/s16a/data/s16a_wide/"
 butler_16a = lsst.daf.persistence.Butler(parent_dir_16a)
 skyMap_16a = butler_16a.get("deepCoadd_skyMap", immediate=True)
 
-parent_dir_17a="/lustre2/HSC_DR/dr2/s17a/data/s17a_wide/"
-butler_17a = lsst.daf.persistence.Butler(parent_dir_17a)
-skyMap_17a = butler_17a.get("deepCoadd_skyMap", immediate=True)
+#parent_dir_17a="/lustre2/HSC_DR/dr2/s17a/data/s17a_wide/"
+#butler_17a = lsst.daf.persistence.Butler(parent_dir_17a)
+#skyMap_17a = butler_17a.get("deepCoadd_skyMap", immediate=True)
 
 coadd_dir = 'deepCoadd/'
 
@@ -38,19 +38,19 @@ def have_data(ra, dec, bands=('g', 'r', 'i', 'z', 'y')):
     n = 0
     while n < nbands and dataok:
         filtname = 'HSC-%s'%bands[n].upper()
-        input_image = parent_dir_17a+coadd_dir+filtname+'/'+str(tract1)+'/'+str(patch1)+'/calexp-'+filtname+'-'+str(tract1)+'-'+str(patch1)+'.fits'
+        #input_image = parent_dir_17a+coadd_dir+filtname+'/'+str(tract1)+'/'+str(patch1)+'/calexp-'+filtname+'-'+str(tract1)+'-'+str(patch1)+'.fits'
+        #if os.path.isfile(input_image):
+        #    n += 1
+        #else:
+        input_image = parent_dir_16a+coadd_dir+filtname+'/'+str(tract1)+'/'+str(patch1)+'/calexp-'+filtname+'-'+str(tract1)+'-'+str(patch1)+'.fits'
         if os.path.isfile(input_image):
             n += 1
         else:
-            input_image = parent_dir_16a+coadd_dir+filtname+'/'+str(tract1)+'/'+str(patch1)+'/calexp-'+filtname+'-'+str(tract1)+'-'+str(patch1)+'.fits'
+            input_image = parent_dir_15b+coadd_dir+filtname+'/'+str(tract1)+'/'+str(patch1)+'/calexp-'+filtname+'-'+str(tract1)+'-'+str(patch1)+'.fits'
             if os.path.isfile(input_image):
                 n += 1
             else:
-                input_image = parent_dir_15b+coadd_dir+filtname+'/'+str(tract1)+'/'+str(patch1)+'/calexp-'+filtname+'-'+str(tract1)+'-'+str(patch1)+'.fits'
-                if os.path.isfile(input_image):
-                    n += 1
-                else:
-                    dataok = False
+                dataok = False
 
     return dataok
 
@@ -189,9 +189,9 @@ def fetch_data(radec, outname=None, bands=None, hsize=50, outdir='/'):
     # tries to look for data in 16a
 
     for band in bands:
-        found = getcutout_and_psf(radec[0], radec[1], band, outname, hsize=hsize, dr='17a', outdir=outdir)
+        #found = getcutout_and_psf(radec[0], radec[1], band, outname, hsize=hsize, dr='17a', outdir=outdir)
+        #if not found:
+        found = getcutout_and_psf(radec[0], radec[1], band, outname, hsize=hsize, dr='16a', outdir=outdir)
         if not found:
-            found = getcutout_and_psf(radec[0], radec[1], band, outname, hsize=hsize, dr='16a', outdir=outdir)
-            if not found:
-                found = getcutout_and_psf(radec[0], radec[1], band, outname, hsize=hsize, dr='15b', outdir=outdir)
+            found = getcutout_and_psf(radec[0], radec[1], band, outname, hsize=hsize, dr='15b', outdir=outdir)
 

@@ -84,7 +84,7 @@ for input_line in input_lines:
 
                 guess = [lenspars['x'], lenspars['y'], lenspars['pa'], 1./lenspars['ab'], lenspars['npix']**0.5/np.pi, 4.]
                 fitters.fit_light(cand, light_model, rmax=config['lightfitrmax'], lfitband=config['lightband'], mask=junkmask, guess=guess, \
-                                  nsamp=50)
+                                  nsamp=50, fit_method=config['lightfit_method'])
 
                 tlenssub_end = time.clock()
                 loglines.append('QUICK_SUBTRACTION_TIME %f\n'%(tlenssub_end - tlenssub_start))
@@ -106,7 +106,7 @@ for input_line in input_lines:
 
                     guess = [cand.x, cand.y, cand.light_pa, cand.light_q, cand.light_re, cand.light_n]
                     fitters.fit_light(cand, light_model, lfitband=config['lightband'], mask=junkmask, guess=guess, nsamp=200, \
-                                      rmax=config['lightfitrmax'])
+                                      rmax=config['lightfitrmax'], fit_method=config['lightfit_method'])
 
                     foreground_model = yo.foreground_model(cand, iobjs + iarcs, arcs)
 
@@ -202,12 +202,7 @@ for input_line in input_lines:
                                     lensness.append((secondbest - cand.lensfit_chi2)/cand.lensfit_chi2)
                                     lenssets.append(i)
 
-                                    f = open(config['modeldir']+'/%s_model_set%d.dat'%(cand.name, i+1), 'w')
-                                    pickle.dump(cand, f)
-                                    f.close()
-
-                                    rgb_arrays = nopil_plotting_tools.make_rgb_arrays(cand, cand.image_sets[i])
-                                    np.save(config['figdir']+'/%s_rgbarray_set%d.dat'%(cand.name, i+1), rgb_arrays)
+                                    cand.save_model(outname=config['modeldir']+'/%s_model_set%d.fits'%(cand.name, i+1), imset=i, clobber=True)
 
                                 else:
                                     if not isalens:
@@ -219,16 +214,7 @@ for input_line in input_lines:
                                     print 'failed'
                                     cpdir = 'failure'
 
-                                    if config['makeallfigs']:
-                                        rgb_arrays = nopil_plotting_tools.make_rgb_arrays(cand, cand.image_sets[i])
-                                        np.save(config['figdir']+'/%s_rgbarray_set%d.dat'%(cand.name, i+1), rgb_arrays)
-
-                                #os.system('cp %s %s/'%(figname, cpdir))
-
                             else:
-                                if config['makeallfigs']:
-                                    rgb_arrays = nopil_plotting_tools.make_rgb_arrays(cand, cand.image_sets[i])
-                                    np.save(config['figdir']+'/%s_rgbarray_set%d.dat'%(cand.name, i+1), rgb_arrays)
 
                                 if not isalens:
                                     if len(reason) > 0:
@@ -239,10 +225,6 @@ for input_line in input_lines:
                             cand.lensfit_model = None
                             cand.lensfit_chi2 = None
 
-                            if config['makeallfigs']:
-                                rgb_arrays = nopil_plotting_tools.make_rgb_arrays(cand, cand.image_sets[i])
-                                np.save(config['figdir']+'/%s_rgbarray_set%d.dat'%(cand.name, i+1), rgb_arrays)
-
                             if not isalens:
                                 if len(reason) > 0:
                                     reason += '_ARC_TOO_RED'
@@ -250,27 +232,15 @@ for input_line in input_lines:
                                     reason = 'ARC_TOO_RED'
 
                         if config['saveallmodels']:
-                            f = open(config['modeldir']+'/%s_model_set%d.dat'%(cand.name, i+1), 'w')
-                            pickle.dump(cand, f)
-                            f.close()
+                            cand.save_model(outname=config['modeldir']+'/%s_model_set%d.fits'%(cand.name, i+1), imset=i, clobber=True)
 
                     tphase2_end = time.clock()
                     loglines.append('PHASE_2_TIME %f\n'%(tphase2_end - tphase1_end))
 
                 else:
-                    if config['makeallfigs']:
-                        figname = config['figdir']+'/%s_noarcs.png'%cand.name
-                        image_set = {'junk': [obj for obj in objects], 'foregrounds': [], 'arcs': [], 'images': [], \
-                                     'bad_arcs': []}
-                        plotting_tools.make_full_rgb(cand, image_set=image_set, outname=figname, success=None)
-
                     reason = 'NO_ARCS_FOUND'
 
             else:
-                if config['makeallfigs']:
-                    figname = config['figdir']+'/%s_nolens.png'%cand.name
-                    plotting_tools.make_full_rgb(cand, image_set=None, outname=figname, success=None)
-
                 reason = 'NO_GALAXY_FOUND'
 
         else:

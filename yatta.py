@@ -189,9 +189,7 @@ for input_line in input_lines:
                                 lensness.append((secondbest - cand.lensfit_chi2)/cand.lensfit_chi2)
                                 lenssets.append(i)
 
-                                f = open(config['modeldir']+'/%s_model_set%d.dat'%(cand.name, i+1), 'w')
-                                pickle.dump(cand, f)
-                                f.close()
+                                cand.save_model(outname=config['modeldir']+'/%s_model_set%d.fits'%(cand.name, i+1), imset=i, clobber=True)
 
                                 plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=success, config=config)
 
@@ -231,9 +229,7 @@ for input_line in input_lines:
                                 reason = 'ARC_TOO_RED'
 
                     if config['saveallmodels']:
-                        f = open(config['modeldir']+'/%s_model_set%d.dat'%(cand.name, i+1), 'w')
-                        pickle.dump(cand, f)
-                        f.close()
+                        cand.save_model(outname=config['modeldir']+'/%s_model_set%d.dat'%(cand.name, i+1), clobber=True)
 
                 tphase2_end = time.clock()
                 loglines.append('PHASE_2_TIME %f\n'%(tphase2_end - tphase1_end))
@@ -246,9 +242,7 @@ for input_line in input_lines:
                     plotting_tools.make_full_rgb(cand, image_set=image_set, outname=figname, success=None, config=config)
 
                 if config['saveallmodels']:
-                    f = open(config['modeldir']+'/%s_model_set0.dat'%cand.name, 'w')
-                    pickle.dump(cand, f)
-                    f.close()
+                    cand.save_model(outname=config['modeldir']+'/%s_model_set%d.dat'%(cand.name, i+1), clobber=True)
 
                 reason = 'NO_ARCS_FOUND'
 

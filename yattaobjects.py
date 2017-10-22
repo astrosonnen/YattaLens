@@ -7,21 +7,6 @@ from pylens import pylens, SBModels
 from pylens import MassModels
 
 
-"""
-class Object:
-    def __init__(self, ind=ind, x=None, y=None, r=r, npix=None, ab=None, flux=None, err=None, tang=None, arc=None):
-
-        self.ind = ind
-        self.x = x
-        self.y = y
-        self.r = r
-        self.npix = npix
-        self.ab = ab
-        self.flux = flux
-        self.err = err
-        self.
-"""
-
 class YattaPar:
 
     def __init__(self, name, lower=0., upper=1., value=0.):
@@ -596,8 +581,6 @@ class Candidate:
 
         npix = len(xpix)
 
-        print npix, self.x, self.y
-
         max_aperture = 0.
         for j in range(npix):
             cosdiff = cospix[j]*cospix + sinpix[j]*sinpix
@@ -606,4 +589,161 @@ class Candidate:
                 max_aperture = aperture
 
         self.model_angular_aperture = max_aperture
+
+    def save_model(self, outname=None, imset=0, clobber=False):
+
+        if outname is None:
+            outname = '%s_model.fits'%self.name
+
+        hdr = pyfits.Header()
+
+        hdr['LENS_X'] = self.x
+        hdr['LENS_Y'] = self.y
+        hdr['LIGHT_PA'] = self.light_pa
+        hdr['LIGHT_Q'] = self.light_q
+        hdr['LIGHT_RE'] = self.light_re
+        hdr['LIGHT_N'] = self.light_n
+
+        hdr['LENS_PA'] = self.lens_pa
+        hdr['LENS_Q'] = self.lens_q
+        hdr['REIN'] = self.lens_rein
+        hdr['S_X'] = self.source_x
+        hdr['S_Y'] = self.source_y
+        hdr['S_RE'] = self.source_re
+
+        for band in self.bands:
+            hdr['LMAG_%s'%band] = self.lensfit_mags[band][0]
+            hdr['SMAG_%s'%band] = self.lensfit_mags[band][-1]
+
+        hdr['LENSCHI2'] = self.lensfit_chi2
+        hdr['RINGCHI2'] = self.ringfit_chi2
+        hdr['SERCHI2'] = self.sersicfit_chi2
+
+        hdr['ANG_AP'] = self.model_angular_aperture
+
+        image_set = self.image_sets[imset]
+
+        narcs = len(image_set['arcs'])
+        hdr['NARCS'] = narcs
+
+        ncim = len(image_set['images'])
+        hdr['NCIM'] = ncim
+
+        njunk = len(image_set['junk'])
+        hdr['NJNK'] = njunk
+
+        nfgd = len(image_set['foregrounds'])
+        nbad = len(image_set['bad_arcs'])
+        hdr['NFGD'] = nfgd + nbad
+
+        arc_segmap = np.zeros(self.imshape, dtype=int)
+
+        for i in range(narcs):
+            hdr['ARC%d_X'%(i+1)] = image_set['arcs'][i]['x']
+            hdr['ARC%d_Y'%(i+1)] = image_set['arcs'][i]['y']
+            hdr['ARC%d_R'%(i+1)] = image_set['arcs'][i]['r']
+            hdr['ARC%d_NPX'%(i+1)] = image_set['arcs'][i]['npix']
+            hdr['ARC%d_PA'%(i+1)] = image_set['arcs'][i]['pa']
+            hdr['ARC%d_DPA'%(i+1)] = image_set['arcs'][i]['ang_diff']
+            hdr['ARC%d_AB'%(i+1)] = image_set['arcs'][i]['ab']
+
+            arc_segmap[image_set['arcs'][i]['footprint'] > 0] = i+1
+
+        cim_segmap = np.zeros(self.imshape, dtype=int)
+
+        for i in range(ncim):
+            hdr['CIM%d_X'%(i+1)] = image_set['images'][i]['x']
+            hdr['CIM%d_Y'%(i+1)] = image_set['images'][i]['y']
+            hdr['CIM%d_R'%(i+1)] = image_set['images'][i]['r']
+            hdr['CIM%d_NPX'%(i+1)] = image_set['images'][i]['npix']
+            hdr['CIM%d_PA'%(i+1)] = image_set['images'][i]['pa']
+            hdr['CIM%d_DPA'%(i+1)] = image_set['images'][i]['ang_diff']
+            hdr['CIM%d_AB'%(i+1)] = image_set['images'][i]['ab']
+
+            cim_segmap[image_set['images'][i]['footprint'] > 0] = i+1
+
+        junk_segmap = np.zeros(self.imshape, dtype=int)
+
+        for i in range(njunk):
+            hdr['JNK%d_X'%(i+1)] = image_set['junk'][i]['x']
+            hdr['JNK%d_Y'%(i+1)] = image_set['junk'][i]['y']
+            hdr['JNK%d_R'%(i+1)] = image_set['junk'][i]['r']
+            hdr['JNK%d_NPX'%(i+1)] = image_set['junk'][i]['npix']
+            hdr['JNK%d_PA'%(i+1)] = image_set['junk'][i]['pa']
+            hdr['JNK%d_DPA'%(i+1)] = image_set['junk'][i]['ang_diff']
+            hdr['JNK%d_AB'%(i+1)] = image_set['junk'][i]['ab']
+
+            junk_segmap[image_set['junk'][i]['footprint'] > 0] = i+1
+
+        fgd_segmap = np.zeros(self.imshape, dtype=int)
+
+        for i in range(nfgd):
+            hdr['FGD%d_X'%(i+1)] = image_set['foregrounds'][i]['x']
+            hdr['FGD%d_Y'%(i+1)] = image_set['foregrounds'][i]['y']
+            hdr['FGD%d_R'%(i+1)] = image_set['foregrounds'][i]['r']
+            hdr['FGD%d_NPX'%(i+1)] = image_set['foregrounds'][i]['npix']
+            hdr['FGD%d_PA'%(i+1)] = image_set['foregrounds'][i]['pa']
+            hdr['FGD%d_DPA'%(i+1)] = image_set['foregrounds'][i]['ang_diff']
+            hdr['FGD%d_AB'%(i+1)] = image_set['foregrounds'][i]['ab']
+
+            fgd_segmap[image_set['foregrounds'][i]['footprint'] > 0] = i+1
+
+        for i in range(nbad):
+            hdr['FGD%d_X'%(nfgd+i+1)] = image_set['bad_arcs'][i]['x']
+            hdr['FGD%d_Y'%(nfgd+i+1)] = image_set['bad_arcs'][i]['y']
+            hdr['FGD%d_R'%(nfgd+i+1)] = image_set['bad_arcs'][i]['r']
+            hdr['FGD%d_NPX'%(nfgd+i+1)] = image_set['bad_arcs'][i]['npix']
+            hdr['FGD%d_PA'%(nfgd+i+1)] = image_set['bad_arcs'][i]['pa']
+            hdr['FGD%d_DPA'%(nfgd+i+1)] = image_set['bad_arcs'][i]['ang_diff']
+            hdr['FGD%d_AB'%(nfgd+i+1)] = image_set['bad_arcs'][i]['ab']
+
+            fgd_segmap[image_set['bad_arcs'][i]['footprint'] > 0] = nfgd+i+1
+
+        phdu = pyfits.PrimaryHDU(header=hdr)
+
+        hdulist = pyfits.HDUList([phdu])
+
+        for band in self.bands:
+
+            sci_hdu = pyfits.ImageHDU(data=self.sci[band])
+            sci_hdu.header['EXTNAME'] = 'SCI_%s'%band
+            hdulist.append(sci_hdu)
+
+            ncomp = len(self.lensfit_model[band])
+
+            lens_full = 0. * self.sci[band]
+    
+            for i in range(ncomp):
+                lens_full += self.lensfit_model[band][i].copy()
+    
+            full_hdu = pyfits.ImageHDU(data=lens_full)
+            full_hdu.header['EXTNAME'] = 'ALL_%s'%band
+            hdulist.append(full_hdu)
+    
+            source_hdu = pyfits.ImageHDU(data=self.lensfit_model[band][-1])
+            source_hdu.header['EXTNAME'] = 'SOURCE_%s'%band
+            hdulist.append(source_hdu)
+
+            lens_hdu = pyfits.ImageHDU(data=self.lensfit_model[band][0])
+            lens_hdu.header['EXTNAME'] = 'LENS_%s'%band
+            hdulist.append(lens_hdu)
+
+        arc_hdu = pyfits.ImageHDU(data=arc_segmap)
+        arc_hdu.header['EXTNAME'] = 'ARC_SEG'
+
+        cim_hdu = pyfits.ImageHDU(data=cim_segmap)
+        cim_hdu.header['EXTNAME'] = 'CIM_SEG'
+
+        fgd_hdu = pyfits.ImageHDU(data=fgd_segmap)
+        fgd_hdu.header['EXTNAME'] = 'FGD_SEG'
+
+        junk_hdu = pyfits.ImageHDU(data=junk_segmap)
+        junk_hdu.header['EXTNAME'] = 'JNK_SEG'
+
+        hdulist.append(arc_hdu)
+        hdulist.append(cim_hdu)
+        hdulist.append(fgd_hdu)
+        hdulist.append(junk_hdu)
+
+        hdulist.writeto(outname, clobber=clobber)
 

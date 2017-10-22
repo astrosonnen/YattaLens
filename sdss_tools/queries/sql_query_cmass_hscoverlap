@@ -9,4 +9,4 @@ WHERE
    AND s.SCIENCEPRIMARY = 1
    AND s.ZWARNING_NOQSO = 0
    AND (s.CHUNK != 'boss1') AND (s.CHUNK != 'boss2')
-   AND (((s.dec > -8.) AND (s.dec < 6.)) OR ((s.dec > 40.) AND (s.dec < 55.) AND (s.ra > 210.) AND (s.ra < 252.)))
+   AND (((s.dec > -8.) AND (s.dec < 8.)) OR ((s.dec > 40.) AND (s.dec < 55.) AND (s.ra > 198.) AND (s.ra < 252.)))

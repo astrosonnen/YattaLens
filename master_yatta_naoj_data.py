@@ -66,7 +66,7 @@ for input_line in input_lines:
         cand_dec = float(input_line.split()[2])
 
         for band in allbands:
-            dname = config['datadir']+'quarryImage?ra=%f&dec=%f&sw=8.4asec&sh=8.4asec&type=coadd&image=on&variance=on&filter=HSC-%s&tract=&rerun=s17a_wide'%(ra, dec, band.upper())
+            dname = config['datadir']+'quarryImage?ra=%f&dec=%f&sw=8.4asec&sh=8.4asec&type=coadd&image=on&variance=on&filter=HSC-%s&tract=&rerun=s17a_wide'%(cand_ra, cand_dec, band.upper())
             if os.path.isfile(dname):
                 hdulist = pyfits.open(dname)
     
@@ -76,7 +76,7 @@ for input_line in input_lines:
                 pyfits.PrimaryHDU(sci).writeto('%s/%s_%s_sci.fits'%(config['datadir'], name, band), clobber=True)
                 pyfits.PrimaryHDU(var).writeto('%s/%s_%s_var.fits'%(config['datadir'], name, band), clobber=True)
 
-                coord = '%7.5f-%7.5f'%(ra, dec)
+                coord = '%7.5f-%7.5f'%(cand_ra, cand_dec)
 
                 if coord in tractpatch:
                 

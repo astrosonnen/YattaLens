@@ -38,9 +38,7 @@ if os.path.isfile(config['catalog_file']):
 else:
     input_lines = [config['catalog_file']]
 
-datasourcedir = '/data1b/work/sonnen/yattadir/17a/'
-
-psfnames = glob.glob(datasourcedir+'/psf-calexp*HSC-I*.fits')
+psfnames = glob.glob(config['datasourcedir']+'/psf-calexp*HSC-I*.fits')
 
 tractpatch = {}
 
@@ -83,7 +81,7 @@ for input_line in input_lines:
                 
                     tp = tractpatch[coord]
     
-                    psfname = sourcedatadir+'psf-calexp-s17a_wide-HSC-%s-%s-%s-%s.fits'%(band.upper(), tp[0], tp[1], coord)
+                    psfname = config['datasourcedir']+'psf-calexp-s17a_wide-HSC-%s-%s-%s-%s.fits'%(band.upper(), tp[0], tp[1], coord)
                     if os.path.isfile(psfname):
     
                         psfhdu = pyfits.open(psfname)

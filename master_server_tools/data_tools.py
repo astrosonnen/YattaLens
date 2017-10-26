@@ -178,7 +178,7 @@ def getcutout_and_psf(ra, dec, band, name, hsize=50, outdir='/', dr='17a'):
         return False
 
 
-def fetch_data(radec, outname=None, bands=None, hsize=50, outdir='/'):
+def fetch_data(radec, datasource='master', outname=None, bands=None, hsize=50, outdir='/'):
 
     if outname is None:
         outname = labeling.coords2name(radec[0], radec[1])

@@ -612,13 +612,18 @@ class Candidate:
         hdr['S_RE'] = self.source_re
 
         for band in self.bands:
-            lmag = self.lensfit_mags[band][0]
-            smag = self.lensfit_mags[band][-1]
+            if band in self.lensfit_mags:
+                lmag = self.lensfit_mags[band][0]
+                smag = self.lensfit_mags[band][-1]
+    
+                if not np.isfinite(lmag):
+                    lmag = 99.
+                if not np.isfinite(smag):
+                    smag = 99.
+            else:
+                lmag = None
+                smag = None
 
-            if not np.isfinite(lmag):
-                lmag = 99.
-            if not np.isfinite(smag):
-                smag = 99.
             hdr['LMAG_%s'%band] = lmag
             hdr['SMAG_%s'%band] = smag
 

@@ -51,9 +51,6 @@ for name in psfnames:
     coord = s[1].split('-%s-%s-'%(tract, patch))[1].split('.fits')[0]
     tractpatch[coord] = (tract, patch)
 
-print len(tractpatch)
-df
-
 summary_lines = []
 for input_line in input_lines:
 

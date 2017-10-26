@@ -66,6 +66,7 @@ if not lightband in allbands:
 def_config = {'catalog_file': catalog_file, \
               'summary_file': summary_file, \
               'datadir': datadir, \
+              'datasourcedir': datadir, \
               'logdir': logdir, \
               'modeldir': modeldir, \
               'figdir': figdir, \
@@ -100,7 +101,7 @@ floatpars = ['maxarcdist', 'minarcdist', 'maxarcsize', 'minarcsize', 'maxarcdang
              'modelmaxdist', 'abmin', 'min_aperture', 'se_minap', 'color_maxdiff', 'color_nsisgma', 'source_range', \
              'lightfitrmax']
 
-stringpars = ['datadir', 'logdir', 'modeldir', 'figdir', 'fitband', 'lightband', 'rgbbands', 'catalog_file', 'summary_file', 'expected_size', 'lightfit_method']
+stringpars = ['datadir', 'datasourcedir', 'logdir', 'modeldir', 'figdir', 'fitband', 'lightband', 'rgbbands', 'catalog_file', 'summary_file', 'expected_size', 'lightfit_method']
 
 boolpars = ['makeallfigs', 'saveallmodels', 'cleanupdir']
 

@@ -1,6 +1,7 @@
 import yattaconfig
 import numpy as np
 import sys
+import pyfits
 import yattaobjects as yo
 from pylens import nopil_plotting_tools
 from master_server_tools import data_tools

@@ -66,7 +66,7 @@ for input_line in input_lines:
         cand_dec = float(input_line.split()[2])
 
         for band in allbands:
-            dname = config['datadir']+'quarryImage?ra=%f&dec=%f&sw=8.4asec&sh=8.4asec&type=coadd&image=on&variance=on&filter=HSC-%s&tract=&rerun=s17a_wide'%(cand_ra, cand_dec, band.upper())
+            dname = config['datasourcedir']+'quarryImage?ra=%f&dec=%f&sw=8.4asec&sh=8.4asec&type=coadd&image=on&variance=on&filter=HSC-%s&tract=&rerun=s17a_wide'%(cand_ra, cand_dec, band.upper())
             if os.path.isfile(dname):
                 hdulist = pyfits.open(dname)
     

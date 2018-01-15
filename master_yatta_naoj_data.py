@@ -222,6 +222,10 @@ for input_line in input_lines:
                                         fitters.fit_sersic(cand, sersic_model, light_model, foreground_model, cand.image_sets[i])
                                         if cand.lensfit_chi2 < cand.sersicfit_chi2:
                                             success = True
+                                        else:
+                                            bestmodel = 'SERSIC'
+                                    else:
+                                        bestmodel = 'RING'
 
                                 else:
                                     fitters.fit_sersic(cand, sersic_model, light_model, foreground_model, cand.image_sets[i])
@@ -229,6 +233,10 @@ for input_line in input_lines:
                                         fitters.fit_ring(cand, ring_model, light_model, foreground_model, cand.image_sets[i])
                                         if cand.lensfit_chi2 < cand.ringfit_chi2:
                                             success = True
+                                        else:
+                                            bestmodel = 'RING'
+                                    else:
+                                        bestmodel = 'SERSIC'
 
                                 if success:
                                     isalens = True
@@ -245,9 +253,9 @@ for input_line in input_lines:
                                 else:
                                     if not isalens:
                                         if len(reason) > 0:
-                                            reason += '_NON_LENS_FITS_BETTER'
+                                            reason += '_%s_FITS_BETTER'%bestmodel
                                         else:
-                                            reason = 'NON_LENS_FITS_BETTER'
+                                            reason = '%s_FITS_BETTER'%bestmodel
 
                                     print 'failed'
                                     cpdir = 'failure'

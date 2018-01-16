@@ -268,7 +268,6 @@ for input_line in input_lines:
                                     else:
                                         reason = 'LENSED_ARC_TOO_SMALL'
                         else:
-                            cand.lensfit_model = None
                             cand.lensfit_chi2 = None
 
                             if not isalens:

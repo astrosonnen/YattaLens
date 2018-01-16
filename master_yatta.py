@@ -3,7 +3,6 @@ import numpy as np
 import sys
 import yattaobjects as yo
 from pylens import nopil_plotting_tools
-from master_server_tools import data_tools
 import object_finder_tools as oft
 import pickle
 import yattafitters as fitters
@@ -22,6 +21,9 @@ else:
 config = yattaconfig.read_config_file(configname)
 for par in config:
     print par, config[par]
+
+if config['cutout_data']:
+    from master_server_tools import data_tools
 
 allbands = list(config['rgbbands'])
 if not config['fitband'] in allbands:
@@ -52,7 +54,8 @@ for input_line in input_lines:
         cand_ra = float(input_line.split()[1])
         cand_dec = float(input_line.split()[2])
 
-        data_tools.fetch_data((cand_ra, cand_dec), outname=name, bands=config['allbands'], outdir=config['datadir'])
+        if config['cutout_data']:
+            data_tools.fetch_data((cand_ra, cand_dec), outname=name, bands=config['allbands'], outdir=config['datadir'])
 
         cand = yo.Candidate(name=name, bands=allbands, config=config)
 

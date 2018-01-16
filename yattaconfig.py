@@ -28,6 +28,7 @@ if figdir is None:
 makeallfigs = False
 saveallmodels = False
 cleanupdir = True
+cutout_data = False
 
 maxarcdist = 30.
 minarcdist = 3.
@@ -94,6 +95,7 @@ def_config = {'catalog_file': catalog_file, \
               'rgbbands': rgbbands, \
               'makeallfigs': makeallfigs, \
               'saveallmodels': saveallmodels, \
+              'cutout_data': cutout_data, \
               'cleanupdir': cleanupdir, \
               'expected_size': expected_size}
 
@@ -103,7 +105,7 @@ floatpars = ['maxarcdist', 'minarcdist', 'maxarcsize', 'minarcsize', 'maxarcdang
 
 stringpars = ['datadir', 'datasourcedir', 'logdir', 'modeldir', 'figdir', 'fitband', 'lightband', 'rgbbands', 'catalog_file', 'summary_file', 'expected_size', 'lightfit_method']
 
-boolpars = ['makeallfigs', 'saveallmodels', 'cleanupdir']
+boolpars = ['makeallfigs', 'saveallmodels', 'cleanupdir', 'cutout_data']
 
 def write_config_file():
 
@@ -120,7 +122,8 @@ def write_config_file():
     lines.append('RGBBANDS %s, %s, %s\t# bands used for production of rgb images\n'%def_config['rgbbands'])
     lines.append('MAKEALLFIGS %s\t# if YES or True, makes a figure for each candidate\n'%(def_config['makeallfigs']))
     lines.append('SAVEALLMODELS %s\t# if YES or True, saves models of each candidate\n'%(def_config['saveallmodels']))
-    lines.append('CLEANUPDIR %s\t# if YES or True, removes intermediate files from working directory\n'%(def_config['saveallmodels']))
+    lines.append('CLEANUPDIR %s\t# if YES or True, removes intermediate files from working directory\n'%(def_config['cleanupdir']))
+    lines.append('CUTOUT_DATA %s\t# if YES or True, uses the HSC pipeline to make cutouts\n'%(def_config['cutout_data']))
     lines.append('EXPECTED_SIZE %s\t# expected image size in number of pixels (sanity check)\n'%(def_config['expected_size']))
     lines.append('\n')
     lines.append('# LENS LIGHT FITTING PARAMETERS\n')

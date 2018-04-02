@@ -61,6 +61,7 @@ def find_lens(candidate, detect_band='i', detect_thresh=3., config=def_config):
         objects.append(obj)
 
     lens = None
+    print nobj, objects[1]
     for i in range(nobj):
         ind = i+1
         if ind == closestind:

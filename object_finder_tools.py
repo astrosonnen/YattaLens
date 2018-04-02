@@ -65,7 +65,10 @@ def find_lens(candidate, detect_band='i', detect_thresh=3., config=def_config):
     for i in range(nobj):
         ind = i+1
         if ind == closestind:
-            lens = objects[i]
+            lens = {}
+            for par in objects[i]:
+                lens[par] = objects[i][par]
+            #lens = objects[i]
         else:
             junkmask[objects[i]['footprint'] > 0] = 0
 

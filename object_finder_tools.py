@@ -69,6 +69,7 @@ def find_lens(candidate, detect_band='i', detect_thresh=3., config=def_config):
         else:
             junkmask[objects[i]['footprint'] > 0] = 0
 
+    print lens
     return lens, junkmask
 
 

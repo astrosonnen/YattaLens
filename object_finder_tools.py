@@ -49,7 +49,7 @@ def find_lens(candidate, detect_band='i', detect_thresh=3., config=def_config):
         obj['pa'] = cat[i, 5]
         obj['ab'] = cat[i, 4]
         obj['npix'] = cat[i, 3]
-        if obj['r'] < closestdist and obj['npix'] > 50:
+        if obj['r'] < closestdist and obj['npix'] > 10:
             closestdist = obj['r']
             closestind = ind
 
@@ -61,18 +61,13 @@ def find_lens(candidate, detect_band='i', detect_thresh=3., config=def_config):
         objects.append(obj)
 
     lens = None
-    print nobj, objects[1]
     for i in range(nobj):
         ind = i+1
         if ind == closestind:
-            lens = {}
-            for par in objects[i]:
-                lens[par] = objects[i][par]
-            #lens = objects[i]
+            lens = objects[i]
         else:
             junkmask[objects[i]['footprint'] > 0] = 0
 
-    print lens
     return lens, junkmask
 
 

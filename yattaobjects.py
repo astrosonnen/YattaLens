@@ -1,6 +1,6 @@
 from yattaconfig import def_config
 import numpy as np
-import pyfits
+from astropy.io import fits as pyfits
 import os
 from photofit import indexTricks as iT, convolve
 from pylens import pylens, SBModels
@@ -444,7 +444,7 @@ class Candidate:
 
         self.model_angular_aperture = None
 
-    def read_data(self):
+    def read_data(self, data_dir=self.config['datadir']):
 
         print 'reading in data...'
 
@@ -452,9 +452,9 @@ class Candidate:
         shapeok = True
 
         for band in self.bands:
-            sciname = self.config['datadir']+'/%s_%s_sci.fits' % (self.name, band)
-            psfname = self.config['datadir']+'/%s_%s_psf.fits' % (self.name, band)
-            varname = self.config['datadir']+'/%s_%s_var.fits' % (self.name, band)
+            sciname = data_dir+'/%s_%s_sci.fits' % (self.name, band)
+            psfname = data_dir+'/%s_%s_psf.fits' % (self.name, band)
+            varname = data_dir+'/%s_%s_var.fits' % (self.name, band)
 
             if os.path.isfile(sciname) and os.path.isfile(psfname) and os.path.isfile(varname):
                 sci = pyfits.open(sciname)[0].data.copy()

@@ -444,12 +444,15 @@ class Candidate:
 
         self.model_angular_aperture = None
 
-    def read_data(self, data_dir=self.config['datadir']):
+    def read_data(self, data_dir=None):
 
         print 'reading in data...'
 
         found = True
         shapeok = True
+
+        if data_dir is None:
+            data_dir = self.config['datadir']
 
         for band in self.bands:
             sciname = data_dir+'/%s_%s_sci.fits' % (self.name, band)

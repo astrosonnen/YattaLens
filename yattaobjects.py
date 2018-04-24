@@ -462,7 +462,11 @@ class Candidate:
             if os.path.isfile(sciname) and os.path.isfile(psfname) and os.path.isfile(varname):
                 sci = pyfits.open(sciname)[0].data.copy()
                 var = pyfits.open(varname)[0].data.copy()
-                psf = pyfits.open(psfname)[1].data.copy()
+                hdulist = pyfits.open(psfname)
+                if hdulist[0].data is None:
+                    psf = hdulist[1].data.copy()
+                else:
+                    psf = hdulist[0].data.copy()
 
                 self.sci[band] = sci
                 self.var[band] = var

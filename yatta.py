@@ -236,7 +236,7 @@ for input_line in input_lines:
                                 reason = 'ARC_TOO_RED'
 
                     if config['saveallmodels']:
-                        cand.save_model(outname=config['modeldir']+'/%s_model_set%d.dat'%(cand.name, i+1), clobber=True)
+                        cand.save_model(outname=config['modeldir']+'/%s_model_set%d.fits'%(cand.name, i+1), clobber=True)
 
                 tphase2_end = time.clock()
                 loglines.append('PHASE_2_TIME %f\n'%(tphase2_end - tphase1_end))
@@ -249,7 +249,7 @@ for input_line in input_lines:
                     plotting_tools.make_full_rgb(cand, image_set=image_set, outname=figname, success=None, config=config)
 
                 if config['saveallmodels']:
-                    cand.save_model(outname=config['modeldir']+'/%s_model_set%d.dat'%(cand.name, i+1), clobber=True)
+                    cand.save_model(outname=config['modeldir']+'/%s_model_set0.fits'%cand.name, clobber=True)
 
                 reason = 'NO_ARCS_FOUND'
 

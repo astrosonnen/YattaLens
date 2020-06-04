@@ -147,7 +147,7 @@ def make_fail_curv_rgb(data, lenssub, arcimg, arccoords, arcmask, crapmask=None,
 def make_full_rgb(candidate, image_set=None, maskedge=None, outname='full_model.png', nsig_cut=5., success=None, \
                   config=def_config):
 
-    font = ImageFont.truetype("/usr/local/texlive/2017/texmf-dist/fonts/truetype/public/dejavu/DejaVuSans-Bold.ttf", 12)
+    #font = ImageFont.truetype("/usr/local/texlive/2017/texmf-dist/fonts/truetype/public/dejavu/DejaVuSans-Bold.ttf", 12)
 
     cuts = []
     rescuts = []
@@ -301,19 +301,19 @@ def make_full_rgb(candidate, image_set=None, maskedge=None, outname='full_model.
                 im.paste(lrim, (5*s[1], 0))
 
     draw = ImageDraw.Draw(im)
-    draw.text((10, s[0] - 20), 'HSCJ'+candidate.name, font=font, fill='white')
-    if ncol > 5:
-        draw.text((10 + 5*s[1], s[0] - 20), '%2.1f'%candidate.lensfit_chi2, font=font, fill='white')
+    #draw.text((10, s[0] - 20), 'HSCJ'+candidate.name, font=font, fill='white')
+    #if ncol > 5:
+    #    draw.text((10 + 5*s[1], s[0] - 20), '%2.1f'%candidate.lensfit_chi2, font=font, fill='white')
 
     if len(candidate.ringfit_model) > 0:
         im.paste(rmim, (rcol*s[1], 0))
         im.paste(rrim, ((rcol+1)*s[1], 0))
-        draw.text((10 + rcol*s[1], s[0] - 20), '%2.1f'%candidate.ringfit_chi2, font=font, fill='white')
+        #draw.text((10 + rcol*s[1], s[0] - 20), '%2.1f'%candidate.ringfit_chi2, font=font, fill='white')
 
     if len(candidate.sersicfit_model) > 0:
         im.paste(cmim, (scol*s[1], 0))
         im.paste(crim, ((scol+1)*s[1], 0))
-        draw.text((10 + scol*s[1], s[0] - 20), '%2.1f'%candidate.sersicfit_chi2, font=font, fill='white')
+        #draw.text((10 + scol*s[1], s[0] - 20), '%2.1f'%candidate.sersicfit_chi2, font=font, fill='white')
 
     if success is not None:
         if success:

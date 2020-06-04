@@ -3,8 +3,8 @@ import numpy as np
 from astropy.io import fits as pyfits
 import os
 from photofit import indexTricks as iT, convolve
-from pylens import pylens, SBModels
-from pylens import MassModels
+from yattapylens import pylens, SBModels
+from yattapylens import MassModels
 
 
 class YattaPar:

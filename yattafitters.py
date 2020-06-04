@@ -1,7 +1,7 @@
 from yattaconfig import def_config
 import numpy as np
-from pylens import pylens
-from pylens import SBModels, MassModels
+from yattapylens import pylens
+from yattapylens import SBModels, MassModels
 import emcee
 from scipy.optimize import basinhopping, nnls
 from scipy.stats import truncnorm

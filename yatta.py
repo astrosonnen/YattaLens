@@ -2,7 +2,7 @@ import yattaconfig
 import numpy as np
 import sys
 import yattaobjects as yo
-from pylens import plotting_tools
+import yattargbtools
 import object_finder_tools as oft
 import pickle
 import yattafitters as fitters
@@ -199,7 +199,7 @@ for input_line in input_lines:
 
                                 cand.save_model(outname=config['modeldir']+'/%s_model_set%d.fits'%(cand.name, i+1), imset=i, clobber=True)
 
-                                plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=success, config=config)
+                                yattargbtools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=success, config=config)
 
                             else:
                                 if not isalens:
@@ -212,11 +212,11 @@ for input_line in input_lines:
                                 cpdir = 'failure'
 
                                 if config['makeallfigs']:
-                                    plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=success, config=config)
+                                    yattargbtools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=success, config=config)
 
                         else:
                             if config['makeallfigs']:
-                                plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=False, config=config)
+                                yattargbtools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=False, config=config)
 
                             if not isalens:
                                 if len(reason) > 0:
@@ -227,7 +227,7 @@ for input_line in input_lines:
                         cand.lensfit_chi2 = None
 
                         if config['makeallfigs']:
-                            plotting_tools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=None, config=config)
+                            yattargbtools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=None, config=config)
 
                         if not isalens:
                             if len(reason) > 0:
@@ -246,7 +246,7 @@ for input_line in input_lines:
                     figname = config['figdir']+'/%s_noarcs.png'%cand.name
                     image_set = {'junk': [obj for obj in objects], 'foregrounds': [], 'arcs': [], 'images': [], \
                                  'bad_arcs': []}
-                    plotting_tools.make_full_rgb(cand, image_set=image_set, outname=figname, success=None, config=config)
+                    yattargbtools.make_full_rgb(cand, image_set=image_set, outname=figname, success=None, config=config)
 
                 if config['saveallmodels']:
                     cand.save_model(outname=config['modeldir']+'/%s_model_set0.fits'%cand.name, clobber=True)
@@ -256,7 +256,7 @@ for input_line in input_lines:
         else:
             if config['makeallfigs']:
                 figname = config['figdir']+'/%s_nolens.png'%cand.name
-                plotting_tools.make_full_rgb(cand, image_set=None, outname=figname, success=None, config=config)
+                yattargbtools.make_full_rgb(cand, image_set=None, outname=figname, success=None, config=config)
 
             reason = 'NO_GALAXY_FOUND'
 

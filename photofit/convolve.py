@@ -4,9 +4,7 @@ def sptoeplitz(x):
     from scipy.linalg import toeplitz
     from scipy.sparse import csr_matrix,dia_matrix
     cols = numpy.where(x!=0)[0]
-    print cols.size
     vals = x[cols].repeat(x.size,axis=0).reshape((cols.size,x.size))
-    print vals.size,vals.shape
     return dia_matrix((vals,cols),shape=(x.size,x.size)).tocsr()
     ptr = numpy.arange(x.size+1)*cols.size
     indx = vals*0.
@@ -28,7 +26,7 @@ def newConvolve(image,psf,doPSF=True):
         row = numpy.roll(row,-1*abs(row-psf[psf.shape[0]/2,psf.shape[1]/2]).argmin())
 #        psf = coo_matrix(toeplitz(row))
         psf = sptoeplitz(row)
-    print 'done!'
+    print('done!')
     return (psf*image.ravel()).reshape(image.shape),psf
 
 
@@ -53,13 +51,13 @@ def convolve(image,psf,doPSF=True,edgeCheck=False):
             size*=2
         boxd = numpy.zeros((size,size))
         r = size-datadim1
-        r1 = r2 = r/2
+        r1 = r2 = r//2
         if r%2==1:
-            r1 = r/2+1
+            r1 = r//2+1
         c = size-datadim2
-        c1 = c2 = c/2
+        c1 = c2 = c//2
         if c%2==1:
-            c1 = c/2+1
+            c1 = c//2+1
         boxdslice = (slice(r1,datadim1+r1),slice(c1,datadim2+c1))
         boxd[boxdslice] = image
     else:
@@ -72,9 +70,9 @@ def convolve(image,psf,doPSF=True,edgeCheck=False):
             boxp = psf.copy()
         else:
             r = boxp.shape[0]-psf.shape[0]
-            r1 = r/2+1
+            r1 = r//2+1
             c = boxp.shape[1]-psf.shape[1]
-            c1 = c/2+1
+            c1 = c//2+1
             boxpslice = (slice(r1,psf.shape[0]+r1),slice(c1,psf.shape[1]+c1))
             boxp[boxpslice] = psf.copy()
         # Store the transform of the image after the first iteration
@@ -108,13 +106,13 @@ def prep(image,psf):
         size = 2**len(s)
         boxd = numpy.zeros((size,size))
         r = size-datadim1
-        r1 = r2 = r/2
+        r1 = r2 = r//2
         if r%2==1:
-            r1 = r/2+1
+            r1 = r//2+1
         c = size-datadim2
-        c1 = c2 = c/2
+        c1 = c2 = c//2
         if c%2==1:
-            c1 = c/2+1
+            c1 = c//2+1
         boxdslice = (slice(r1,datadim1+r1),slice(c1,datadim2+c1))
         boxd[boxdslice] = image
     else:
@@ -125,9 +123,9 @@ def prep(image,psf):
         boxp = psf.copy()
     else:
         r = boxp.shape[0]-psf.shape[0]
-        r1 = r/2+1
+        r1 = r//2+1
         c = boxp.shape[1]-psf.shape[1]
-        c1 = c/2+1
+        c1 = c//2+1
         boxpslice = (slice(r1,psf.shape[0]+r1),slice(c1,psf.shape[1]+c1))
         boxp[boxpslice] = psf.copy()
 

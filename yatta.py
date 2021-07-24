@@ -4,13 +4,12 @@ import sys
 import yattaobjects as yo
 import yattargbtools
 import object_finder_tools as oft
-import pickle
 import yattafitters as fitters
 import time
 import os
 
 
-tstart = time.clock()
+tstart = time.time()
 
 yattaconfig.write_config_file()
 if len(sys.argv) > 1:
@@ -20,7 +19,7 @@ else:
 
 config = yattaconfig.read_config_file(configname)
 for par in config:
-    print par, config[par]
+    print(par, config[par])
 
 allbands = list(config['rgbbands'])
 if not config['fitband'] in allbands:
@@ -69,18 +68,18 @@ for input_line in input_lines:
 
         if lenspars is not None and junkmask[cand.R < config['lightfitrmax']].sum() > 0:
 
-            tlenssub_start = time.clock()
+            tlenssub_start = time.time()
 
             guess = [lenspars['x'], lenspars['y'], lenspars['pa'], 1./lenspars['ab'], lenspars['npix']**0.5/np.pi, 4.]
             fitters.fit_light(cand, light_model, rmax=config['lightfitrmax'], lfitband=config['lightband'], mask=junkmask, guess=guess, \
                               nsamp=50, fit_method=config['lightfit_method'])
 
-            tlenssub_end = time.clock()
+            tlenssub_end = time.time()
             loglines.append('QUICK_SUBTRACTION_TIME %f\n'%(tlenssub_end - tlenssub_start))
 
             objects, arcs, segmap, foundarcs = oft.find_objects(cand, detect_band=config['fitband'], detect_thresh=3., \
                                                                 config=config)
-            tphase1_end = time.clock()
+            tphase1_end = time.time()
             loglines.append('PHASE_1_TIME %f\n'%(tphase1_end - tstart))
             loglines.append('ARC_CANDIDATES %d\n'%(len(arcs)))
 
@@ -91,7 +90,7 @@ for input_line in input_lines:
                 junkmask = 1 - junkmask
                 junkmask[cand.R < 5.] = 1
 
-                print 'arcs found: %d'%(len(arcs))
+                print('arcs found: %d'%(len(arcs)))
 
                 guess = [cand.x, cand.y, cand.light_pa, cand.light_q, cand.light_re, cand.light_n]
                 fitters.fit_light(cand, light_model, lfitband=config['lightband'], mask=junkmask, guess=guess, nsamp=200, \
@@ -113,7 +112,7 @@ for input_line in input_lines:
 
                 nsets = len(cand.image_sets)
 
-                print 'possible image sets: %d'%nsets
+                print('possible image sets: %d'%nsets)
 
                 lens_model = yo.lens_model(cand)
                 ring_model = yo.ring_model(cand)
@@ -132,13 +131,13 @@ for input_line in input_lines:
 
                     if bluest < 10.**(config['color_maxdiff']/2.5):
 
-                        print 'set %d: %d arcs, %d images'%(i+1, len(cand.image_sets[i]['arcs']), \
-                                                            len(cand.image_sets[i]['images']))
+                        print('set %d: %d arcs, %d images'%(i+1, len(cand.image_sets[i]['arcs']), \
+                                                            len(cand.image_sets[i]['images'])))
 
                         for arc in cand.image_sets[i]['arcs']:
-                            print 'arc', arc['x'], arc['y']
+                            print('arc', arc['x'], arc['y'])
                         for image in cand.image_sets[i]['images']:
-                            print 'image', image['x'], image['y']
+                            print('image', image['x'], image['y'])
 
                         foreground_model.update(cand, cand.image_sets[i])
 
@@ -191,7 +190,7 @@ for input_line in input_lines:
                                 isalens = True
                                 cpdir = 'success'
                                 reason = 'YATTA'
-                                print 'Yatta!'
+                                print('Yatta!')
 
                                 secondbest = min(cand.sersicfit_chi2, cand.ringfit_chi2)
                                 lensness.append((secondbest - cand.lensfit_chi2)/cand.lensfit_chi2)
@@ -208,7 +207,7 @@ for input_line in input_lines:
                                     else:
                                         reason = '%s_FITS_BETTER'%bestmodel
 
-                                print 'failed'
+                                print('failed')
                                 cpdir = 'failure'
 
                                 if config['makeallfigs']:
@@ -238,7 +237,7 @@ for input_line in input_lines:
                     if config['saveallmodels']:
                         cand.save_model(outname=config['modeldir']+'/%s_model_set%d.fits'%(cand.name, i+1), clobber=True)
 
-                tphase2_end = time.clock()
+                tphase2_end = time.time()
                 loglines.append('PHASE_2_TIME %f\n'%(tphase2_end - tphase1_end))
 
             else:
@@ -276,7 +275,7 @@ for input_line in input_lines:
     else:
         summary_line += ' %s 0 %d\n'%(reason, data_flag)
 
-    print 'writing output in file %s'%config['summary_file']
+    print('writing output in file %s'%config['summary_file'])
 
     # cleaning up directory
     if config['cleanupdir']:
@@ -291,7 +290,7 @@ for input_line in input_lines:
     f.writelines([summary_line])
     f.close()
 
-    tend = time.clock()
+    tend = time.time()
     loglines.append('TOTAL_TIME %f\n'%(tend - tstart))
     logfile = open(config['logdir']+name+'.txt', 'w')
     logfile.writelines(loglines)

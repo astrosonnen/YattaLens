@@ -14,7 +14,7 @@ def fit_light(candidate, light_model, lfitband=('i'), guess=None, step=None, nsa
     npars = len(pars)
 
     if guess is not None:
-        print 'model starting point'
+        print('model starting point')
         if len(guess) == npars:
             for i in range(npars):
                 pars[i].value = guess[i]
@@ -22,7 +22,7 @@ def fit_light(candidate, light_model, lfitband=('i'), guess=None, step=None, nsa
                     pars[i].lower = guess[i]
                 if pars[i].upper < guess[i]:
                     pars[i].upper = guess[i]
-                print guess[i], (pars[i].lower, pars[i].upper)
+                print(guess[i], (pars[i].lower, pars[i].upper))
 
     pars[2].lower = pars[2].value - 100.
     pars[2].upper = pars[2].value + 100.
@@ -81,7 +81,7 @@ def fit_light(candidate, light_model, lfitband=('i'), guess=None, step=None, nsa
             tmp = truncnorm.rvs(a, b, size=nwalkers)*step[j] + pars[j].value
             start.append(tmp)
     
-        print "sampling light profile parameters..."
+        print("sampling light profile parameters...")
     
         sampler.run_mcmc(np.array(start).T, nsamp)
     
@@ -125,7 +125,7 @@ def fit_light(candidate, light_model, lfitband=('i'), guess=None, step=None, nsa
     
             return -sumlogp
     
-        print 'finding optimal lens light model...'
+        print('finding optimal lens light model...')
         res = basinhopping(nlogpfunc, scale_free_guess, stepsize=0.1, niter=nsamp, minimizer_kwargs=minimizer_kwargs, \
                            interval=30, T=3.)
 
@@ -261,7 +261,7 @@ def fit_ring(candidate, ring_model, light_model, foreground_model, image_set, rm
 
         start.append(tmp)
 
-    print "fitting ring model..."
+    print("fitting ring model...")
 
     sampler.run_mcmc(start, nsamp)
 
@@ -395,7 +395,7 @@ def fit_new_ring(candidate, ring_model, light_model, foreground_model, image_set
 
         start.append(tmp)
 
-    print "fitting ring model..."
+    print("fitting ring model...")
 
     sampler.run_mcmc(start, nsamp)
 
@@ -568,7 +568,7 @@ def fit_sersic(candidate, sersic_model, light_model, foreground_model, image_set
 
         start.append(tmp)
 
-    print "fitting sersic model..."
+    print("fitting sersic model...")
 
     sampler.run_mcmc(start, nsamp)
 
@@ -697,7 +697,7 @@ def fit_foregrounds(candidate, foreground_model, light_model, rmax=30., nsamp=10
 
             start.append(tmp)
 
-        print "fitting foreground no. %d at x: %2.1f y: %2.1f"%(count, pars[0].value, pars[1].value)
+        print("fitting foreground no. %d at x: %2.1f y: %2.1f"%(count, pars[0].value, pars[1].value))
 
         count += 1
 
@@ -817,7 +817,7 @@ def fit_foregrounds_fixedamps(candidate, foreground_model, light_model, rmax=30.
 
             start.append(tmp)
 
-        print "fitting foreground no. %d at x: %2.1f y: %2.1f"%(count, pars[0].value, pars[1].value)
+        print("fitting foreground no. %d at x: %2.1f y: %2.1f"%(count, pars[0].value, pars[1].value))
 
 
         sampler.run_mcmc(start, nsamp)
@@ -985,7 +985,7 @@ def fit_bad_arcs(candidate, foreground_model, light_model, rmax=30., nsamp=200):
 
             start.append(tmp)
 
-        print "fitting arc-like foreground no. %d at x: %2.1f y: %2.1f"%(count, pars[0].value, pars[1].value)
+        print("fitting arc-like foreground no. %d at x: %2.1f y: %2.1f"%(count, pars[0].value, pars[1].value))
 
         count += 1
         sampler.run_mcmc(start, nsamp)
@@ -1147,7 +1147,7 @@ def fit_new_foregrounds(candidate, foreground_model, light_model, rmax=30., nsam
 
             start.append(tmp)
 
-        print "fitting arc-like foreground no. %d at x: %2.1f y: %2.1f"%(count, pars[0].value, pars[1].value)
+        print("fitting arc-like foreground no. %d at x: %2.1f y: %2.1f"%(count, pars[0].value, pars[1].value))
 
         count += 1
         sampler.run_mcmc(start, nsamp)
@@ -1351,7 +1351,7 @@ def fit_lens_freeamps(candidate, lens_model, light_model, foreground_model, imag
 
     sampler = emcee.EnsembleSampler(nwalkers, npars, logpfunc)
 
-    print "fitting lens model..."
+    print("fitting lens model...")
 
     sampler.run_mcmc(start, nsamp)
 
@@ -1496,7 +1496,7 @@ def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rm
             foregrounds[band].append(obj['scalefreemodel'][band])
             scalefreemags[band].append(obj['scalefreemags'][band])
 
-    print 'fitting %d foregrounds, including 1 lens and %d arc-like objects'%(len(foregrounds[band]), len(foreground_model.bad_arcs))
+    print('fitting %d foregrounds, including 1 lens and %d arc-like objects'%(len(foregrounds[band]), len(foreground_model.bad_arcs)))
 
     start = []
     for j in range(npars):
@@ -1567,7 +1567,7 @@ def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rm
 
     sampler = emcee.EnsembleSampler(nwalkers, npars, logpfunc)
 
-    print "fitting lens model..."
+    print("fitting lens model...")
 
     sampler.run_mcmc(start, nsamp)
 
@@ -1581,7 +1581,7 @@ def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rm
 
     nband = 0
     blobarr = np.array(sampler.blobs)
-    print blobarr.shape
+    print(blobarr.shape)
 
     for band in candidate.fitband:
         pars_sample['lens_%s_mag'%band] = blobarr[:, :, 0, nband].T

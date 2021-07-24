@@ -1,4 +1,4 @@
-import SBProfiles as SBProfiles
+from yattapylens import SBProfiles
 from math import pi
 
 def cnts2mag(cnts,zp):
@@ -11,15 +11,15 @@ class SBModel:
         if 'amp' not in pars.keys() and 'logamp' not in pars.keys():
             pars['amp'] = 1.
         self.keys = pars.keys()
-        self.keys.sort()
-        if self.keys not in self._SBkeys:
+        sorted_keys  = sorted(self.keys)
+        if sorted_keys not in self._SBkeys:
             import sys
-            print 'Not all (or too many) parameters were defined!'
+            print('Not all (or too many) parameters were defined!')
             sys.exit()
         self._baseProfile.__init__(self)
         self.vmap = {}
         self.pars = pars
-        for key in self.keys:
+        for key in sorted_keys:
             try:
                 v = self.pars[key].value
                 self.vmap[key] = self.pars[key]
@@ -105,7 +105,7 @@ class Spiral(SBModel, SBProfiles.Spiral):
         SBModel.__init__(self, name, pars, convolve)
 
     def getMag(self, amp, zp):
-	cnts = amp
+        cnts = amp
         return cnts2mag(cnts, zp)
 
     def Mag(self, zp):
@@ -120,7 +120,7 @@ class Ring(SBModel, SBProfiles.Ring):
         SBModel.__init__(self, name, pars, convolve)
 
     def getMag(self, amp, zp):
-	cnts = amp
+        cnts = amp
         return cnts2mag(cnts, zp)
 
     def Mag(self, zp):
@@ -135,7 +135,7 @@ class StoneRing(SBModel, SBProfiles.StoneRing):
         SBModel.__init__(self, name, pars, convolve)
 
     def getMag(self, amp, zp):
-	cnts = amp
+        cnts = amp
         return cnts2mag(cnts, zp)
 
     def Mag(self, zp):

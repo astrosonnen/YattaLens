@@ -1,9 +1,11 @@
 from yattaconfig import def_config
-import pyfits
+from astropy.io import fits as pyfits
 import numpy as np
 from scipy.optimize import minimize
 import os
 
+
+thisdir = os.path.dirname(os.path.abspath(__file__))
 
 def find_lens(candidate, detect_band='i', detect_thresh=3., config=def_config):
 
@@ -13,8 +15,8 @@ def find_lens(candidate, detect_band='i', detect_thresh=3., config=def_config):
     segname = config['modeldir']+'/%s_%s_segmap.fits'%(candidate.name, detect_band)
     catname = config['modeldir']+'/%s_%s_secat.cat'%(candidate.name, detect_band)
 
-    os.system('sex %s -c $YATTADIR/sedir/seconfig.sex -WEIGHT_IMAGE %s -CATALOG_NAME %s -CHECKIMAGE_NAME %s -DETECT_THRESH %f'%\
-              (sciname, varname, catname, segname, detect_thresh))
+    os.system('sex %s -c %s/sedir/seconfig.sex -WEIGHT_IMAGE %s -CATALOG_NAME %s -CHECKIMAGE_NAME %s -DETECT_THRESH %f'%\
+              (sciname, thisdir, varname, catname, segname, detect_thresh))
 
     f = open(catname, 'r')
     cat = np.atleast_2d(np.loadtxt(f))
@@ -81,8 +83,8 @@ def find_objects(candidate, detect_band='g', detect_thresh=3., config=def_config
 
     pyfits.PrimaryHDU(candidate.lenssub_resid[detect_band]).writeto(lsubname, clobber=True)
 
-    os.system('sex %s -c $YATTADIR/sedir/seconfig.sex -WEIGHT_IMAGE %s -CATALOG_NAME %s -CHECKIMAGE_NAME %s -DETECT_THRESH %f'%\
-              (lsubname, varname, catname, segname, detect_thresh))
+    os.system('sex %s -c %s/sedir/seconfig.sex -WEIGHT_IMAGE %s -CATALOG_NAME %s -CHECKIMAGE_NAME %s -DETECT_THRESH %f'%\
+              (lsubname, thisdir, varname, catname, segname, detect_thresh))
 
     f = open(catname, 'r')
     cat = np.atleast_2d(np.loadtxt(f))
@@ -335,7 +337,7 @@ def determine_image_sets(objects, arcs, iobjects, config=def_config):
                 if arcs[n]['footprint'][int(round(yiobj)), int(round(xiobj))] > 0:
                     already_there = True
             if not already_there:
-                print 'adding footprint of object at %2.1f %2.1f. dist: %2.1f. arc dist: %2.1f'%(xiobj, yiobj, iobjects[j]['r'], furthest)
+                print('adding footprint of object at %2.1f %2.1f. dist: %2.1f. arc dist: %2.1f'%(xiobj, yiobj, iobjects[j]['r'], furthest))
                 if iobjects[j]['r'] <= config['junkstart']*furthest:
                     image_set['foregrounds'].append(iobjects[j])
                 else:

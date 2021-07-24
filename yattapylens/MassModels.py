@@ -1,4 +1,4 @@
-import MassProfiles
+from yattapylens import MassProfiles
 from math import pi
 
 class MassModel:
@@ -7,7 +7,7 @@ class MassModel:
         self.keys.sort()
         if self.keys not in self._MMkeys:
             import sys
-            print 'Not all (or too many) parameters were defined!'
+            print('Not all (or too many) parameters were defined!')
             sys.exit()
         self._baseProfile.__init__(self)
         self.vmap = {}

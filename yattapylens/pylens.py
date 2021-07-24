@@ -219,10 +219,10 @@ def getModel(lenses, light_profiles, source_profiles, image, sigma, X, Y, zp=30.
     model = np.array(modlist).T
 
     if np.isnan(model).any():
-	if returnImg:
-	    return -np.inf, (99., 99.), 0.*image
-	else:
-	    return -np.inf, (99., 99.)
+        if returnImg:
+            return -np.inf, (99., 99.), 0.*image
+        else: 
+            return -np.inf, (99., 99.)
 
     amps, chi = optimize.nnls(model, (I/S)[mask])
 
@@ -405,7 +405,7 @@ def do_fit_emcee(pars, bands, lens, lights, sources, images, sigmas, X, Y, mask_
         start.append(tmp)
 
 
-    print "Sampling"
+    print("Sampling")
 
     sampler.run_mcmc(start, nsamp)
 
@@ -458,7 +458,7 @@ def do_fit_emcee_inputwalkers(candidate, pars, fitbands, start, mask_r, nsamp=50
 
     sampler = emcee.EnsembleSampler(nwalkers, npars, logpfunc)
 
-    print "Sampling"
+    print("Sampling")
 
     sampler.run_mcmc(start, nsamp)
 
@@ -573,7 +573,7 @@ def read_config(filename):
                 i += j
 
                 if foundpars < npars:
-                    print 'not all parameters found!'
+                    print('not all parameters found!')
                 else:
                     light_components.append(comp)
 
@@ -609,7 +609,7 @@ def read_config(filename):
                 i += j
 
                 if foundpars < npars:
-                    print 'not all parameters found!'
+                    print('not all parameters found!')
                 else:
                     source_components.append(comp)
 
@@ -644,7 +644,7 @@ def read_config(filename):
                 i += j
 
                 if foundpars < npars:
-                    print 'not all parameters found!'
+                    print('not all parameters found!')
                 else:
                     lens_components.append(comp)
 

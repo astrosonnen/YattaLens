@@ -165,7 +165,7 @@ class foreground_model:
 
         fluxes = []
         inner_objects = []
-        print 'foreground objects:'
+        print('foreground objects:')
         for obj in objects:
             mask_all[obj['footprint'] > 0] = 0
             if obj['r'] < config['modelmaxdist']*furthest and obj['r'] > config['minarcdist'] and \
@@ -178,9 +178,7 @@ class foreground_model:
         if len(inner_objects) > 0:
             tmp = zip(fluxes, inner_objects)
 
-            tmp.sort(reverse=True)
-
-            fluxes, inner_objects = zip(*tmp)
+            fluxes, inner_objects = zip(*sorted(tmp, reverse=True))
 
 
             mask = mask_all.copy()
@@ -244,11 +242,11 @@ class foreground_model:
                 dofit = False
 
             if dofit:
-                print 'foreground %d at x: %2.1f y: %2.1f is modeled'%(i+1, xcomp, ycomp)
+                print('foreground %d at x: %2.1f y: %2.1f is modeled'%(i+1, xcomp, ycomp))
                 self.components[i]['dofit'] = True
             else:
                 self.components[i]['dofit'] = False
-                print 'foreground %d at x: %2.1f y: %2.1f is not included'%(i+1, xcomp, ycomp)
+                print('foreground %d at x: %2.1f y: %2.1f is not included'%(i+1, xcomp, ycomp))
 
         bad_arcs = []
 
@@ -315,7 +313,7 @@ class foreground_model:
                 xobj = obj['x']
                 yobj = obj['y']
 
-                print 'adding foreground at %2.1f %2.1f'%(xobj, yobj)
+                print('adding foreground at %2.1f %2.1f'%(xobj, yobj))
 
                 remax = (obj['npix']/np.pi)**0.5
 
@@ -446,7 +444,7 @@ class Candidate:
 
     def read_data(self, data_dir=None):
 
-        print 'reading in data...'
+        print('reading in data...')
 
         found = True
         shapeok = True

@@ -227,9 +227,8 @@ def compare_colors(f1a, f1b, f2a, f2b, e1a, e1b, e2a, e2b, nsigma=2.):
     errors = [r1err, r2err]
 
     tmp = zip(ratios, errors)
-    tmp.sort()
 
-    ratios, errors = zip(*tmp)
+    ratios, errors = zip(*sorted(tmp))
 
     if ratios[0] + nsigma*errors[0] > ratios[1] - nsigma*errors[1]:
         samecolor = True

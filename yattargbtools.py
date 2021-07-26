@@ -39,6 +39,44 @@ def make_crazy_pil_format(data, cuts):
     return l
 
 
+def marshall16_pil_format(images, scales=(1., 1., 1.), alpha=1., Q=1.):
+
+    r = images[0] * scales[0]
+    g = images[1] * scales[1]
+    b = images[2] * scales[2]
+
+    I = (r + g + b)
+    f = np.arcsinh(alpha*I*Q)
+
+    R = r*f/(I*Q)
+    G = g*f/(I*Q)
+    B = b*f/(I*Q)
+
+    R = R * 255.
+    G = G * 255.
+    B = B * 255.
+
+    R[R<0.] = 0.
+    G[G<0.] = 0.
+    B[B<0.] = 0.
+
+    R[R>255.] = 255.
+    G[G>255.] = 255.
+    B[B>255.] = 255.
+
+    flatlist = []
+    for img in [R, G, B]:
+        img = np.uint8(img.round())
+        img = np.flipud(img)
+        flatlist.append(img.flatten())
+
+    l = []
+    for i in range(images[0].size):
+        l.append((flatlist[0][i], flatlist[1][i], flatlist[2][i]))
+
+    return l
+
+
 def make_fail_curv_rgb(data, lenssub, arcimg, arccoords, arcmask, crapmask=None, fuzzmask=None, maskedge=None, \
                        outname='wrong_curvature.png'):
 
@@ -175,7 +213,8 @@ def make_full_rgb(candidate, image_set=None, maskedge=None, outname='full_model.
 
     s = (data[0].shape[1], data[0].shape[0])
 
-    dlist = make_crazy_pil_format(data, cuts)
+    #dlist = make_crazy_pil_format(data, cuts)
+    dlist = marshall16_pil_format(data, config['rgb_scales'])
     dim = Image.new('RGB', s, 'black')
     dim.putdata(dlist)
 
@@ -239,7 +278,8 @@ def make_full_rgb(candidate, image_set=None, maskedge=None, outname='full_model.
                     lensresid.append(candidate.sci[band] - lmodel)
 
                 slist = make_crazy_pil_format(source, rescuts)
-                lmlist = make_crazy_pil_format(lensmodel, cuts)
+                lmlist = marshall16_pil_format(lensmodel, config['rgb_scales'])
+                #lmlist = make_crazy_pil_format(lensmodel, cuts)
                 lrlist = make_crazy_pil_format(lensresid, cuts)
 
                 sim = Image.new('RGB', s, 'black')
@@ -260,7 +300,8 @@ def make_full_rgb(candidate, image_set=None, maskedge=None, outname='full_model.
                         ringmodel.append(rmodel)
                         ringresid.append(candidate.sci[band] - rmodel)
 
-                    rmlist = make_crazy_pil_format(ringmodel, cuts)
+                    #rmlist = make_crazy_pil_format(ringmodel, cuts)
+                    rmlist = marshall16_pil_format(ringmodel, config['rgb_scales'])
                     rrlist = make_crazy_pil_format(ringresid, cuts)
 
                     rmim = Image.new('RGB', s, 'black')
@@ -279,7 +320,8 @@ def make_full_rgb(candidate, image_set=None, maskedge=None, outname='full_model.
                         sersicmodel.append(smodel)
                         sersicresid.append(candidate.sci[band] - smodel)
 
-                    cmlist = make_crazy_pil_format(sersicmodel, cuts)
+                    #cmlist = make_crazy_pil_format(sersicmodel, cuts)
+                    cmlist = marshall16_pil_format(sersicmodel, config['rgb_scales'])
                     crlist = make_crazy_pil_format(sersicresid, cuts)
 
                     cmim = Image.new('RGB', s, 'black')

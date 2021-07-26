@@ -62,6 +62,7 @@ fitband = 'g'
 lightband = 'i'
 
 rgbbands = ('i', 'r', 'g')
+rgb_scales = (0.4, 0.6, 1.8)
 
 allbands = list(rgbbands)
 if not fitband in allbands:
@@ -101,6 +102,7 @@ def_config = {'catalog_file': catalog_file, \
               'fitband': fitband, \
               'lightband': lightband, \
               'rgbbands': rgbbands, \
+              'rgb_scales': rgb_scales, \
               'makeallfigs': makeallfigs, \
               'saveallmodels': saveallmodels, \
               'cutout_data': cutout_data, \
@@ -111,7 +113,7 @@ floatpars = ['maxarcdist', 'minarcdist', 'maxarcsize', 'minarcsize', 'maxarcdang
              'modelmaxdist', 'abmin', 'min_aperture', 'se_minap', 'color_maxdiff', 'color_nsisgma', 'source_range', \
              'lightfitrmax', 'lightfit_reff_max', 'lightfit_nser_max', 'lightfit_nser_min']
 
-stringpars = ['datadir', 'datasourcedir', 'logdir', 'modeldir', 'figdir', 'fitband', 'lightband', 'rgbbands', 'catalog_file', 'summary_file', 'expected_size', 'lightfit_method']
+stringpars = ['datadir', 'datasourcedir', 'logdir', 'modeldir', 'figdir', 'fitband', 'lightband', 'rgbbands', 'rgb_scales', 'catalog_file', 'summary_file', 'expected_size', 'lightfit_method']
 
 boolpars = ['makeallfigs', 'saveallmodels', 'cleanupdir', 'cutout_data']
 
@@ -128,6 +130,7 @@ def write_config_file():
     lines.append('FITBAND %s\t# band used for lens modeling\n'%def_config['fitband'])
     lines.append('LIGHTBAND %s\t# band used for lens light and foreground fitting\n'%def_config['lightband'])
     lines.append('RGBBANDS %s, %s, %s\t# bands used for production of rgb images\n'%def_config['rgbbands'])
+    lines.append('RGB_SCALES %2.1f, %2.1f, %2.1f\t# scales rgb images\n'%def_config['rgb_scales'])
     lines.append('MAKEALLFIGS %s\t# if YES or True, makes a figure for each candidate\n'%(def_config['makeallfigs']))
     lines.append('SAVEALLMODELS %s\t# if YES or True, saves models of each candidate\n'%(def_config['saveallmodels']))
     lines.append('CLEANUPDIR %s\t# if YES or True, removes intermediate files from working directory\n'%(def_config['cleanupdir']))
@@ -181,7 +184,10 @@ def read_config_file(filename='default.yatta'):
             parname = fields[0].lower()
             if parname in config:
                 if parname in floatpars:
-                    config[parname] = float(fields[1])
+                    if parname == 'rgb_scales':
+                        config[parname] = (float(fields[0]), float(fields[1]), float(fields[2]))
+                    else:
+                        config[parname] = float(fields[1])
 
                 elif parname in stringpars:
                     if parname == 'rgbbands':

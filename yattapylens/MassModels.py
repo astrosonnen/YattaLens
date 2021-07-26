@@ -4,15 +4,15 @@ from math import pi
 class MassModel:
     def __init__(self,name,pars):
         self.keys = pars.keys()
-        self.keys.sort()
-        if self.keys not in self._MMkeys:
+        sorted_keys = sorted(self.keys)
+        if sorted_keys not in self._MMkeys:
             import sys
             print('Not all (or too many) parameters were defined!')
             sys.exit()
         self._baseProfile.__init__(self)
         self.vmap = {}
         self.pars = pars
-        for key in self.keys:
+        for key in sorted_keys:
             try:
                 v = self.pars[key].value
                 self.vmap[key] = self.pars[key]

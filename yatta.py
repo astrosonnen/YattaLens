@@ -62,7 +62,7 @@ for input_line in input_lines:
         else:
             data_flag = 0
 
-        light_model = yo.light_model(cand)
+        light_model = yo.light_model(cand, config=config)
 
         lenspars, junkmask = oft.find_lens(cand, detect_band=config['lightband'], detect_thresh=3., config=config)
 
@@ -114,8 +114,8 @@ for input_line in input_lines:
 
                 print('possible image sets: %d'%nsets)
 
-                lens_model = yo.lens_model(cand)
-                ring_model = yo.ring_model(cand)
+                lens_model = yo.lens_model(cand, config=config)
+                ring_model = yo.ring_model(cand, config=config)
                 sersic_model = yo.sersic_model(cand)
 
                 for i in range(nsets):
@@ -188,7 +188,6 @@ for input_line in input_lines:
 
                             if success:
                                 isalens = True
-                                cpdir = 'success'
                                 reason = 'YATTA'
                                 print('Yatta!')
 
@@ -207,8 +206,7 @@ for input_line in input_lines:
                                     else:
                                         reason = '%s_FITS_BETTER'%bestmodel
 
-                                print('failed')
-                                cpdir = 'failure'
+                                    print('%s fits better'%bestmodel)
 
                                 if config['makeallfigs']:
                                     yattargbtools.make_full_rgb(cand, cand.image_sets[i], outname=figname, success=success, config=config)
@@ -265,8 +263,7 @@ for input_line in input_lines:
 
     if isalens:
         zipped = zip(lensness, lenssets)
-        zipped.sort()
-        slensness, slenssets = zip(*zipped)
+        slensness, slenssets = zip(*sorted(zipped))
 
         bset = slenssets[-1]
 

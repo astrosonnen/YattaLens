@@ -1496,6 +1496,10 @@ def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rm
             foregrounds[band].append(obj['scalefreemodel'][band])
             scalefreemags[band].append(obj['scalefreemags'][band])
 
+    nfitband = len(candidate.fitband)
+
+    placeholder_mags = np.inf*np.ones((2, nfitband))
+
     print('fitting %d foregrounds, including 1 lens and %d arc-like objects'%(len(foregrounds[band]), len(foreground_model.bad_arcs)))
 
     start = []
@@ -1520,7 +1524,7 @@ def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rm
     def logpfunc(allpars):
         lp = logprior(allpars)
         if not np.isfinite(lp):
-            return -np.inf, (np.inf, np.inf)
+            return -np.inf, placeholder_mags
 
         for j in range(0, npars):
             pars[j].value = allpars[j]
@@ -1529,9 +1533,11 @@ def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rm
         lens_model.lens.setPars()
         xl, yl = pylens.getDeflections(lens_model.lens, [candidate.X, candidate.Y])
 
-        lensmag = []
-        sourcemag = []
-        for band in candidate.fitband:
+        allmags = np.zeros((2, nfitband))
+
+        for n in range(nfitband):
+
+            band = candidate.fitband[n]
 
             modlist = []
             fixedcomps = 0.*candidate.sci[band]
@@ -1550,20 +1556,20 @@ def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rm
             modarr = np.array(modlist).T
 
             if np.isnan(modarr).any():
-                return -1e300, (np.inf, np.inf)
+                return -1e300, placeholder_mags
 
             amps, chi = nnls(modarr, (candidate.sci[band]/candidate.err[band]).ravel()[mask_r])
 
             logp = -0.5*chi
 
             if logp != logp:
-                return -np.inf, (np.inf, np.inf)
+                return -np.inf, placeholder_mags
             sumlogp += logp
 
-            lensmag.append(scalefreemags[band][0] - 2.5*np.log10(amps[0]))
-            sourcemag.append(lens_model.source[band].Mag(candidate.zp[band]) - 2.5*np.log10(amps[1]))
+            allmags[0, n] = scalefreemags[band][0] - 2.5*np.log10(amps[0])
+            allmags[1, n] = lens_model.source[band].Mag(candidate.zp[band]) - 2.5*np.log10(amps[1])
 
-        return sumlogp, (lensmag, sourcemag)
+        return sumlogp, allmags
 
     sampler = emcee.EnsembleSampler(nwalkers, npars, logpfunc)
 
@@ -1579,14 +1585,14 @@ def fit_lens(candidate, lens_model, light_model, foreground_model, image_set, rm
     pars_sample['source_y'] = sampler.chain[:, :, 4]
     pars_sample['source_re'] = sampler.chain[:, :, 5]
 
-    nband = 0
     blobarr = np.array(sampler.blobs)
     print(blobarr.shape)
+    magschain = blobarr.reshape((nsamp, nwalkers, 2, nfitband))
 
-    for band in candidate.fitband:
-        pars_sample['lens_%s_mag'%band] = blobarr[:, :, 0, nband].T
-        pars_sample['source_%s_mag'%band] = blobarr[:, :, 1, nband].T
-        nband += 1
+    for n in range(nfitband):
+        band = candidate.fitband[n]
+        pars_sample['lens_%s_mag'%band] = magschain[:, :, 0, n].T
+        pars_sample['source_%s_mag'%band] = magschain[:, :, 1, n].T
 
     candidate.lens_pars_sample = pars_sample
 

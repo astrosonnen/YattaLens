@@ -1,0 +1,42 @@
+# GENERAL PARAMETERS
+CATALOG_FILE yatta_input.cat	# name of input file (or of single object)
+SUMMARY_FILE yatta_output.summary	# name of output file
+DATADIR data/	# directory where the data is read from
+LOGDIR logs/	 # directory where logs are stored
+MODELDIR models/	 # directory where modeling products are stored
+FIGDIR figs/	 # directory where figures are stored
+FITBAND g	# band used for lens modeling
+LIGHTBAND i	# band used for lens light and foreground fitting
+RGBBANDS i, r, g	# bands used for production of rgb images
+MAKEALLFIGS False	# if YES or True, makes a figure for each candidate
+SAVEALLMODELS False	# if YES or True, saves models of each candidate
+CLEANUPDIR True	# if YES or True, removes intermediate files from working directory
+CUTOUT_DATA False	# if YES or True, uses the HSC pipeline to make cutouts
+EXPECTED_SIZE None	# expected image size in number of pixels (sanity check)
+
+# LENS LIGHT FITTING PARAMETERS
+LIGHTFITRMAX 20.0	# radius of region used for fitting of the lens light
+LIGHTFIT_REFF_MAX 30.0	# maximum allowed half-light radius
+LIGHTFIT_NSER_MAX 8.0	# maximum allowed Sersic index
+LIGHTFIT_NSER_MIN 0.5	# minimum allowed Sersic index
+LIGHTFIT_METHOD MCMC	# method used for fitting of the lens light (MCMC or minimize)
+# ARC SEARCH PARAMETERS
+MAXARCDIST 30.0	# maximum search distance from image center
+MINARCDIST 3.0	# minimum search distance from image center
+MAXARCSIZE 500	# maximum area of arc footprint
+MINARCSIZE 20	# minimum area of arc footprint
+MAXARCDANG 30	# maximum angle between arc and tangential curve
+ABMIN 1.4	# minimum axis ratio
+SE_MINAP 25	# minimum angle subtended by arc candidate
+COLOR_MAXDIFF 2.0	# maximum FITBAND-LIGHTBAND color of arc candidate
+COLOR_NSIGMA 2.0	# number of sigmas required for color consistency
+
+# FOREGROUND OBJECT SEARCH PARAMETERS
+MINOBJDIST 3.0	# minimum search distance from image center
+JUNKSTART 1.3	#distance (in units of distance of the farthest arc candidate) beyond which objects are labeled as foregrounds
+MODELMAXDIST 1.3	# distance (in units of distance of the farthest arc candidate) beyond which foregrounds are not modeled
+
+# LENS MODEL PARAMETERS
+SOURCE_RANGE 8.0	
+# CANDIDATE CLASSIFICATION PARAMETERS
+MIN_APERTURE 35	# minimum angle subtended by the lensed source

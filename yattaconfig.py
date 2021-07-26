@@ -43,6 +43,11 @@ min_aperture = 35.
 tooclose = 0.03
 se_minap = 25.
 color_maxdiff = 2.
+
+# light model parameters
+lightfit_reff_max = 30.
+lightfit_nser_max = 8.
+lightfit_nser_min = 0.5
 lightfitrmax = 20.
 lightfit_method = 'MCMC'
 
@@ -72,6 +77,9 @@ def_config = {'catalog_file': catalog_file, \
               'modeldir': modeldir, \
               'figdir': figdir, \
               'lightfitrmax': lightfitrmax, \
+              'lightfit_reff_max': lightfit_reff_max, \
+              'lightfit_nser_max': lightfit_nser_max, \
+              'lightfit_nser_min': lightfit_nser_min, \
               'lightfit_method': lightfit_method, \
               'maxarcdist': maxarcdist, \
               'minarcdist': minarcdist, \
@@ -101,7 +109,7 @@ def_config = {'catalog_file': catalog_file, \
 
 floatpars = ['maxarcdist', 'minarcdist', 'maxarcsize', 'minarcsize', 'maxarcdang', 'minobjdist', 'junkstart', \
              'modelmaxdist', 'abmin', 'min_aperture', 'se_minap', 'color_maxdiff', 'color_nsisgma', 'source_range', \
-             'lightfitrmax']
+             'lightfitrmax', 'lightfit_reff_max', 'lightfit_nser_max', 'lightfit_nser_min']
 
 stringpars = ['datadir', 'datasourcedir', 'logdir', 'modeldir', 'figdir', 'fitband', 'lightband', 'rgbbands', 'catalog_file', 'summary_file', 'expected_size', 'lightfit_method']
 
@@ -127,8 +135,11 @@ def write_config_file():
     lines.append('EXPECTED_SIZE %s\t# expected image size in number of pixels (sanity check)\n'%(def_config['expected_size']))
     lines.append('\n')
     lines.append('# LENS LIGHT FITTING PARAMETERS\n')
-    lines.append('LIGHTFITRMAX %2.1f\t# radius of region used for fitting of the lens light'%def_config['lightfitrmax'])
-    lines.append('LIGHTFIT_METHOD %s\t# method used for fitting of the lens light (MCMC or minimize)'%def_config['lightfit_method'])
+    lines.append('LIGHTFITRMAX %2.1f\t# radius of region used for fitting of the lens light\n'%def_config['lightfitrmax'])
+    lines.append('LIGHTFIT_REFF_MAX %2.1f\t# maximum allowed half-light radius\n'%def_config['lightfit_reff_max'])
+    lines.append('LIGHTFIT_NSER_MAX %2.1f\t# maximum allowed Sersic index\n'%def_config['lightfit_nser_max'])
+    lines.append('LIGHTFIT_NSER_MIN %2.1f\t# minimum allowed Sersic index\n'%def_config['lightfit_nser_min'])
+    lines.append('LIGHTFIT_METHOD %s\t# method used for fitting of the lens light (MCMC or minimize)\n'%def_config['lightfit_method'])
     lines.append('# ARC SEARCH PARAMETERS\n')
     lines.append('MAXARCDIST %2.1f\t# maximum search distance from image center\n'%def_config['maxarcdist'])
     lines.append('MINARCDIST %2.1f\t# minimum search distance from image center\n'%def_config['minarcdist'])

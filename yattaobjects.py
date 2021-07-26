@@ -19,14 +19,14 @@ class YattaPar:
 
 class light_model:
 
-    def __init__(self, candidate):
+    def __init__(self, candidate, config=def_config):
 
         self.x = YattaPar('x', lower=candidate.x0 - 2., upper=candidate.x0 + 2., value=candidate.x0)
         self.y = YattaPar('y', lower=candidate.y0 - 2., upper=candidate.y0 + 2., value=candidate.y0)
         self.pa = YattaPar('pa', lower=-100., upper=100., value=0.)
-        self.q = YattaPar('q', lower=0.3, upper=2., value=0.7)
-        self.re = YattaPar('re', lower=3., upper=30., value=10.)
-        self.n = YattaPar('ns', lower=0.5, upper=8., value=4.)
+        self.q = YattaPar('q', lower=0.2, upper=2., value=0.8)
+        self.re = YattaPar('re', lower=3., upper=config['lightfit_reff_max'], value=10.)
+        self.n = YattaPar('ns', lower=config['lightfit_nser_min'], upper=config['lightfit_nser_max'], value=4.)
 
         self.model = {}
 
@@ -45,11 +45,11 @@ class light_model:
 
 class ring_model:
 
-    def __init__(self, candidate):
+    def __init__(self, candidate, config=def_config):
 
         self.pa = YattaPar('pa', lower=-100., upper=100., value=0.)
-        self.q = YattaPar('q', lower=0.2, upper=2., value=0.6)
-        self.rr = YattaPar('rr', lower=0., upper=30., value=10.)
+        self.q = YattaPar('q', lower=0.2, upper=2., value=0.8)
+        self.rr = YattaPar('rr', lower=0., upper=config['maxarcdist'], value=0.3*config['maxarcdist'])
         self.hi = YattaPar('hi', lower=1., upper=30., value=5.)
         self.ho = YattaPar('ho', lower=1., upper=30., value=5.)
 

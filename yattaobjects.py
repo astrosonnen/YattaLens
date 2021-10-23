@@ -616,6 +616,12 @@ class Candidate:
         hdr['S_Y'] = self.source_y
         hdr['S_RE'] = self.source_re
 
+        hdr['RING_PA'] = self.ring_pa
+        hdr['RING_Q'] = self.ring_q
+        hdr['RING_RR'] = self.ring_rr
+        hdr['RING_HI'] = self.ring_hi
+        hdr['RING_HO'] = self.ring_ho
+
         for band in self.bands:
             if band in self.lensfit_mags:
                 lmag = self.lensfit_mags[band][0]
@@ -736,7 +742,7 @@ class Candidate:
                     lens_full += self.lensfit_model[band][i].copy()
     
                 full_hdu = pyfits.ImageHDU(data=lens_full)
-                full_hdu.header['EXTNAME'] = 'ALL_%s'%band
+                full_hdu.header['EXTNAME'] = 'LENSALL_%s'%band
                 hdulist.append(full_hdu)
     
                 source_hdu = pyfits.ImageHDU(data=self.lensfit_model[band][-1])
@@ -747,6 +753,22 @@ class Candidate:
                 lens_hdu = pyfits.ImageHDU(data=self.lenssub_model[band][0])
                 lens_hdu.header['EXTNAME'] = 'LENS_%s'%band
                 hdulist.append(lens_hdu)
+
+            if band in self.ringfit_model:
+                ncomp = len(self.ringfit_model[band])
+
+                ring_full = 0. * self.sci[band]
+    
+                for i in range(ncomp):
+                    ring_full += self.ringfit_model[band][i].copy()
+    
+                full_hdu = pyfits.ImageHDU(data=ring_full)
+                full_hdu.header['EXTNAME'] = 'RINGALL_%s'%band
+                hdulist.append(full_hdu)
+    
+                ring_hdu = pyfits.ImageHDU(data=self.ringfit_model[band][-1])
+                ring_hdu.header['EXTNAME'] = 'RING_%s'%band
+                hdulist.append(ring_hdu)
 
         if self.image_sets is not None:
             arc_hdu = pyfits.ImageHDU(data=arc_segmap)

@@ -111,9 +111,9 @@ def_config = {'catalog_file': catalog_file, \
 
 floatpars = ['maxarcdist', 'minarcdist', 'maxarcsize', 'minarcsize', 'maxarcdang', 'minobjdist', 'junkstart', \
              'modelmaxdist', 'abmin', 'min_aperture', 'se_minap', 'color_maxdiff', 'color_nsisgma', 'source_range', \
-             'lightfitrmax', 'lightfit_reff_max', 'lightfit_nser_max', 'lightfit_nser_min']
+             'lightfitrmax', 'lightfit_reff_max', 'lightfit_nser_max', 'lightfit_nser_min', 'rgb_scales']
 
-stringpars = ['datadir', 'datasourcedir', 'logdir', 'modeldir', 'figdir', 'fitband', 'lightband', 'rgbbands', 'rgb_scales', 'catalog_file', 'summary_file', 'expected_size', 'lightfit_method']
+stringpars = ['datadir', 'datasourcedir', 'logdir', 'modeldir', 'figdir', 'fitband', 'lightband', 'rgbbands', 'catalog_file', 'summary_file', 'expected_size', 'lightfit_method']
 
 boolpars = ['makeallfigs', 'saveallmodels', 'cleanupdir', 'cutout_data']
 
